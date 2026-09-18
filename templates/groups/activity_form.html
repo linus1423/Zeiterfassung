@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Taetigkeit bearbeiten{% endblock %}
+{% block content %}
+<h1>{{ activity.name }}</h1>
+<div class="card">
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Speichern</button>
+      <a class="button" href="{% url 'groups:activities' group.pk %}">Zurueck</a>
+    </div>
+  </form>
+  <p class="help">Taetigkeiten werden nicht geloescht, sondern deaktiviert. Alte Zeiten bleiben dadurch auswertbar.</p>
+</div>
+{% endblock %}

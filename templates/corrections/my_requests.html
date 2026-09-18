@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Meine Korrekturantraege{% endblock %}
+{% block content %}
+<h1>Meine Korrekturantraege</h1>
+<p><a class="button" href="{% url 'corrections:create' %}">Vergessene Zeit nachtragen</a></p>
+<div class="card">
+  <div class="table-scroll">
+    <table>
+      <tr><th>Gestellt am</th><th>Art</th><th>Gruppe</th><th>Gewuenscht</th><th>Status</th><th></th></tr>
+      {% for request in requests %}
+        <tr>
+          <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ request.get_kind_display }}</td>
+          <td>{{ request.group.name }}</td>
+          <td>
+            {% if request.proposed_start %}
+              {{ request.proposed_start|date:"d.m.Y H:i" }} bis {{ request.proposed_end|date:"H:i" }}
+            {% else %}-{% endif %}
+          </td>
+          <td>
+            <span class="badge {{ request.status }}">{{ request.get_status_display }}</span>
+            {% if request.decision_note %}<br><span class="help">{{ request.decision_note }}</span>{% endif %}
+          </td>
+          <td>
+            {% if request.is_pending %}
+              <form method="post" action="{% url 'corrections:withdraw' request.pk %}">{% csrf_token %}
+                <button type="submit">Zuruecknehmen</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="muted">Noch keine Antraege.</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

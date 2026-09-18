@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}Stempeluhr{% endblock %}
+{% block content %}
+<h1>Stempeluhr</h1>
+
+{% if not has_groups %}
+  <div class="card">
+    <p><strong>Du bist noch keiner Gruppe zugeordnet.</strong></p>
+    <p class="help">Bitte einen Admin, dich einer Gruppe hinzuzufuegen. Danach kannst du stempeln.</p>
+  </div>
+{% else %}
+<div class="card">
+  {% if state.is_clocked_in %}
+    <div class="state">
+      {% if state.is_on_break %}
+        In Pause seit {{ state.open_break.start|time:"H:i" }}
+      {% else %}
+        Du arbeitest seit {{ state.entry.start|time:"H:i" }}
+      {% endif %}
+      <small>
+        {{ state.entry.group.name }}{% if state.entry.activity %} · {{ state.entry.activity.name }}{% endif %}
+        · bisher {{ state.entry.duration|dauer }} h
+      </small>
+    </div>
+    <div class="actions">
+      {% if state.is_on_break %}
+        <form method="post" action="{% url 'tracking:break_end' %}">{% csrf_token %}
+          <button class="primary big" type="submit">Pause beenden</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'tracking:break_start' %}">{% csrf_token %}
+          <button class="big" type="submit">Pause</button>
+        </form>
+      {% endif %}
+      <form method="post" action="{% url 'tracking:clock_out' %}">{% csrf_token %}
+        <button class="danger big" type="submit">Stop</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="state">Ausgestempelt<small>Waehle Gruppe und Taetigkeit, um zu starten.</small></div>
+    <form method="post" action="{% url 'tracking:clock_in' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="actions"><button class="primary big" type="submit">Start</button></div>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if break_warning %}<div class="card"><strong>Hinweis:</strong> {{ break_warning }}</div>{% endif %}
+
+<div class="card">
+  <h2>Heute</h2>
+  {% if today_entries %}
+    <div class="table-scroll">
+      <table>
+        <tr><th>Beginn</th><th>Ende</th><th>Taetigkeit</th><th class="num">Pause</th><th class="num">Arbeitszeit</th></tr>
+        {% for entry in today_entries %}
+          <tr>
+            <td>{{ entry.start|time:"H:i" }}</td>
+            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}laeuft{% endif %}</td>
+            <td>{{ entry.activity.name|default:"-" }}</td>
+            <td class="num">{{ entry.break_duration|dauer }}</td>
+            <td class="num">{{ entry.duration|dauer }}</td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <th colspan="3">Summe</th>
+          <th class="num">{{ paused_today|dauer }}</th>
+          <th class="num">{{ worked_today|dauer }}</th>
+        </tr>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">Heute noch nichts gestempelt.</p>
+  {% endif %}
+</div>
+
+{% if incomplete_entries %}
+<div class="card">
+  <h2>Unvollstaendige Eintraege</h2>
+  <p class="help">Diese Eintraege wurden automatisch beendet, weil das Ausstempeln vergessen wurde.</p>
+  <table>
+    {% for entry in incomplete_entries %}
+      <tr>
+        <td>{{ entry.start|date:"d.m.Y" }}</td>
+        <td>{{ entry.start|time:"H:i" }} bis {{ entry.end|time:"H:i" }}</td>
+        <td><a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur beantragen</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

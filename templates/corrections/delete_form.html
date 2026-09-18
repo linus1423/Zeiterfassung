@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Loeschung beantragen{% endblock %}
+{% block content %}
+<h1>Loeschung beantragen</h1>
+<div class="card">
+  <p>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}, {{ entry.group.name }}</p>
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions">
+      <button class="danger" type="submit">Loeschung beantragen</button>
+      <a class="button" href="{% url 'tracking:my_entries' %}">Abbrechen</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

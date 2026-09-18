@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Auswertung und Export{% endblock %}
+{% block content %}
+<h1>Auswertung und Export</h1>
+
+{% if profiles %}
+<div class="card">
+  <h2>Vorlagen</h2>
+  <table>
+    {% for item in profiles %}
+      <tr>
+        <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
+        <td>{{ item.get_grouping_display }}</td>
+        <td>{% if item.is_shared %}geteilt{% endif %}</td>
+        <td>
+          {% if item.owner_id == user.pk %}
+            <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
+              {% csrf_token %}<button type="submit">Loeschen</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card">
+    <h2>Zeitraum und Filter</h2>
+    <div class="grid two">
+      <div>{{ form.start.label_tag }}{{ form.start }}{{ form.start.errors }}</div>
+      <div>{{ form.end.label_tag }}{{ form.end }}{{ form.end.errors }}</div>
+      <div>{{ form.groups.label_tag }}{{ form.groups }}<p class="help">{{ form.groups.help_text }}</p></div>
+      <div>{{ form.users.label_tag }}{{ form.users }}</div>
+      <div>{{ form.activities.label_tag }}{{ form.activities }}</div>
+      <div>{{ form.grouping.label_tag }}{{ form.grouping }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Spalten</h2>
+    <div class="checkbox-columns">{{ form.columns }}</div>
+    {{ form.columns.errors }}
+  </div>
+
+  <div class="card">
+    <h2>Ausgabe</h2>
+    <div class="grid two">
+      <div>{{ form.csv_dialect.label_tag }}{{ form.csv_dialect }}</div>
+      <div>
+        <label for="id_name">Als Vorlage speichern unter</label>
+        <input type="text" name="name" id="id_name" maxlength="120" placeholder="z. B. Monatsabrechnung">
+        <label><input type="checkbox" name="is_shared" value="on"> Mit der Buchhaltung teilen</label>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" type="submit" name="action" value="preview">Vorschau</button>
+      <button type="submit" name="action" value="xlsx">Als Excel herunterladen</button>
+      <button type="submit" name="action" value="csv">Als CSV herunterladen</button>
+      <button type="submit" name="action" value="save_profile">Vorlage speichern</button>
+    </div>
+  </div>
+</form>
+
+{% if columns %}
+<div class="card">
+  <h2>Vorschau ({{ row_count }} Zeilen)</h2>
+  <div class="table-scroll">
+    <table>
+      <tr>{% for column in columns %}<th>{{ column.label }}</th>{% endfor %}</tr>
+      {% for row in preview_rows %}
+        <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+      {% empty %}
+        <tr><td colspan="{{ columns|length }}" class="muted">Keine Daten im Zeitraum.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% if row_count > preview_limit %}
+    <p class="help">Angezeigt werden die ersten {{ preview_limit }} Zeilen. Der Download enthaelt alle {{ row_count }}.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Anmelden{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 32rem; margin: 3rem auto;">
+  <h1>Anmelden</h1>
+  {% if providers %}
+    <p class="muted">Melde dich mit deinem Firmenkonto an.</p>
+    <div class="actions">
+      {% for provider in providers %}
+        <a class="button primary big" href="{{ provider.url }}">Weiter mit {{ provider.name }}</a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>Es ist noch kein Anmeldeverfahren eingerichtet.</p>
+    <p class="help">
+      Trage die Zugangsdaten fuer Keycloak oder Microsoft Entra ID in der Datei
+      <code>.env</code> ein (siehe <code>.env.example</code>). System-Admins koennen
+      sich in der Zwischenzeit ueber die Adminoberflaeche anmelden.
+    </p>
+  {% endif %}
+</div>
+{% endblock %}
