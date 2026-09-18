@@ -7,6 +7,8 @@ app_name = "groups"
 urlpatterns = [
     path("", views.group_list, name="list"),
     path("<int:group_id>/", views.group_detail, name="detail"),
+    path("<int:group_id>/einstellungen/", views.group_settings, name="settings"),
+    path("<int:group_id>/abschluss/", views.period_list, name="periods"),
     path("<int:group_id>/taetigkeiten/", views.activity_list, name="activities"),
     path(
         "<int:group_id>/taetigkeiten/<int:activity_id>/", views.activity_edit, name="activity_edit"

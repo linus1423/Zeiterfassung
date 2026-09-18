@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Abschluss: {{ group.name }}{% endblock %}
+{% block content %}
+<h1>Abrechnungszeitraeume von {{ group.name }}</h1>
+<p>
+  {% if group.month_start_day == 1 %}
+    Die Gruppe rechnet nach Kalendermonat ab.
+  {% else %}
+    Ein Zeitraum beginnt am {{ group.month_start_day }}. eines Monats.
+  {% endif %}
+</p>
+<div class="card">
+  <table>
+    <tr><th>Zeitraum</th><th>Von</th><th>Bis</th><th>Status</th><th></th></tr>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.period.label }}</td>
+        <td>{{ row.period.start|date:"d.m.Y" }}</td>
+        <td>{{ row.period.end|date:"d.m.Y" }}</td>
+        <td>
+          {% if row.lock %}
+            <span class="badge">abgeschlossen</span>
+            am {{ row.lock.closed_at|date:"d.m.Y" }}
+            {% if row.lock.closed_by %}von {{ row.lock.closed_by.full_name }}{% endif %}
+          {% elif row.is_current %}
+            <span class="badge pending">laufend</span>
+          {% else %}
+            offen
+          {% endif %}
+        </td>
+        <td>
+          {% if row.lock %}
+            {% if may_reopen %}
+              <form method="post" class="inline">{% csrf_token %}
+                <input type="hidden" name="lock" value="{{ row.lock.pk }}">
+                <button type="submit" name="action" value="reopen">Wieder oeffnen</button>
+              </form>
+            {% endif %}
+          {% elif may_close and not row.is_current %}
+            <form method="post" class="inline">{% csrf_token %}
+              <input type="hidden" name="period_start" value="{{ row.period.start|date:'Y-m-d' }}">
+              <button class="primary" type="submit" name="action" value="close">Abschliessen</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  <p class="help">
+    Nach dem Abschluss lehnt das System Korrekturantraege fuer diesen Zeitraum ab.
+    Aufheben kann den Abschluss nur ein System-Admin.
+  </p>
+</div>
+{% endblock %}

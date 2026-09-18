@@ -3,17 +3,25 @@
 {% block content %}
 <h1>Gruppen</h1>
 <div class="card">
-  {% if groups %}
+  {% if rows %}
     <table>
-      <tr><th>Gruppe</th><th>Kostenstelle</th><th class="num">Mitglieder</th><th></th></tr>
-      {% for group in groups %}
+      <tr><th>Gruppe</th><th>Kostenstelle</th><th>Abrechnungszeitraum</th><th class="num">Mitglieder</th><th></th></tr>
+      {% for row in rows %}
         <tr>
-          <td><a href="{% url 'groups:detail' group.pk %}">{{ group.name }}</a></td>
-          <td>{{ group.cost_center|default:"-" }}</td>
-          <td class="num">{{ group.member_count }}</td>
+          <td><a href="{% url 'groups:detail' row.group.pk %}">{{ row.group.name }}</a></td>
+          <td>{{ row.group.cost_center|default:"-" }}</td>
           <td>
-            <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten</a> ·
-            <a href="{% url 'groups:members' group.pk %}">Mitglieder</a>
+            {% if row.group.month_start_day == 1 %}Kalendermonat
+            {% else %}ab dem {{ row.group.month_start_day }}.{% endif %}
+          </td>
+          <td class="num">{{ row.group.member_count }}</td>
+          <td>
+            <a href="{% url 'groups:periods' row.group.pk %}">Abschluss</a>
+            {% if row.is_admin %}
+              · <a href="{% url 'groups:activities' row.group.pk %}">Taetigkeiten</a>
+              · <a href="{% url 'groups:members' row.group.pk %}">Mitglieder</a>
+              · <a href="{% url 'groups:settings' row.group.pk %}">Einstellungen</a>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}

@@ -22,6 +22,11 @@ class AuditLog(models.Model):
         CORRECTION_REJECTED = "correction_rejected", "Korrektur abgelehnt"
         CORRECTION_WITHDRAWN = "correction_withdrawn", "Korrektur zurueckgezogen"
         EXPORT = "export", "Export erstellt"
+        PERIOD_CLOSED = "period_closed", "Zeitraum abgeschlossen"
+        PERIOD_REOPENED = "period_reopened", "Zeitraum wieder geoeffnet"
+        USER_ANONYMIZED = "user_anonymized", "Konto anonymisiert"
+        MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
+        NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

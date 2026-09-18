@@ -14,27 +14,17 @@ from datetime import date, time
 
 from django.utils import timezone
 
+from apps.groups.closing import ClosedPeriods
+from apps.groups.periods import MONTH_NAMES, WEEKDAY_NAMES, period_for
 from apps.groups.permissions import readable_groups
 from apps.tracking.models import TimeEntry
 from apps.tracking.utils import day_bounds
 
 from .columns import DATE, HHMM, HOURS, NUMBER, TEXT, TIME, Column
 
-WEEKDAYS = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
-MONTHS = (
-    "Januar",
-    "Februar",
-    "Maerz",
-    "April",
-    "Mai",
-    "Juni",
-    "Juli",
-    "August",
-    "September",
-    "Oktober",
-    "November",
-    "Dezember",
-)
+# Weiterhin unter den alten Namen erreichbar.
+WEEKDAYS = WEEKDAY_NAMES
+MONTHS = MONTH_NAMES
 
 
 def query_entries(
@@ -66,10 +56,13 @@ def query_entries(
     return queryset
 
 
-def _base_row(entry: TimeEntry) -> dict:
+def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
     local_start = timezone.localtime(entry.start)
     local_end = timezone.localtime(entry.end) if entry.end else None
     iso_year, iso_week, _ = local_start.date().isocalendar()
+    # Der Abrechnungszeitraum folgt dem Zyklus der Gruppe (Issue 8).
+    period = period_for(local_start.date(), entry.group.month_start_day)
+    is_closed = closed is not None and closed.is_closed(entry.group_id, local_start.date())
     return {
         "personnel_number": entry.user.personnel_number,
         "last_name": entry.user.last_name,
@@ -82,8 +75,12 @@ def _base_row(entry: TimeEntry) -> dict:
         "date": local_start.date(),
         "weekday": WEEKDAYS[local_start.weekday()],
         "week": iso_week,
-        "month": MONTHS[local_start.month - 1],
-        "year": local_start.year,
+        "month": period.month_label,
+        "year": period.start.year,
+        "period_label": period.label,
+        "period_start": period.start,
+        "period_end": period.end,
+        "period_closed": "ja" if is_closed else "",
         "start": local_start.time().replace(second=0, microsecond=0),
         "end": local_end.time().replace(second=0, microsecond=0) if local_end else None,
         "break_seconds": entry.break_duration.total_seconds(),
@@ -97,9 +94,11 @@ def _base_row(entry: TimeEntry) -> dict:
     }
 
 
-def build_rows(entries: Iterable[TimeEntry], grouping: str) -> list[dict]:
+def build_rows(
+    entries: Iterable[TimeEntry], grouping: str, closed: ClosedPeriods | None = None
+) -> list[dict]:
     """Baut die Exportzeilen in der gewuenschten Verdichtung."""
-    rows = [_base_row(entry) for entry in entries]
+    rows = [_base_row(entry, closed) for entry in entries]
     if grouping == "entry":
         return rows
 
@@ -120,9 +119,15 @@ def build_rows(entries: Iterable[TimeEntry], grouping: str) -> list[dict]:
                 "week",
                 "month",
                 "year",
+                "period_label",
+                "period_start",
+                "period_end",
+                "period_closed",
             )
         elif grouping == "user_month":
-            key = (row["email"], row["year"], row["month"])
+            # Der Schluessel ist der Abrechnungszeitraum, nicht der Kalendermonat:
+            # Gruppen mit eigenem Zyklus bleiben so getrennt (Issue 8).
+            key = (row["email"], row["period_start"], row["period_end"])
             keep = (
                 "personnel_number",
                 "last_name",
@@ -131,6 +136,10 @@ def build_rows(entries: Iterable[TimeEntry], grouping: str) -> list[dict]:
                 "email",
                 "month",
                 "year",
+                "period_label",
+                "period_start",
+                "period_end",
+                "period_closed",
             )
         elif grouping == "activity":
             key = (row["group"], row["activity"])

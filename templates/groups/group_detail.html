@@ -3,12 +3,18 @@
 {% block title %}{{ group.name }}{% endblock %}
 {% block content %}
 <h1>{{ group.name }}</h1>
-{% if is_admin %}
 <p>
-  <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten verwalten</a> ·
-  <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
+  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeitraeume</a>
+  {% if is_admin %}
+    · <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten verwalten</a>
+    · <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
+    · <a href="{% url 'groups:settings' group.pk %}">Einstellungen</a>
+  {% endif %}
 </p>
-{% endif %}
+<p class="help">
+  Aktueller Abrechnungszeitraum: {{ period.label }}
+  {% if period_closed %} · <span class="badge">Der angezeigte Zeitraum ist abgeschlossen.</span>{% endif %}
+</p>
 
 <div class="card">
   <h2>Gerade eingestempelt</h2>

@@ -62,3 +62,8 @@ def group_admin(make_user, group):
 @pytest.fixture
 def accountant(make_user):
     return make_user("buchhaltung@example.com", last_name="Buch", is_accounting=True)
+
+
+@pytest.fixture
+def superuser(make_user):
+    return make_user("system@example.com", last_name="System", is_superuser=True, is_staff=True)
