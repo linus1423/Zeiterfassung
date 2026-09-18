@@ -12,8 +12,10 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.audit.models import AuditLog, log
+from apps.groups import closing
 from apps.tracking.models import BreakEntry, TimeEntry
 
+from . import notifications
 from .models import CorrectionRequest
 
 
@@ -32,6 +34,19 @@ def may_decide(user, request_obj: CorrectionRequest) -> bool:
     if user.pk == request_obj.requested_by_id and not user.is_superuser:
         return False
     return user.is_group_admin(request_obj.group)
+
+
+def affected_days(request_obj: CorrectionRequest) -> list:
+    """Die Tage, die ein Antrag beruehrt: bisheriger und gewuenschter Zeitpunkt."""
+    values = [request_obj.proposed_start, request_obj.proposed_end]
+    if request_obj.time_entry_id and request_obj.time_entry is not None:
+        values.append(request_obj.time_entry.start)
+    return [timezone.localtime(value).date() for value in values if value is not None]
+
+
+def closed_period_lock(request_obj: CorrectionRequest):
+    """Der Abschluss, der diesen Antrag blockiert, falls es einen gibt (Issue 5)."""
+    return closing.blocking_lock(request_obj.group, affected_days(request_obj))
 
 
 def _entry_snapshot(entry: TimeEntry) -> dict:
@@ -57,6 +72,14 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
     locked = CorrectionRequest.objects.select_for_update().get(pk=request_obj.pk)
     if not may_decide(decided_by, locked):
         raise CorrectionError("Dieser Antrag darf von dir nicht entschieden werden.")
+
+    # Der Abschluss kann zwischen Antrag und Entscheidung gesetzt worden sein.
+    lock = closed_period_lock(locked)
+    if lock is not None:
+        raise CorrectionError(
+            f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
+            "Die Zeit kann nicht mehr geaendert werden."
+        )
 
     if locked.kind == CorrectionRequest.Kind.DELETE:
         entry = locked.time_entry
@@ -122,6 +145,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
     locked.decided_by = decided_by
     locked.decided_at = timezone.now()
     locked.decision_note = note
+    locked.decision_seen_at = None
     locked.save()
 
     log(
@@ -131,6 +155,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
         group=locked.group,
         subject=locked.requested_by,
     )
+    notifications.notify_requester_of_decision(locked)
     return locked
 
 
@@ -146,6 +171,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
     locked.decided_by = decided_by
     locked.decided_at = timezone.now()
     locked.decision_note = note
+    locked.decision_seen_at = None
     locked.save()
 
     log(
@@ -156,6 +182,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
         subject=locked.requested_by,
         note=note,
     )
+    notifications.notify_requester_of_decision(locked)
     return locked
 
 
@@ -177,3 +204,57 @@ def withdraw(request_obj: CorrectionRequest, user) -> CorrectionRequest:
         subject=user,
     )
     return locked
+
+
+@transaction.atomic
+def create_request(
+    *,
+    requested_by,
+    group,
+    kind: str,
+    reason: str,
+    entry: TimeEntry | None = None,
+    proposed_start=None,
+    proposed_end=None,
+    proposed_activity=None,
+    proposed_breaks: list[dict] | None = None,
+) -> CorrectionRequest:
+    """Legt einen Antrag an, protokolliert ihn und meldet ihn den Admins."""
+    correction = CorrectionRequest(
+        time_entry=entry,
+        requested_by=requested_by,
+        group=group,
+        kind=kind,
+        proposed_start=proposed_start,
+        proposed_end=proposed_end,
+        proposed_activity=proposed_activity,
+        proposed_breaks=proposed_breaks or [],
+        reason=reason,
+    )
+
+    lock = closed_period_lock(correction)
+    if lock is not None:
+        raise CorrectionError(
+            f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
+            "Korrekturen sind dort nicht mehr moeglich."
+        )
+
+    correction.save()
+    log(
+        AuditLog.Action.CORRECTION_REQUESTED,
+        actor=requested_by,
+        target=correction,
+        group=group,
+        subject=requested_by,
+    )
+    notifications.notify_admins_of_new_request(correction)
+    return correction
+
+
+def mark_decisions_seen(user) -> None:
+    """Entschiedene eigene Antraege als gesehen markieren (Zaehler in der Navigation)."""
+    CorrectionRequest.objects.filter(
+        requested_by=user,
+        status__in=(CorrectionRequest.Status.APPROVED, CorrectionRequest.Status.REJECTED),
+        decision_seen_at__isnull=True,
+    ).update(decision_seen_at=timezone.now())

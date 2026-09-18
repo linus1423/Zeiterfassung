@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load zeit %}
 {% block title %}Korrektur beantragen{% endblock %}
 {% block content %}
 <h1>{% if entry %}Korrektur beantragen{% else %}Zeit nachtragen{% endif %}</h1>
@@ -16,6 +17,26 @@
 {% endif %}
 <div class="card">
   <form method="post">{% csrf_token %}{{ form.as_p }}
+    <h2>Pausen</h2>
+    {{ breaks.management_form }}
+    {% if breaks.non_form_errors %}
+      <ul class="messages">{% for error in breaks.non_form_errors %}<li class="error">{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
+    <table class="breaks">
+      <tr><th>Von</th><th>Bis</th></tr>
+      {% for pause in breaks %}
+        <tr>
+          <td>{{ pause.start }}{{ pause.start.errors }}</td>
+          <td>{{ pause.end }}{{ pause.end.errors }}</td>
+        </tr>
+        {% if pause.non_field_errors %}
+          <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
+        {% endif %}
+      {% endfor %}
+    </table>
+    <p class="help">
+      Eine Zeile je Pause, hoechstens {{ breaks.max_num }}. Leere Zeilen werden verworfen.
+    </p>
     <div class="actions">
       <button class="primary" type="submit">Antrag stellen</button>
       <a class="button" href="{% url 'tracking:my_entries' %}">Abbrechen</a>

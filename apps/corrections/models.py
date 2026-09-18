@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
+from django.utils.dateparse import parse_datetime
 
 
 class CorrectionRequest(models.Model):
@@ -68,6 +71,12 @@ class CorrectionRequest(models.Model):
     )
     decided_at = models.DateTimeField("Entschieden am", null=True, blank=True)
     decision_note = models.TextField("Begruendung der Entscheidung", blank=True)
+    decision_seen_at = models.DateTimeField(
+        "Entscheidung gesehen am",
+        null=True,
+        blank=True,
+        help_text="Solange leer, zaehlt die Entscheidung in der Navigation als neu.",
+    )
     created_at = models.DateTimeField("Gestellt am", auto_now_add=True)
 
     class Meta:
@@ -82,3 +91,26 @@ class CorrectionRequest(models.Model):
     @property
     def is_pending(self) -> bool:
         return self.status == self.Status.PENDING
+
+    @property
+    def is_decided(self) -> bool:
+        return self.status in (self.Status.APPROVED, self.Status.REJECTED)
+
+    @property
+    def proposed_break_periods(self) -> list[dict]:
+        """Die beantragten Pausen als Zeitpunkte, fuer die Anzeige im Antrag."""
+        periods = []
+        for item in self.proposed_breaks or []:
+            start = parse_datetime(item.get("start") or "")
+            end = parse_datetime(item.get("end") or "")
+            if start and end:
+                periods.append({"start": start, "end": end, "duration": end - start})
+        periods.sort(key=lambda item: item["start"])
+        return periods
+
+    @property
+    def proposed_break_total(self) -> timedelta:
+        return sum(
+            (period["duration"] for period in self.proposed_break_periods),
+            timedelta(),
+        )
