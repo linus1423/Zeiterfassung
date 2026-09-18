@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block content %}
+<h1>{{ group.name }}</h1>
+{% if is_admin %}
+<p>
+  <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten verwalten</a> ·
+  <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
+</p>
+{% endif %}
+
+<div class="card">
+  <h2>Gerade eingestempelt</h2>
+  {% if currently_working %}
+    <table>
+      {% for entry in currently_working %}
+        <tr>
+          <td>{{ entry.user.full_name }}</td>
+          <td>{{ entry.activity.name|default:"-" }}</td>
+          <td>seit {{ entry.start|time:"H:i" }}</td>
+          <td>{% if entry.is_on_break %}<span class="badge pending">in Pause</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">Gerade arbeitet niemand.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <form method="get" class="grid two">
+    {{ form.as_p }}
+    <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
+  </form>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <h2>Summe je Person</h2>
+    <table>
+      {% for name, total_user in per_user %}
+        <tr><td>{{ name }}</td><td class="num">{{ total_user|dauer }} h</td></tr>
+      {% empty %}<tr><td class="muted">Keine Daten.</td></tr>{% endfor %}
+      <tr><th>Gesamt</th><th class="num">{{ total|dauer }} h</th></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Summe je Taetigkeit</h2>
+    <table>
+      {% for name, total_activity in per_activity %}
+        <tr><td>{{ name }}</td><td class="num">{{ total_activity|dauer }} h</td></tr>
+      {% empty %}<tr><td class="muted">Keine Daten.</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Eintraege ({{ entry_count }})</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Datum</th><th>Person</th><th>Taetigkeit</th><th>Beginn</th><th>Ende</th><th class="num">Arbeitszeit</th></tr>
+      {% for entry in entries %}
+        <tr>
+          <td>{{ entry.start|date:"d.m.Y" }}</td>
+          <td>{{ entry.user.full_name }}</td>
+          <td>{{ entry.activity.name|default:"-" }}</td>
+          <td>{{ entry.start|time:"H:i" }}</td>
+          <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}laeuft{% endif %}</td>
+          <td class="num">{{ entry.duration|dauer }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="muted">Keine Eintraege im Zeitraum.</td></tr>{% endfor %}
+    </table>
+  </div>
+  {% if entry_count > 200 %}<p class="help">Es werden die neuesten 200 Eintraege angezeigt. Der vollstaendige Zeitraum steht im Export.</p>{% endif %}
+</div>
+{% endblock %}

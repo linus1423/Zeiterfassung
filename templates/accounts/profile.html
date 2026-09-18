@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Mein Profil{% endblock %}
+{% block content %}
+<h1>Mein Profil</h1>
+<div class="card">
+  <table>
+    <tr><th>Name</th><td>{{ user.full_name }}</td></tr>
+    <tr><th>E-Mail</th><td>{{ user.email }}</td></tr>
+    <tr><th>Personalnummer</th><td>{{ user.personnel_number|default:"nicht hinterlegt" }}</td></tr>
+    <tr><th>Buchhaltung</th><td>{% if user.is_accounting %}ja{% else %}nein{% endif %}</td></tr>
+  </table>
+  <p class="help">Diese Angaben pflegt ein Admin. Name und E-Mail kommen aus der Anmeldung.</p>
+</div>
+<div class="card">
+  <h2>Meine Gruppen</h2>
+  {% if memberships %}
+    <table>
+      <tr><th>Gruppe</th><th>Rolle</th><th>Mitglied seit</th></tr>
+      {% for membership in memberships %}
+        <tr>
+          <td>{{ membership.group.name }}</td>
+          <td>{{ membership.get_role_display }}</td>
+          <td>{{ membership.joined_at|date:"d.m.Y" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Du bist noch keiner Gruppe zugeordnet. Ein Admin muss dich hinzufuegen.</p>
+  {% endif %}
+</div>
+{% endblock %}

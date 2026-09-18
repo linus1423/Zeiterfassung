@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Gruppen{% endblock %}
+{% block content %}
+<h1>Gruppen</h1>
+<div class="card">
+  {% if groups %}
+    <table>
+      <tr><th>Gruppe</th><th>Kostenstelle</th><th class="num">Mitglieder</th><th></th></tr>
+      {% for group in groups %}
+        <tr>
+          <td><a href="{% url 'groups:detail' group.pk %}">{{ group.name }}</a></td>
+          <td>{{ group.cost_center|default:"-" }}</td>
+          <td class="num">{{ group.member_count }}</td>
+          <td>
+            <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten</a> ·
+            <a href="{% url 'groups:members' group.pk %}">Mitglieder</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">Du verwaltest zurzeit keine Gruppe.</p>
+  {% endif %}
+</div>
+{% endblock %}

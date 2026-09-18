@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Korrektur beantragen{% endblock %}
+{% block content %}
+<h1>{% if entry %}Korrektur beantragen{% else %}Zeit nachtragen{% endif %}</h1>
+{% if entry %}
+<div class="card">
+  <h2>Bisher erfasst</h2>
+  <p>
+    {{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }},
+    {{ entry.group.name }}{% if entry.activity %} · {{ entry.activity.name }}{% endif %}
+  </p>
+  <p>
+    <a href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Loeschung beantragen</a>
+  </p>
+</div>
+{% endif %}
+<div class="card">
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Antrag stellen</button>
+      <a class="button" href="{% url 'tracking:my_entries' %}">Abbrechen</a>
+    </div>
+  </form>
+  <p class="help">Ein Admin deiner Gruppe entscheidet ueber den Antrag. Bis dahin bleibt die erfasste Zeit unveraendert.</p>
+</div>
+{% endblock %}

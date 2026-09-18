@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}Meine Zeiten{% endblock %}
+{% block content %}
+<h1>Meine Zeiten</h1>
+
+<div class="card">
+  <form method="get" class="grid two">
+    {{ form.as_p }}
+    <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}</h2>
+  <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden)</p>
+  {% if entries %}
+    <div class="table-scroll">
+      <table>
+        <tr>
+          <th>Datum</th><th>Gruppe</th><th>Taetigkeit</th><th>Beginn</th><th>Ende</th>
+          <th class="num">Pause</th><th class="num">Arbeitszeit</th><th></th>
+        </tr>
+        {% for entry in entries %}
+          <tr>
+            <td>{{ entry.start|date:"d.m.Y" }}</td>
+            <td>{{ entry.group.name }}</td>
+            <td>{{ entry.activity.name|default:"-" }}</td>
+            <td>{{ entry.start|time:"H:i" }}</td>
+            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}laeuft{% endif %}</td>
+            <td class="num">{{ entry.break_duration|dauer }}</td>
+            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollstaendig</span>{% endif %}</td>
+            <td>
+              {% if entry.end %}
+                <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">In diesem Zeitraum wurde nichts erfasst.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Tagessummen</h2>
+  <table>
+    {% for day, total_day in by_day %}
+      <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
+    {% empty %}
+      <tr><td class="muted">Keine Daten.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

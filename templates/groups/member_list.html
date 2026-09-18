@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Mitglieder{% endblock %}
+{% block content %}
+<h1>Mitglieder von {{ group.name }}</h1>
+<div class="card">
+  <table>
+    <tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th></th></tr>
+    {% for membership in memberships %}
+      <tr>
+        <td>{{ membership.user.full_name }}</td>
+        <td>{{ membership.user.email }}</td>
+        <td>{{ membership.get_role_display }}</td>
+        <td>
+          <form method="post" action="{% url 'groups:member_role' group.pk membership.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit">{% if membership.is_admin %}Adminrechte entziehen{% else %}Zum Admin machen{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'groups:member_remove' group.pk membership.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="danger">Entfernen</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="4" class="muted">Noch keine Mitglieder.</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="card">
+  <h2>Mitglied hinzufuegen</h2>
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions"><button class="primary" type="submit">Hinzufuegen</button></div>
+  </form>
+  <p class="help">Konten entstehen beim ersten Login. Wer sich noch nie angemeldet hat, kann noch nicht zugeordnet werden.</p>
+</div>
+{% endblock %}
