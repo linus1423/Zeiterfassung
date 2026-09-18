@@ -114,6 +114,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   border: 1px solid var(--line);
   color: var(--muted);
 }
+.badge.count {
+  border-color: var(--warn);
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
+}
 .badge.pending { border-color: var(--warn); color: var(--warn); }
 .badge.approved { border-color: var(--ok); color: var(--ok); }
 .badge.rejected { border-color: var(--bad); color: var(--bad); }
@@ -125,3 +130,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .muted { color: var(--muted); }
 .inline { display: inline; }
+
+table.breaks th { font-weight: 600; }
+table.breaks input { width: 100%; }

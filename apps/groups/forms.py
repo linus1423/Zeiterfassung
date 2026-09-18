@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import Activity, GroupMembership
+from .models import Activity, Group, GroupMembership
+from .periods import MAX_MONTH_START_DAY
 
 User = get_user_model()
 
@@ -41,3 +42,25 @@ class MembershipForm(forms.Form):
             raise forms.ValidationError("Dieser Nutzer ist bereits in der Gruppe.")
         self.cleaned_user = user
         return email
+
+
+class GroupSettingsForm(forms.ModelForm):
+    """Einstellungen, die ein Admin der Gruppe selbst pflegen darf."""
+
+    class Meta:
+        model = Group
+        fields = ["month_start_day", "cost_center", "idp_identifier"]
+        widgets = {
+            "month_start_day": forms.NumberInput(
+                attrs={"min": 1, "max": MAX_MONTH_START_DAY, "step": 1}
+            )
+        }
+
+
+class ClosePeriodForm(forms.Form):
+    """Abschluss eines Zeitraums, identifiziert ueber seinen ersten Tag."""
+
+    period_start = forms.DateField(widget=forms.HiddenInput())
+    note = forms.CharField(
+        label="Bemerkung", required=False, widget=forms.Textarea(attrs={"rows": 2})
+    )

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load zeit %}
 {% block title %}Antrag entscheiden{% endblock %}
 {% block content %}
 <h1>Antrag von {{ correction.requested_by.full_name }}</h1>
@@ -26,7 +27,21 @@
         {{ correction.group.name }}
         {% if correction.proposed_activity %} · {{ correction.proposed_activity.name }}{% endif %}
       </p>
-      {% if correction.proposed_breaks %}<p class="help">Mit Pause laut Antrag.</p>{% endif %}
+      {% if correction.proposed_break_periods %}
+        <h3>Beantragte Pausen</h3>
+        <table>
+          {% for pause in correction.proposed_break_periods %}
+            <tr>
+              <td>{{ pause.start|date:"d.m.Y H:i" }}</td>
+              <td>bis {{ pause.end|date:"H:i" }}</td>
+              <td class="num">{{ pause.duration|dauer }}</td>
+            </tr>
+          {% endfor %}
+          <tr><th>Summe</th><th></th><th class="num">{{ correction.proposed_break_total|dauer }}</th></tr>
+        </table>
+      {% else %}
+        <p class="help">Keine Pause beantragt.</p>
+      {% endif %}
     {% endif %}
   </div>
 </div>
@@ -34,6 +49,15 @@
   <h2>Begruendung des Antragstellers</h2>
   <p>{{ correction.reason|linebreaksbr }}</p>
 </div>
+{% if period_lock %}
+<div class="card">
+  <p>
+    Der Zeitraum {{ period_lock.period.label }} ist seit dem
+    {{ period_lock.closed_at|date:"d.m.Y" }} abgeschlossen. Dieser Antrag kann nicht
+    mehr genehmigt werden; ein System-Admin muesste den Abschluss erst wieder oeffnen.
+  </p>
+</div>
+{% endif %}
 <div class="card">
   {% if may_decide %}
     <form method="post">{% csrf_token %}{{ form.as_p }}

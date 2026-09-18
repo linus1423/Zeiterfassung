@@ -1,0 +1,11 @@
+Hallo,
+
+{{ requester.full_name }} hat fuer die Gruppe {{ group.name }} eine Korrektur beantragt.
+
+Art: {{ correction.get_kind_display }}
+{% if correction.proposed_start %}Gewuenscht: {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"d.m.Y H:i" }}
+{% endif %}Begruendung: {{ correction.reason }}
+
+Entscheiden: {{ inbox_url }}
+
+Diese Nachricht kommt von der Zeiterfassung, eine Antwort darauf liest niemand.

@@ -1,0 +1,12 @@
+Hallo {{ requester.full_name }},
+
+dein Korrekturantrag vom {{ correction.created_at|date:"d.m.Y" }} fuer die Gruppe
+{{ group.name }} wurde {{ correction.get_status_display|lower }}.
+
+Art: {{ correction.get_kind_display }}
+{% if correction.proposed_start %}Beantragt war: {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"d.m.Y H:i" }}
+{% endif %}{% if correction.decision_note %}Begruendung der Entscheidung: {{ correction.decision_note }}
+{% endif %}
+Deine Antraege: {{ mine_url }}
+
+Diese Nachricht kommt von der Zeiterfassung, eine Antwort darauf liest niemand.

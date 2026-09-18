@@ -1,7 +1,10 @@
 # Spezifikation: Zeiterfassung
 
 Stand: 18.09.2026 · Entwurf zur Abstimmung
-Repository: https://github.com/linus1423/Zeiterfassung (aktuell leer, Neuaufbau)
+Repository: https://github.com/linus1423/Zeiterfassung
+
+Stand der Umsetzung: das Grundgerüst steht, die Erweiterungen aus Kapitel 13 sind
+umgesetzt.
 
 Alles hier ist ein Vorschlag. Was nicht eindeutig aus deiner Beschreibung folgt, steht
 in Kapitel 12 als nummerierte Rückfrage mit meiner Empfehlung. Du kannst einfach
@@ -89,6 +92,9 @@ Django sehr aufwendig ist.
 |---|---|---|
 | `name` | Text, eindeutig | z. B. "Werkstatt" |
 | `slug` | Slug | für URLs |
+| `cost_center` | Text, optional | Kostenstelle für den Export |
+| `month_start_day` | Zahl 1 bis 28 | Beginn des Abrechnungszeitraums, 1 = Kalendermonat |
+| `idp_identifier` | Text, optional | Name der Gruppe im Token des Identity-Providers |
 | `is_active` | bool | archivieren statt löschen |
 | `created_at` | Zeitpunkt | |
 
@@ -98,9 +104,23 @@ Django sehr aufwendig ist.
 |---|---|---|
 | `user`, `group` | FK | eindeutig zusammen |
 | `role` | Auswahl | `member` oder `admin` |
+| `source` | Auswahl | `manual` (im Tool gepflegt) oder `idp` (aus dem Token) |
 | `joined_at` | Zeitpunkt | |
 
 Ein Nutzer kann in mehreren Gruppen sein (siehe Rückfrage 3).
+
+**PeriodLock** (Abschluss eines Abrechnungszeitraums)
+
+| Feld | Typ | Bemerkung |
+|---|---|---|
+| `group` | FK | ein Abschluss gilt für eine Gruppe |
+| `period_start`, `period_end` | Datum | Zeitraum einschließlich, eindeutig je Gruppe |
+| `closed_by` | FK, optional | wer abgeschlossen hat |
+| `closed_at` | Zeitpunkt | |
+| `note` | Text, optional | |
+
+Solange ein Abschluss besteht, nimmt das System für diesen Zeitraum keine Korrekturen
+mehr an. Aufheben darf ihn nur ein System-Admin.
 
 **Activity** (Tätigkeit)
 
@@ -312,7 +332,7 @@ Vor dem Export wird gewählt, was eine Zeile bedeutet:
 |---|---|
 | `entry` | ein einzelner Zeiteintrag (Rohdaten) |
 | `user_day` | ein Nutzer an einem Tag |
-| `user_month` | ein Nutzer in einem Monat |
+| `user_month` | ein Nutzer in einem Abrechnungszeitraum (je Gruppen-Zyklus) |
 | `activity` | eine Tätigkeit im gewählten Zeitraum |
 
 ### Wählbare Spalten
@@ -520,3 +540,62 @@ denen du es anders willst.
 25. **Darf die Buchhaltung auch Namen sehen, oder soll es eine anonymisierte Ansicht
     geben?**
     *Empfehlung: Namen sehen, das ist für eine Abrechnung nötig.*
+
+---
+
+## 13. Umgesetzte Erweiterungen (18.09.2026)
+
+Diese Punkte lagen als Issues im Repository und sind jetzt umgesetzt. Wo eine Rückfrage
+aus Kapitel 12 dahinter steht, gilt die dort genannte Empfehlung weiter als Vorgabe,
+ist aber nun konfigurierbar oder ausgebaut.
+
+**Mehrere Pausen je Korrekturantrag** (Issue 2). Das Antragsformular hat ein Formular
+je Pause, höchstens sechs. Die Pausen müssen innerhalb der beantragten Arbeitszeit
+liegen und dürfen sich nicht überschneiden; leere Zeilen werden verworfen. Die
+Entscheidungsansicht zeigt jede beantragte Pause einzeln mit Summe.
+
+**Benachrichtigungen** (Issue 3, Rückfrage 9). Ohne Mailserver zeigt die Navigation
+Zähler: offene Anträge für Admins, neu entschiedene eigene Anträge für Antragstellende.
+Der Zähler geht aus, sobald der Antragsteller seine Anträge ansieht. Mit
+`CORRECTION_EMAILS_ENABLED=true` kommt zusätzlich eine Mail an die Admins bei einem
+neuen Antrag und an den Antragsteller bei der Entscheidung, samt Begründung. Versandt
+wird nach dem Commit; ein nicht erreichbarer Mailserver verhindert den Vorgang nicht.
+
+**Gruppen aus den Claims des Identity-Providers** (Issue 4, Rückfrage 2). Aus, solange
+`OIDC_GROUP_SYNC` nicht gesetzt ist. Eingeschaltet liest das Tool beim Login den Claim
+aus `OIDC_GROUPS_CLAIM` und vergleicht die Werte mit Kurzname, Name und
+`idp_identifier` der Gruppe; bei verschachtelten Keycloak-Gruppen passt auch das letzte
+Pfadstück. Im Tool gepflegte Mitgliedschaften bleiben unangetastet, der Provider legt
+eigene an (`source=idp`) und ändert auch nur diese. `OIDC_GROUP_SYNC_MODE=replace`
+entzieht diese wieder, `add` ergänzt nur. Die Admin-Rolle kommt nur aus dem Token, wenn
+`OIDC_ADMIN_GROUPS_CLAIM` oder `OIDC_ADMIN_GROUP_SUFFIX` gesetzt ist; der letzte Admin
+einer Gruppe verliert die Rolle nie automatisch.
+
+**Monatsabschluss** (Issue 5, Rückfrage 11). Ein Admin der Gruppe schließt einen
+abgelaufenen Abrechnungszeitraum ab. Danach lehnt das System neue Korrekturanträge für
+diesen Zeitraum ab, und auch schon gestellte Anträge lassen sich nicht mehr genehmigen.
+Der laufende Zeitraum kann nicht abgeschlossen werden. Wieder öffnen darf nur ein
+System-Admin; beides steht im Protokoll. Die Auswertung zeigt je Gruppe den letzten
+Abschluss und je Zeile, ob sie in einem abgeschlossenen Zeitraum liegt.
+
+**Aufbewahrung und Anonymisierung** (Issue 6, Rückfrage 18). Frist:
+`DATA_RETENTION_MONTHS`, Vorgabe 24 Monate. Das Kommando
+`anonymize_expired_users` zeigt betroffene Konten an und anonymisiert sie erst mit
+`--apply`: Name, E-Mail und Personalnummer werden ersetzt, das Konto deaktiviert, die
+Verknüpfung zum Identity-Provider und die Mitgliedschaften entfernt. Die Zeiteinträge
+bleiben für die Statistik erhalten, sind aber keiner Person mehr zuzuordnen. Angefasst
+werden nur Konten ohne Zeiten, ohne Anmeldung und ohne offenen Antrag innerhalb der
+Frist; neue Konten bleiben also unberührt.
+
+**Vergessene Stempelungen planmäßig beenden** (Issue 7). Das Compose-Setup hat einen
+Dienst `scheduler`, der `close_stale_entries` in einer Schleife aufruft, standardmäßig
+jede Stunde (`SCHEDULER_INTERVAL_SECONDS`). Ohne Compose übernimmt das ein Cronjob oder
+ein systemd-Timer.
+
+**Eigener Abrechnungszeitraum je Gruppe** (Issue 8). `month_start_day` der Gruppe legt
+fest, an welchem Tag ein Zeitraum beginnt, höchstens am 28., damit es den Tag in jedem
+Monat gibt. 1 bedeutet Kalendermonat. Der Zyklus gilt für die Vorbelegung der
+Gruppenansicht, den Abschluss und die Verdichtung "Je Nutzer und Monat": zwei Tage im
+selben Kalendermonat können in verschiedenen Abrechnungszeiträumen liegen und werden
+dann getrennt ausgewiesen. Der Export hat dafür die Spalten Abrechnungszeitraum,
+Zeitraum von, Zeitraum bis und Abgeschlossen.

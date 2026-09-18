@@ -82,4 +82,25 @@
   {% endif %}
 </div>
 {% endif %}
+<div class="card">
+  <h2>Abgeschlossene Zeitraeume</h2>
+  {% if closed_periods %}
+    <table>
+      <tr><th>Gruppe</th><th>Letzter Abschluss</th><th>Abgeschlossen am</th></tr>
+      {% for lock in closed_periods %}
+        <tr>
+          <td>{{ lock.group.name }}</td>
+          <td>{{ lock.period_start|date:"d.m.Y" }} bis {{ lock.period_end|date:"d.m.Y" }}</td>
+          <td>{{ lock.closed_at|date:"d.m.Y" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="help">
+      Fuer abgeschlossene Zeitraeume nimmt das System keine Korrekturen mehr an, die
+      Zahlen bleiben also wie exportiert. Die Spalte "Abgeschlossen" zeigt das je Zeile.
+    </p>
+  {% else %}
+    <p class="muted">Bisher ist kein Zeitraum abgeschlossen.</p>
+  {% endif %}
+</div>
 {% endblock %}
