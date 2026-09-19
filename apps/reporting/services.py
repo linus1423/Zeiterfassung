@@ -26,6 +26,11 @@ from .columns import DATE, HHMM, HOURS, NUMBER, TEXT, TIME, Column
 WEEKDAYS = WEEKDAY_NAMES
 MONTHS = MONTH_NAMES
 
+# Mit einem dieser Zeichen beginnt fuer Excel eine Formel. Die Werte kommen
+# zum Teil aus freien Textfeldern (Notiz, Gruppen- und Taetigkeitsname), also
+# werden sie in beiden Formaten entschaerft.
+_RISKY_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
 
 def query_entries(
     user,
@@ -205,6 +210,18 @@ def total_row(rows: list[dict], columns: list[Column]) -> list:
 # --- Excel ------------------------------------------------------------------
 
 
+def _force_text_cells(cells) -> None:
+    """Haelt Werte aus Textfeldern Text, auch wenn sie wie eine Formel aussehen.
+
+    openpyxl macht aus einem Text mit fuehrendem Gleichheitszeichen eine
+    Formel. Die Notiz eines Zeiteintrags ist frei waehlbar, also wuerde sie
+    sonst in der Datei der Buchhaltung ausgefuehrt.
+    """
+    for cell in cells:
+        if isinstance(cell.value, str) and cell.value[:1] in _RISKY_PREFIXES:
+            cell.data_type = "s"
+
+
 def to_xlsx(rows: list[dict], columns: list[Column], *, title: str = "Zeiten") -> bytes:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
@@ -221,12 +238,14 @@ def to_xlsx(rows: list[dict], columns: list[Column], *, title: str = "Zeiten") -
 
     for row in rows:
         sheet.append([cell_value(row, column) for column in columns])
+        _force_text_cells(sheet[sheet.max_row])
 
     if rows:
         summary = total_row(rows, columns)
         sheet.append(summary)
         for cell in sheet[sheet.max_row]:
             cell.font = Font(bold=True)
+        _force_text_cells(sheet[sheet.max_row])
 
     for index, column in enumerate(columns, start=1):
         letter = get_column_letter(index)
@@ -253,8 +272,6 @@ def to_xlsx(rows: list[dict], columns: list[Column], *, title: str = "Zeiten") -
 
 
 # --- CSV --------------------------------------------------------------------
-
-_RISKY_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def csv_safe(value: str) -> str:
