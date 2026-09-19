@@ -68,10 +68,13 @@ class User(AbstractUser):
 
     @property
     def is_any_group_admin(self) -> bool:
+        """Darf der Nutzer irgendeine Gruppe verwalten?
+
+        Ein System-Admin darf das immer, auch solange es noch gar keine Gruppe
+        gibt: sonst fuehrte kein Weg zum Anlegen der ersten.
+        """
         from apps.groups.models import GroupMembership
 
         if self.is_superuser:
-            from apps.groups.models import Group
-
-            return Group.objects.filter(is_active=True).exists()
+            return True
         return self.memberships().filter(role=GroupMembership.Role.ADMIN).exists()
