@@ -2,17 +2,19 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.audit.models import AuditLog, log
 from apps.tracking.forms import PeriodForm
 from apps.tracking.models import BreakEntry, TimeEntry
 from apps.tracking.utils import day_bounds
 
 from . import closing
-from .forms import ActivityForm, ClosePeriodForm, GroupSettingsForm, MembershipForm
+from .forms import ActivityForm, ClosePeriodForm, GroupForm, GroupSettingsForm, MembershipForm
 from .models import Activity, GroupMembership, PeriodLock
 from .periods import period_for
 from .permissions import readable_groups, require_group_admin, require_group_read
@@ -28,6 +30,30 @@ def group_list(request):
         for group in groups
     ]
     return render(request, "groups/group_list.html", {"rows": rows})
+
+
+@login_required
+def group_create(request):
+    """Eine neue Gruppe anlegen. Nur fuer System-Admins."""
+    if not request.user.is_superuser:
+        raise PermissionDenied("Nur System-Admins duerfen Gruppen anlegen.")
+
+    form = GroupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        group = form.save()
+        log(
+            AuditLog.Action.GROUP_CREATED,
+            actor=request.user,
+            target=group,
+            group=group,
+            note=f"Gruppe {group.name} angelegt.",
+        )
+        messages.success(
+            request, f"Gruppe {group.name} angelegt. Jetzt fehlen noch die Mitglieder."
+        )
+        return redirect("groups:members", group_id=group.pk)
+
+    return render(request, "groups/group_form.html", {"form": form})
 
 
 @login_required

@@ -30,8 +30,9 @@ python manage.py runserver
 ```
 
 Ohne konfigurierten Identity-Provider gibt es auf der Anmeldeseite keinen Knopf.
-Der System-Admin meldet sich dann unter `/admin/` mit Passwort an, legt Gruppen
-und Mitglieder an und richtet die Anmeldung ein.
+Der System-Admin meldet sich dann unter `/admin/` mit Passwort an und richtet die
+Anmeldung ein. Gruppen legt er danach unter Gruppen > Neue Gruppe an, Mitglieder
+kommen dazu, sobald sie sich einmal angemeldet haben.
 
 ## Anmeldung einrichten
 

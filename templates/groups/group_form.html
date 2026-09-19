@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Neue Gruppe{% endblock %}
+{% block content %}
+<h1>Neue Gruppe anlegen</h1>
+<div class="card">
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Anlegen</button>
+      <a class="button" href="{% url 'groups:list' %}">Abbrechen</a>
+    </div>
+  </form>
+  <p class="help">
+    Danach kommen die Mitglieder dazu. Die Gruppe braucht mindestens einen Admin,
+    der die Taetigkeiten pflegt und die Korrekturantraege entscheidet.
+  </p>
+</div>
+{% endblock %}

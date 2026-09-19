@@ -26,6 +26,7 @@ class AuditLog(models.Model):
         PERIOD_REOPENED = "period_reopened", "Zeitraum wieder geoeffnet"
         USER_ANONYMIZED = "user_anonymized", "Konto anonymisiert"
         MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
+        GROUP_CREATED = "group_created", "Gruppe angelegt"
         NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
 
     actor = models.ForeignKey(

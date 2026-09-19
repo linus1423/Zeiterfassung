@@ -2,6 +2,9 @@
 {% block title %}Gruppen{% endblock %}
 {% block content %}
 <h1>Gruppen</h1>
+{% if nav.is_superuser %}
+<p><a class="button primary" href="{% url 'groups:create' %}">Neue Gruppe</a></p>
+{% endif %}
 <div class="card">
   {% if rows %}
     <table>
@@ -27,7 +30,9 @@
       {% endfor %}
     </table>
   {% else %}
-    <p class="muted">Du verwaltest zurzeit keine Gruppe.</p>
+    <p class="muted">
+      {% if nav.is_superuser %}Es gibt noch keine Gruppe.{% else %}Du verwaltest zurzeit keine Gruppe.{% endif %}
+    </p>
   {% endif %}
 </div>
 {% endblock %}
