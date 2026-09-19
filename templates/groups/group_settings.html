@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen: {{ group.name }}{% endblock %}
+{% block content %}
+<h1>Einstellungen der Gruppe {{ group.name }}</h1>
+<div class="card">
+  <form method="post">{% csrf_token %}{{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Speichern</button>
+      <a class="button" href="{% url 'groups:detail' group.pk %}">Zurueck</a>
+    </div>
+  </form>
+  <p class="help">
+    Aktueller Abrechnungszeitraum: {{ period.label }}
+    ({{ period.start|date:"d.m.Y" }} bis {{ period.end|date:"d.m.Y" }}).
+    Der Zyklus gilt fuer Auswertung und Abschluss dieser Gruppe. Bereits
+    abgeschlossene Zeitraeume behalten ihre Tage; sie bleiben also gesperrt,
+    auch wenn sie danach nicht mehr auf den neuen Zyklus passen.
+  </p>
+</div>
+{% endblock %}

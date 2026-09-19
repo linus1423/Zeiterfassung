@@ -11,8 +11,10 @@ from apps.tracking.forms import PeriodForm
 from apps.tracking.models import BreakEntry, TimeEntry
 from apps.tracking.utils import day_bounds
 
-from .forms import ActivityForm, MembershipForm
-from .models import Activity, GroupMembership
+from . import closing
+from .forms import ActivityForm, ClosePeriodForm, GroupSettingsForm, MembershipForm
+from .models import Activity, GroupMembership, PeriodLock
+from .periods import period_for
 from .permissions import readable_groups, require_group_admin, require_group_read
 
 
@@ -20,7 +22,12 @@ from .permissions import readable_groups, require_group_admin, require_group_rea
 def group_list(request):
     """Gruppen, die der Nutzer auswerten darf."""
     groups = readable_groups(request.user).annotate(member_count=Count("memberships"))
-    return render(request, "groups/group_list.html", {"groups": groups})
+    admin_ids = set(request.user.admin_group_ids())
+    rows = [
+        {"group": group, "is_admin": request.user.is_superuser or group.pk in admin_ids}
+        for group in groups
+    ]
+    return render(request, "groups/group_list.html", {"rows": rows})
 
 
 @login_required
@@ -29,8 +36,9 @@ def group_detail(request, group_id):
     group = require_group_read(request.user, group_id)
 
     today = timezone.localdate()
-    form = PeriodForm(request.GET or {"start": today.replace(day=1), "end": today})
-    start_day, end_day = today.replace(day=1), today
+    period = group.current_period(today)
+    form = PeriodForm(request.GET or {"start": period.start, "end": today})
+    start_day, end_day = period.start, today
     if form.is_valid():
         start_day, end_day = form.cleaned_data["start"], form.cleaned_data["end"]
 
@@ -66,6 +74,8 @@ def group_detail(request, group_id):
         "per_activity": sorted(per_activity.items()),
         "total": sum((entry.duration for entry in entries), timedelta()),
         "is_admin": request.user.is_group_admin(group),
+        "period": period,
+        "period_closed": closing.is_closed(group, end_day),
     }
     return render(request, "groups/group_detail.html", context)
 
@@ -176,3 +186,69 @@ def member_remove(request, group_id, membership_id):
     membership.delete()
     messages.success(request, f"{user} wurde aus der Gruppe entfernt.")
     return redirect("groups:members", group_id=group.pk)
+
+
+@login_required
+def group_settings(request, group_id):
+    """Einstellungen der Gruppe, zurzeit der Abrechnungszyklus (Issue 8)."""
+    group = require_group_admin(request.user, group_id)
+    form = GroupSettingsForm(request.POST or None, instance=group)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Einstellungen gespeichert.")
+        return redirect("groups:settings", group_id=group.pk)
+
+    return render(
+        request,
+        "groups/group_settings.html",
+        {"group": group, "form": form, "period": group.current_period()},
+    )
+
+
+@login_required
+def period_list(request, group_id):
+    """Abrechnungszeitraeume der Gruppe abschliessen und wieder oeffnen (Issue 5)."""
+    group = require_group_read(request.user, group_id)
+
+    if request.method == "POST":
+        _handle_period_post(request, group)
+        return redirect("groups:periods", group_id=group.pk)
+
+    return render(
+        request,
+        "groups/period_list.html",
+        {
+            "group": group,
+            "rows": closing.period_overview(group),
+            "form": ClosePeriodForm(),
+            "may_close": closing.may_close(request.user, group),
+            "may_reopen": closing.may_reopen(request.user),
+        },
+    )
+
+
+def _handle_period_post(request, group) -> None:
+    action = request.POST.get("action")
+    try:
+        if action == "close":
+            form = ClosePeriodForm(request.POST)
+            if not form.is_valid():
+                messages.error(request, "Der Zeitraum wurde nicht erkannt.")
+                return
+            period = period_for(form.cleaned_data["period_start"], group.month_start_day)
+            closing.close_period(group, period, request.user, form.cleaned_data["note"])
+            messages.success(request, f"{period.label} ist abgeschlossen.")
+        elif action == "reopen":
+            lock_id = request.POST.get("lock") or ""
+            if not lock_id.isdigit():
+                messages.error(request, "Der Abschluss wurde nicht erkannt.")
+                return
+            lock = get_object_or_404(PeriodLock, pk=int(lock_id), group=group)
+            label = lock.period.label
+            closing.reopen_period(lock, request.user)
+            messages.success(request, f"{label} ist wieder offen.")
+        else:
+            messages.error(request, "Unbekannte Aktion.")
+    except closing.ClosingError as exc:
+        messages.error(request, str(exc))

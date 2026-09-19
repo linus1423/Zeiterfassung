@@ -19,6 +19,16 @@ env = environ.Env(
     DJANGO_BEHIND_PROXY=(bool, False),
     MAX_OPEN_ENTRY_HOURS=(int, 16),
     STATUTORY_BREAK_WARNINGS=(bool, True),
+    DATA_RETENTION_MONTHS=(int, 24),
+    CORRECTION_EMAILS_ENABLED=(bool, False),
+    DJANGO_EMAIL_PORT=(int, 587),
+    DJANGO_EMAIL_USE_TLS=(bool, True),
+    DJANGO_EMAIL_TIMEOUT=(int, 10),
+    OIDC_GROUP_SYNC=(bool, False),
+    OIDC_GROUPS_CLAIM=(str, "groups"),
+    OIDC_GROUP_SYNC_MODE=(str, "add"),
+    OIDC_ADMIN_GROUPS_CLAIM=(str, ""),
+    OIDC_ADMIN_GROUP_SUFFIX=(str, ""),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -221,12 +231,52 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# --- Gruppen aus dem Identity-Provider (Issue 4) ---------------------------
+# Standardmaessig aus: die Mitgliedschaften werden im Tool gepflegt. Wer die
+# Gruppen aus dem Token uebernehmen will, schaltet das hier ein.
+OIDC_GROUP_SYNC = env("OIDC_GROUP_SYNC")
+OIDC_GROUPS_CLAIM = env("OIDC_GROUPS_CLAIM")
+# "add" ergaenzt nur, "replace" entzieht auch wieder. Entzogen werden immer
+# nur Mitgliedschaften, die aus dem Provider stammen.
+OIDC_GROUP_SYNC_MODE = env("OIDC_GROUP_SYNC_MODE")
+if OIDC_GROUP_SYNC_MODE not in ("add", "replace"):
+    raise ImproperlyConfigured("OIDC_GROUP_SYNC_MODE must be either 'add' or 'replace'.")
+# Leer bedeutet: die Admin-Rolle wird im Tool vergeben, nicht aus dem Token.
+OIDC_ADMIN_GROUPS_CLAIM = env("OIDC_ADMIN_GROUPS_CLAIM")
+# Alternative zum eigenen Claim: eine Gruppe "werkstatt-admins" macht zum
+# Admin der Gruppe "werkstatt".
+OIDC_ADMIN_GROUP_SUFFIX = env("OIDC_ADMIN_GROUP_SUFFIX")
+
+# --- Benachrichtigungen (Issue 3) ------------------------------------------
+# Ohne Mailserver bleibt es beim Zaehler in der Navigation.
+CORRECTION_EMAILS_ENABLED = env("CORRECTION_EMAILS_ENABLED")
+SITE_BASE_URL = env("SITE_BASE_URL", default="")
+DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="zeiterfassung@localhost")
+EMAIL_BACKEND = env(
+    "DJANGO_EMAIL_BACKEND",
+    default=(
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    ),
+)
+EMAIL_HOST = env("DJANGO_EMAIL_HOST", default="localhost")
+EMAIL_PORT = env("DJANGO_EMAIL_PORT")
+EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env("DJANGO_EMAIL_USE_TLS")
+# Ein haengender Mailserver darf keinen Request blockieren.
+EMAIL_TIMEOUT = env("DJANGO_EMAIL_TIMEOUT")
+
 # --- Fachliche Einstellungen ------------------------------------------------
 # Nach dieser Dauer wird ein vergessener Zeiteintrag automatisch beendet und
 # als unvollstaendig markiert (Kapitel 4 der Spezifikation).
 MAX_OPEN_ENTRY_HOURS = env("MAX_OPEN_ENTRY_HOURS")
 # Hinweis auf gesetzliche Pausen, ohne automatischen Abzug (Rueckfrage 7).
 STATUTORY_BREAK_WARNINGS = env("STATUTORY_BREAK_WARNINGS")
+# Aufbewahrungsfrist fuer personenbezogene Zeitdaten in Monaten (Issue 6).
+# Zwei Jahre entsprechen der ueblichen Frist fuer Arbeitszeitnachweise.
+DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

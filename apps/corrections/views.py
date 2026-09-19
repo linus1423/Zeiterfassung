@@ -2,23 +2,33 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.audit.models import AuditLog, log
+from apps.groups import closing
 from apps.tracking.models import TimeEntry
 
 from . import services
-from .forms import CorrectionRequestForm, DecisionForm, DeleteRequestForm
+from .forms import (
+    CorrectionRequestForm,
+    DecisionForm,
+    DeleteRequestForm,
+    break_formset,
+    validate_breaks_within,
+)
 from .models import CorrectionRequest
 
 
 @login_required
 def my_requests(request):
-    requests = (
+    requests = list(
         CorrectionRequest.objects.filter(requested_by=request.user)
         .select_related("group", "time_entry", "proposed_activity", "decided_by")
         .order_by("-created_at")
     )
+    # Wer seine Antraege ansieht, hat die Entscheidungen gesehen; damit geht
+    # der Zaehler in der Navigation wieder aus.
+    services.mark_decisions_seen(request.user)
     return render(request, "corrections/my_requests.html", {"requests": requests})
 
 
@@ -28,7 +38,8 @@ def request_create(request, entry_id=None):
     entry = None
     if entry_id is not None:
         entry = get_object_or_404(
-            TimeEntry.objects.select_related("group", "activity"), pk=entry_id
+            TimeEntry.objects.select_related("group", "activity").prefetch_related("breaks"),
+            pk=entry_id,
         )
         if entry.user_id != request.user.pk:
             raise PermissionDenied("Du kannst nur eigene Zeiten korrigieren lassen.")
@@ -36,31 +47,42 @@ def request_create(request, entry_id=None):
             messages.error(request, "Ein laufender Eintrag kann nicht korrigiert werden.")
             return redirect("tracking:clock")
 
-    form = CorrectionRequestForm(request.user, request.POST or None, entry=entry)
+    posted = request.POST if request.method == "POST" else None
+    form = CorrectionRequestForm(request.user, posted, entry=entry)
+    breaks = break_formset(posted, entry=entry)
 
-    if request.method == "POST" and form.is_valid():
-        correction = CorrectionRequest.objects.create(
-            time_entry=entry,
-            requested_by=request.user,
-            group=form.cleaned_data["group"],
-            kind=CorrectionRequest.Kind.EDIT if entry else CorrectionRequest.Kind.CREATE,
-            proposed_start=form.cleaned_data["start"],
-            proposed_end=form.cleaned_data["end"],
-            proposed_activity=form.cleaned_data.get("activity"),
-            proposed_breaks=form.proposed_breaks(),
-            reason=form.cleaned_data["reason"],
-        )
-        log(
-            AuditLog.Action.CORRECTION_REQUESTED,
-            actor=request.user,
-            target=correction,
-            group=correction.group,
-            subject=request.user,
-        )
-        messages.success(request, "Antrag gestellt. Ein Admin der Gruppe entscheidet darueber.")
-        return redirect("corrections:mine")
+    if request.method == "POST":
+        valid = form.is_valid() and breaks.is_valid()
+        if valid:
+            valid = validate_breaks_within(
+                breaks, form.cleaned_data["start"], form.cleaned_data["end"]
+            )
+        if valid:
+            try:
+                services.create_request(
+                    requested_by=request.user,
+                    group=form.cleaned_data["group"],
+                    kind=CorrectionRequest.Kind.EDIT if entry else CorrectionRequest.Kind.CREATE,
+                    reason=form.cleaned_data["reason"],
+                    entry=entry,
+                    proposed_start=form.cleaned_data["start"],
+                    proposed_end=form.cleaned_data["end"],
+                    proposed_activity=form.cleaned_data.get("activity"),
+                    proposed_breaks=breaks.breaks(),
+                )
+            except services.CorrectionError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(
+                    request, "Antrag gestellt. Ein Admin der Gruppe entscheidet darueber."
+                )
+                return redirect("corrections:mine")
 
-    return render(request, "corrections/request_form.html", {"form": form, "entry": entry})
+    return render(
+        request,
+        "corrections/request_form.html",
+        {"form": form, "breaks": breaks, "entry": entry},
+    )
 
 
 @login_required
@@ -70,24 +92,30 @@ def request_delete(request, entry_id):
     if entry.user_id != request.user.pk:
         raise PermissionDenied("Du kannst nur eigene Zeiten korrigieren lassen.")
 
+    lock = closing.lock_for(entry.group, timezone.localtime(entry.start).date())
+    if lock is not None:
+        messages.error(
+            request,
+            f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
+            "Korrekturen sind dort nicht mehr moeglich.",
+        )
+        return redirect("tracking:my_entries")
+
     form = DeleteRequestForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        correction = CorrectionRequest.objects.create(
-            time_entry=entry,
-            requested_by=request.user,
-            group=entry.group,
-            kind=CorrectionRequest.Kind.DELETE,
-            reason=form.cleaned_data["reason"],
-        )
-        log(
-            AuditLog.Action.CORRECTION_REQUESTED,
-            actor=request.user,
-            target=correction,
-            group=correction.group,
-            subject=request.user,
-        )
-        messages.success(request, "Antrag auf Loeschung gestellt.")
-        return redirect("corrections:mine")
+        try:
+            services.create_request(
+                requested_by=request.user,
+                group=entry.group,
+                kind=CorrectionRequest.Kind.DELETE,
+                reason=form.cleaned_data["reason"],
+                entry=entry,
+            )
+        except services.CorrectionError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Antrag auf Loeschung gestellt.")
+            return redirect("corrections:mine")
 
     return render(request, "corrections/delete_form.html", {"form": form, "entry": entry})
 
@@ -161,5 +189,6 @@ def decide(request, request_id):
             "correction": correction,
             "form": form,
             "may_decide": services.may_decide(request.user, correction),
+            "period_lock": services.closed_period_lock(correction),
         },
     )

@@ -9,6 +9,9 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from apps.audit.models import AuditLog, log
+from apps.groups.closing import ClosedPeriods
+from apps.groups.models import PeriodLock
+from apps.groups.permissions import readable_groups
 
 from . import services
 from .columns import resolve
@@ -62,7 +65,8 @@ def export_view(request, profile_id=None):
             user_ids=[user.pk for user in form.cleaned_data["users"]],
             activity_ids=[activity.pk for activity in form.cleaned_data["activities"]],
         )
-        rows = services.build_rows(entries, form.cleaned_data["grouping"])
+        closed = ClosedPeriods(readable_groups(request.user).values_list("pk", flat=True))
+        rows = services.build_rows(entries, form.cleaned_data["grouping"], closed)
 
         action = request.POST.get("action", "preview")
         if action == "xlsx":
@@ -84,8 +88,22 @@ def export_view(request, profile_id=None):
         ],
         "row_count": len(rows),
         "preview_limit": PREVIEW_ROWS,
+        "closed_periods": _latest_closed_periods(request.user),
     }
     return render(request, "reporting/export.html", context)
+
+
+def _latest_closed_periods(user):
+    """Der jeweils letzte Abschluss je Gruppe, damit die Buchhaltung ihn sieht."""
+    locks = (
+        PeriodLock.objects.filter(group__in=readable_groups(user))
+        .select_related("group")
+        .order_by("group__name", "-period_start")
+    )
+    latest = {}
+    for lock in locks:
+        latest.setdefault(lock.group_id, lock)
+    return sorted(latest.values(), key=lambda lock: lock.group.name)
 
 
 def _period_label(form) -> str:
