@@ -220,6 +220,12 @@ def create_request(
     proposed_breaks: list[dict] | None = None,
 ) -> CorrectionRequest:
     """Legt einen Antrag an, protokolliert ihn und meldet ihn den Admins."""
+    # Ueber die Gruppe laufen zwei Dinge: wer entscheiden darf und welcher
+    # Abschluss sperrt. Ein bestehender Eintrag gibt sie deshalb vor, sonst
+    # entschiede ein Admin einer fremden Gruppe ueber fremde Zeiten.
+    if entry is not None and entry.group_id != group.pk:
+        raise CorrectionError("Ein bestehender Eintrag bleibt in seiner Gruppe.")
+
     correction = CorrectionRequest(
         time_entry=entry,
         requested_by=requested_by,

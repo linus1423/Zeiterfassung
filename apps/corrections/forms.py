@@ -138,6 +138,14 @@ class CorrectionRequestForm(forms.Form):
             group_id__in=group_ids, is_active=True
         ).select_related("group")
 
+        if entry is not None:
+            # Ein bestehender Eintrag behaelt seine Gruppe: ueber sie laeuft,
+            # wer entscheiden darf und welcher Abschluss sperrt.
+            self.fields["group"].queryset = Group.objects.filter(pk=entry.group_id)
+            self.fields["activity"].queryset = Activity.objects.filter(
+                group_id=entry.group_id, is_active=True
+            ).select_related("group")
+
         if entry is not None and not self.is_bound:
             self.initial.update(
                 {
@@ -157,6 +165,9 @@ class CorrectionRequestForm(forms.Form):
             self.add_error("end", "Das Ende muss nach dem Beginn liegen.")
         if start and start > timezone.now():
             self.add_error("start", "Ein Beginn in der Zukunft ist nicht moeglich.")
+        if self.entry is not None and group and group.pk != self.entry.group_id:
+            self.add_error("group", "Ein bestehender Eintrag bleibt in seiner Gruppe.")
+            group = None
         if activity and group and activity.group_id != group.pk:
             self.add_error("activity", "Diese Taetigkeit gehoert nicht zur gewaehlten Gruppe.")
 
