@@ -139,7 +139,17 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             note="Nachtrag aus Korrekturantrag",
         )
     else:
-        entry = TimeEntry.objects.select_for_update().get(pk=locked.time_entry_id)
+        # Der Eintrag kann zwischen Antrag und Entscheidung verschwunden sein,
+        # etwa durch einen genehmigten Loeschantrag auf denselben Eintrag.
+        entry = (
+            TimeEntry.objects.select_for_update().filter(pk=locked.time_entry_id).first()
+            if locked.time_entry_id
+            else None
+        )
+        if entry is None:
+            raise CorrectionError(
+                "Den Zeiteintrag gibt es nicht mehr. Der Antrag kann nur noch abgelehnt werden."
+            )
         before = _entry_snapshot(entry)
         entry.start = locked.proposed_start or entry.start
         entry.end = locked.proposed_end or entry.end
