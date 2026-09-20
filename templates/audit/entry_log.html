@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}Protokoll eines Zeiteintrags{% endblock %}
+{% block content %}
+<h1>Protokoll eines Zeiteintrags</h1>
+<p>
+  <a href="{% url 'audit:group' group.pk %}">Protokoll der Gruppe</a> ·
+  <a href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a>
+</p>
+
+<div class="card">
+  <h2>Der Eintrag</h2>
+  <p>
+    {{ entry.user.full_name }} · {{ entry.start|date:"d.m.Y H:i" }} bis
+    {% if entry.end %}{{ entry.end|date:"H:i" }}{% else %}läuft{% endif %}
+    {% if entry.activity %} · {{ entry.activity.name }}{% endif %}
+    · {{ entry.duration|dauer }} h
+  </p>
+</div>
+
+<div class="card">
+  <h2>Was damit geschehen ist</h2>
+  {% include "audit/_rows.html" %}
+</div>
+{% endblock %}
