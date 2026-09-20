@@ -216,3 +216,23 @@ def test_the_log_shows_a_changed_break(client, group_admin, group, entry):
     log_entry = AuditLog.objects.filter(action=AuditLog.Action.ENTRY_UPDATED).latest("created_at")
     assert log_entry.changes["vorher"]["breaks"] == []
     assert len(log_entry.changes["nachher"]["breaks"]) == 1
+
+
+def test_a_closed_period_inside_the_entry_blocks_it(group_admin, group, member):
+    """Der Abschluss zählt auch, wenn er zwischen Beginn und Ende liegt."""
+    closed = period_for(timezone.localdate(), group.month_start_day).previous()
+    closing.close_period(group, closed, group_admin, "")
+    start = timezone.make_aware(datetime.combine(closed.start - timedelta(days=5), time(8, 0)))
+    end = timezone.make_aware(datetime.combine(closed.end + timedelta(days=3), time(17, 0)))
+
+    with pytest.raises(entry_editing.EntryEditError) as exc:
+        entry_editing.create_entry(
+            editor=group_admin,
+            user=member,
+            group=group,
+            reason="Nachtrag über mehrere Wochen",
+            start=start,
+            end=end,
+        )
+
+    assert "abgeschlossen" in str(exc.value)

@@ -44,12 +44,24 @@ def is_closed(group: Group, day: date) -> bool:
     return lock_for(group, day) is not None
 
 
-def blocking_lock(group: Group, days: Iterable[date | None]) -> PeriodLock | None:
-    """Der erste Abschluss, der einen der Tage sperrt."""
-    for day in days:
-        if day is None:
+def lock_in_range(group: Group, first: date, last: date) -> PeriodLock | None:
+    """Der erste Abschluss, der einen Tag von first bis last sperrt, beide einschließlich."""
+    return PeriodLock.objects.filter(
+        group=group, period_start__lte=last, period_end__gte=first
+    ).first()
+
+
+def blocking_lock(group: Group, ranges: Iterable[tuple[date, date] | None]) -> PeriodLock | None:
+    """Der erste Abschluss, der einen der Tagesbereiche sperrt.
+
+    Geprüft wird jeder Bereich ganz und nicht nur seine Enden: ein Eintrag
+    kann über Mitternacht laufen, und zwischen seinem ersten und letzten Tag
+    kann ein abgeschlossener Zeitraum liegen.
+    """
+    for entry_range in ranges:
+        if entry_range is None:
             continue
-        lock = lock_for(group, day)
+        lock = lock_in_range(group, *entry_range)
         if lock is not None:
             return lock
     return None

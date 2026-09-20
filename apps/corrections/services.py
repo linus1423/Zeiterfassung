@@ -20,6 +20,7 @@ from apps.tracking.entries import (
     snapshot,
 )
 from apps.tracking.models import TimeEntry
+from apps.tracking.utils import local_day_range
 
 from . import notifications
 from .models import CorrectionRequest
@@ -42,19 +43,24 @@ def may_decide(user, request_obj: CorrectionRequest) -> bool:
     return user.is_group_admin(request_obj.group)
 
 
-def affected_days(request_obj: CorrectionRequest, overrides: dict | None = None) -> list:
-    """Die Tage, die ein Antrag berührt: bisheriger und gewünschter Zeitpunkt."""
-    values = [request_obj.proposed_start, request_obj.proposed_end]
+def affected_ranges(request_obj: CorrectionRequest, overrides: dict | None = None) -> list:
+    """Die Tagesbereiche, die ein Antrag berührt: bisheriger und gewünschter.
+
+    Jeder Bereich zählt ganz, weil ein Eintrag über Mitternacht laufen kann
+    und zwischen seinem ersten und letzten Tag ein Abschluss liegen kann.
+    """
+    ranges = [local_day_range(request_obj.proposed_start, request_obj.proposed_end)]
     if request_obj.time_entry_id and request_obj.time_entry is not None:
-        values.append(request_obj.time_entry.start)
+        entry = request_obj.time_entry
+        ranges.append(local_day_range(entry.start, entry.end))
     if overrides:
-        values.extend([overrides.get("start"), overrides.get("end")])
-    return [timezone.localtime(value).date() for value in values if value is not None]
+        ranges.append(local_day_range(overrides.get("start"), overrides.get("end")))
+    return ranges
 
 
 def closed_period_lock(request_obj: CorrectionRequest, overrides: dict | None = None):
     """Der Abschluss, der diesen Antrag blockiert, falls es einen gibt (Issue 5)."""
-    return closing.blocking_lock(request_obj.group, affected_days(request_obj, overrides))
+    return closing.blocking_lock(request_obj.group, affected_ranges(request_obj, overrides))
 
 
 def _reject_overlap(user, start, end, *, exclude_id=None) -> None:

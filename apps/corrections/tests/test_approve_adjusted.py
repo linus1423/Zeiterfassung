@@ -216,3 +216,29 @@ def test_a_deactivated_activity_stays_selectable(client, group_admin, pending_re
     response = client.get(reverse("corrections:decide", args=[pending_request.pk]))
 
     assert activity in response.context["adjust_form"].fields["activity"].queryset
+
+
+def test_a_closed_period_inside_the_request_blocks_the_approval(member, group, group_admin):
+    """Auch ein Antrag, der einen abgeschlossenen Zeitraum überspannt, ist gesperrt."""
+    from datetime import datetime, time
+
+    from apps.groups import closing
+    from apps.groups.periods import period_for
+
+    closed = period_for(timezone.localdate(), group.month_start_day).previous()
+    start = timezone.make_aware(datetime.combine(closed.start - timedelta(days=5), time(8, 0)))
+    end = timezone.make_aware(datetime.combine(closed.end + timedelta(days=3), time(17, 0)))
+    correction = CorrectionRequest.objects.create(
+        requested_by=member,
+        group=group,
+        kind=CorrectionRequest.Kind.CREATE,
+        proposed_start=start,
+        proposed_end=end,
+        reason="Langer Einsatz, nie gestempelt.",
+    )
+    closing.close_period(group, closed, group_admin, "")
+
+    with pytest.raises(services.CorrectionError) as exc:
+        services.approve(correction, group_admin, "")
+
+    assert "abgeschlossen" in str(exc.value)

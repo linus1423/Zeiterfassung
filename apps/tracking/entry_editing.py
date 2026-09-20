@@ -14,13 +14,13 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
 from apps.groups import closing
 
 from .entries import apply_breaks, lock_user, overlap_message, overlapping_entry, snapshot
 from .models import TimeEntry
+from .utils import local_day_range
 
 
 class EntryEditError(Exception):
@@ -37,8 +37,8 @@ def _require_admin(editor, group) -> None:
         raise EntryEditError("Nur Admins dieser Gruppe dürfen Zeiten ändern.")
 
 
-def _require_open_period(group, days) -> None:
-    lock = closing.blocking_lock(group, days)
+def _require_open_period(group, ranges) -> None:
+    lock = closing.blocking_lock(group, ranges)
     if lock is not None:
         raise EntryEditError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
@@ -50,10 +50,6 @@ def _require_free_slot(user, start, end, *, exclude_id=None) -> None:
     clash = overlapping_entry(user, start, end, exclude_id=exclude_id)
     if clash is not None:
         raise EntryEditError(overlap_message(clash))
-
-
-def _local_days(*values) -> list:
-    return [timezone.localtime(value).date() for value in values if value is not None]
 
 
 def _validate(entry: TimeEntry) -> None:
@@ -87,7 +83,13 @@ def update_entry(
     if activity is not None and activity.group_id != locked.group_id:
         raise EntryEditError("Die Tätigkeit gehört zu einer anderen Gruppe.")
 
-    _require_open_period(locked.group, _local_days(locked.start, start, end))
+    # Der bisherige und der gewünschte Zeitraum, jeder ganz: der Eintrag kann
+    # über Mitternacht laufen, und er kann aus einem Zeitraum in einen anderen
+    # verschoben werden.
+    _require_open_period(
+        locked.group,
+        [local_day_range(locked.start, locked.end), local_day_range(start, end)],
+    )
     _require_free_slot(locked.user, start, end, exclude_id=locked.pk)
 
     before = snapshot(locked)
@@ -137,7 +139,7 @@ def create_entry(
     if activity is not None and activity.group_id != group.pk:
         raise EntryEditError("Die Tätigkeit gehört zu einer anderen Gruppe.")
 
-    _require_open_period(group, _local_days(start, end))
+    _require_open_period(group, [local_day_range(start, end)])
     _require_free_slot(user, start, end)
 
     entry = TimeEntry(

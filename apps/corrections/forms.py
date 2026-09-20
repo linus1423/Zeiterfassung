@@ -17,6 +17,7 @@ from apps.tracking.forms import (  # noqa: F401
     break_formset,
     validate_breaks_within,
 )
+from apps.tracking.utils import local_day_range
 
 from .models import CorrectionRequest
 
@@ -76,10 +77,10 @@ class CorrectionRequestForm(forms.Form):
             self.add_error("activity", "Diese Tätigkeit gehört nicht zur gewählten Gruppe.")
 
         if group:
-            days = [timezone.localtime(value).date() for value in (start, end) if value is not None]
+            ranges = [local_day_range(start, end)]
             if self.entry is not None:
-                days.append(timezone.localtime(self.entry.start).date())
-            lock = closing.blocking_lock(group, days)
+                ranges.append(local_day_range(self.entry.start, self.entry.end))
+            lock = closing.blocking_lock(group, ranges)
             if lock is not None:
                 self.add_error(
                     None,
