@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Korrekturantraege{% endblock %}
+{% block title %}Korrekturanträge{% endblock %}
 {% block content %}
-<h1>Offene Korrekturantraege</h1>
+<h1>Offene Korrekturanträge</h1>
 <div class="card">
   <div class="table-scroll">
     <table>
-      <tr><th>Gestellt am</th><th>Person</th><th>Gruppe</th><th>Art</th><th>Begruendung</th><th></th></tr>
+      <tr><th>Gestellt am</th><th>Person</th><th>Gruppe</th><th>Art</th><th>Begründung</th><th></th></tr>
       {% for request in requests %}
         <tr>
           <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
@@ -15,7 +15,7 @@
           <td>{{ request.reason|truncatechars:80 }}</td>
           <td><a href="{% url 'corrections:decide' request.pk %}">Ansehen</a></td>
         </tr>
-      {% empty %}<tr><td colspan="6" class="muted">Keine offenen Antraege.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="6" class="muted">Keine offenen Anträge.</td></tr>{% endfor %}
     </table>
   </div>
 </div>

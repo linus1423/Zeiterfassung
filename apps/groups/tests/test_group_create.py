@@ -19,7 +19,7 @@ def test_a_system_admin_creates_a_group(client, superuser):
     assert response.status_code == 200
     assert group.slug == "vertrieb"
     assert AuditLog.objects.filter(action=AuditLog.Action.GROUP_CREATED).exists()
-    # Weiter geht es bei den Mitgliedern, eine Gruppe ohne Menschen nuetzt nichts.
+    # Weiter geht es bei den Mitgliedern, eine Gruppe ohne Menschen nützt nichts.
     assert response.redirect_chain[-1][0] == reverse("groups:members", args=[group.pk])
 
 

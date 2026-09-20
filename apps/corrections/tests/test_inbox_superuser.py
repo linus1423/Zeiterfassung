@@ -1,4 +1,4 @@
-"""Der System-Admin sieht offene Antraege (Issue 16)."""
+"""Der System-Admin sieht offene Anträge (Issue 16)."""
 
 from datetime import timedelta
 
@@ -33,7 +33,7 @@ def test_superuser_sees_pending_requests(client, superuser, pending_request):
 
 
 def test_group_admin_sees_only_own_groups(client, group_admin, other_group, make_user):
-    """Ein Gruppen-Admin bekommt durch die Aenderung nichts Fremdes zu sehen."""
+    """Ein Gruppen-Admin bekommt durch die Änderung nichts Fremdes zu sehen."""
     outsider = make_user("extern@example.com")
     GroupMembership.objects.create(user=outsider, group=other_group)
     start = timezone.now() - timedelta(days=1)

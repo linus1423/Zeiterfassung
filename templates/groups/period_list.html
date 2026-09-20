@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Abschluss: {{ group.name }}{% endblock %}
 {% block content %}
-<h1>Abrechnungszeitraeume von {{ group.name }}</h1>
+<h1>Abrechnungszeiträume von {{ group.name }}</h1>
 <p>
   {% if group.month_start_day == 1 %}
     Die Gruppe rechnet nach Kalendermonat ab.
@@ -33,13 +33,13 @@
             {% if may_reopen %}
               <form method="post" class="inline">{% csrf_token %}
                 <input type="hidden" name="lock" value="{{ row.lock.pk }}">
-                <button type="submit" name="action" value="reopen">Wieder oeffnen</button>
+                <button type="submit" name="action" value="reopen">Wieder öffnen</button>
               </form>
             {% endif %}
           {% elif may_close and not row.is_current %}
             <form method="post" class="inline">{% csrf_token %}
               <input type="hidden" name="period_start" value="{{ row.period.start|date:'Y-m-d' }}">
-              <button class="primary" type="submit" name="action" value="close">Abschliessen</button>
+              <button class="primary" type="submit" name="action" value="close">Abschließen</button>
             </form>
           {% endif %}
         </td>
@@ -47,7 +47,7 @@
     {% endfor %}
   </table>
   <p class="help">
-    Nach dem Abschluss lehnt das System Korrekturantraege fuer diesen Zeitraum ab.
+    Nach dem Abschluss lehnt das System Korrekturanträge für diesen Zeitraum ab.
     Aufheben kann den Abschluss nur ein System-Admin.
   </p>
 </div>

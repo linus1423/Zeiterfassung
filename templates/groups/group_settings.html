@@ -6,14 +6,14 @@
   <form method="post">{% csrf_token %}{{ form.as_p }}
     <div class="actions">
       <button class="primary" type="submit">Speichern</button>
-      <a class="button" href="{% url 'groups:detail' group.pk %}">Zurueck</a>
+      <a class="button" href="{% url 'groups:detail' group.pk %}">Zurück</a>
     </div>
   </form>
   <p class="help">
     Aktueller Abrechnungszeitraum: {{ period.label }}
     ({{ period.start|date:"d.m.Y" }} bis {{ period.end|date:"d.m.Y" }}).
-    Der Zyklus gilt fuer Auswertung und Abschluss dieser Gruppe. Bereits
-    abgeschlossene Zeitraeume behalten ihre Tage; sie bleiben also gesperrt,
+    Der Zyklus gilt für Auswertung und Abschluss dieser Gruppe. Bereits
+    abgeschlossene Zeiträume behalten ihre Tage; sie bleiben also gesperrt,
     auch wenn sie danach nicht mehr auf den neuen Zyklus passen.
   </p>
 </div>

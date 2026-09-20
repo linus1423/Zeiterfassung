@@ -30,7 +30,7 @@ services:
              gunicorn zeiterfassung.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 
   # Vergessene Stempelungen beenden (Issue 7). Laeuft als eigener Dienst im
-  # selben Stack, damit dafuer kein Cronjob auf dem Host und kein Broker
+  # selben Stack, damit dafür kein Cronjob auf dem Host und kein Broker
   # gebraucht wird. Das Kommando ist unschaedlich, wenn es nichts zu tun gibt.
   scheduler:
     build: .

@@ -122,7 +122,7 @@ def test_the_command_changes_nothing_without_apply(make_user, group):
 
     user.refresh_from_db()
     assert user.personnel_number == "4711"
-    assert "Nichts geaendert" in output.getvalue()
+    assert "Nichts geändert" in output.getvalue()
 
 
 def test_the_command_anonymizes_with_apply(make_user, group):

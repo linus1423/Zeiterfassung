@@ -161,7 +161,7 @@ if env("DJANGO_BEHIND_PROXY"):
     USE_X_FORWARDED_HOST = True
 
 # --- Anmeldung (OpenID Connect) --------------------------------------------
-# Keycloak und Entra ID sind beide OIDC und laufen deshalb ueber denselben
+# Keycloak und Entra ID sind beide OIDC und laufen deshalb über denselben
 # allauth-Provider, nur mit unterschiedlicher Konfiguration.
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*"]
@@ -171,10 +171,10 @@ ACCOUNT_ADAPTER = "apps.accounts.adapters.NoLocalSignupAdapter"
 SOCIALACCOUNT_ADAPTER = "apps.accounts.adapters.OIDCSocialAccountAdapter"
 SOCIALACCOUNT_ONLY = True
 SOCIALACCOUNT_STORE_TOKENS = False
-# Ein Mensch, der sich einmal ueber Keycloak und einmal ueber Entra anmeldet,
-# soll dasselbe Konto bekommen. Beide Provider sind vertrauenswuerdig und
+# Ein Mensch, der sich einmal über Keycloak und einmal über Entra anmeldet,
+# soll dasselbe Konto bekommen. Beide Provider sind vertrauenswürdig und
 # liefern verifizierte Adressen; bei einem Provider ohne Adressverifikation
-# muesste das abgeschaltet werden.
+# müsste das abgeschaltet werden.
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = env.bool("OIDC_LINK_BY_EMAIL", default=True)
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = SOCIALACCOUNT_EMAIL_AUTHENTICATION
 
@@ -232,11 +232,11 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # --- Gruppen aus dem Identity-Provider (Issue 4) ---------------------------
-# Standardmaessig aus: die Mitgliedschaften werden im Tool gepflegt. Wer die
-# Gruppen aus dem Token uebernehmen will, schaltet das hier ein.
+# Standardmäßig aus: die Mitgliedschaften werden im Tool gepflegt. Wer die
+# Gruppen aus dem Token übernehmen will, schaltet das hier ein.
 OIDC_GROUP_SYNC = env("OIDC_GROUP_SYNC")
 OIDC_GROUPS_CLAIM = env("OIDC_GROUPS_CLAIM")
-# "add" ergaenzt nur, "replace" entzieht auch wieder. Entzogen werden immer
+# "add" ergänzt nur, "replace" entzieht auch wieder. Entzogen werden immer
 # nur Mitgliedschaften, die aus dem Provider stammen.
 OIDC_GROUP_SYNC_MODE = env("OIDC_GROUP_SYNC_MODE")
 if OIDC_GROUP_SYNC_MODE not in ("add", "replace"):
@@ -248,7 +248,7 @@ OIDC_ADMIN_GROUPS_CLAIM = env("OIDC_ADMIN_GROUPS_CLAIM")
 OIDC_ADMIN_GROUP_SUFFIX = env("OIDC_ADMIN_GROUP_SUFFIX")
 
 # --- Benachrichtigungen (Issue 3) ------------------------------------------
-# Ohne Mailserver bleibt es beim Zaehler in der Navigation.
+# Ohne Mailserver bleibt es beim Zähler in der Navigation.
 CORRECTION_EMAILS_ENABLED = env("CORRECTION_EMAILS_ENABLED")
 SITE_BASE_URL = env("SITE_BASE_URL", default="")
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="zeiterfassung@localhost")
@@ -265,17 +265,17 @@ EMAIL_PORT = env("DJANGO_EMAIL_PORT")
 EMAIL_HOST_USER = env("DJANGO_EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("DJANGO_EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env("DJANGO_EMAIL_USE_TLS")
-# Ein haengender Mailserver darf keinen Request blockieren.
+# Ein hängender Mailserver darf keinen Request blockieren.
 EMAIL_TIMEOUT = env("DJANGO_EMAIL_TIMEOUT")
 
 # --- Fachliche Einstellungen ------------------------------------------------
 # Nach dieser Dauer wird ein vergessener Zeiteintrag automatisch beendet und
-# als unvollstaendig markiert (Kapitel 4 der Spezifikation).
+# als unvollständig markiert (Kapitel 4 der Spezifikation).
 MAX_OPEN_ENTRY_HOURS = env("MAX_OPEN_ENTRY_HOURS")
-# Hinweis auf gesetzliche Pausen, ohne automatischen Abzug (Rueckfrage 7).
+# Hinweis auf gesetzliche Pausen, ohne automatischen Abzug (Rückfrage 7).
 STATUTORY_BREAK_WARNINGS = env("STATUTORY_BREAK_WARNINGS")
-# Aufbewahrungsfrist fuer personenbezogene Zeitdaten in Monaten (Issue 6).
-# Zwei Jahre entsprechen der ueblichen Frist fuer Arbeitszeitnachweise.
+# Aufbewahrungsfrist für personenbezogene Zeitdaten in Monaten (Issue 6).
+# Zwei Jahre entsprechen der üblichen Frist für Arbeitszeitnachweise.
 DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"

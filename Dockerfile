@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Statische Dateien einsammeln; der Schluessel wird dafuer nicht gebraucht.
+# Statische Dateien einsammeln; der Schlüssel wird dafür nicht gebraucht.
 RUN DJANGO_DEBUG=true python manage.py collectstatic --noinput
 
 RUN useradd --create-home --uid 10001 app && chown -R app /app

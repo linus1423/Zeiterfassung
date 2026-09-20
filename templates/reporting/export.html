@@ -15,7 +15,7 @@
         <td>
           {% if item.owner_id == user.pk %}
             <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
-              {% csrf_token %}<button type="submit">Loeschen</button>
+              {% csrf_token %}<button type="submit">Löschen</button>
             </form>
           {% endif %}
         </td>
@@ -78,12 +78,12 @@
     </table>
   </div>
   {% if row_count > preview_limit %}
-    <p class="help">Angezeigt werden die ersten {{ preview_limit }} Zeilen. Der Download enthaelt alle {{ row_count }}.</p>
+    <p class="help">Angezeigt werden die ersten {{ preview_limit }} Zeilen. Der Download enthält alle {{ row_count }}.</p>
   {% endif %}
 </div>
 {% endif %}
 <div class="card">
-  <h2>Abgeschlossene Zeitraeume</h2>
+  <h2>Abgeschlossene Zeiträume</h2>
   {% if closed_periods %}
     <table>
       <tr><th>Gruppe</th><th>Letzter Abschluss</th><th>Abgeschlossen am</th></tr>
@@ -96,7 +96,7 @@
       {% endfor %}
     </table>
     <p class="help">
-      Fuer abgeschlossene Zeitraeume nimmt das System keine Korrekturen mehr an, die
+      Für abgeschlossene Zeiträume nimmt das System keine Korrekturen mehr an, die
       Zahlen bleiben also wie exportiert. Die Spalte "Abgeschlossen" zeigt das je Zeile.
     </p>
   {% else %}

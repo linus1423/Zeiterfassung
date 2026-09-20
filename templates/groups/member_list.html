@@ -4,11 +4,12 @@
 <h1>Mitglieder von {{ group.name }}</h1>
 <div class="card">
   <table>
-    <tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th></th></tr>
+    <tr><th>Name</th><th>E-Mail</th><th>Personalnummer</th><th>Rolle</th><th></th></tr>
     {% for membership in memberships %}
       <tr>
         <td>{{ membership.user.full_name }}</td>
         <td>{{ membership.user.email }}</td>
+        <td>{% if membership.user.personnel_number %}{{ membership.user.personnel_number }}{% else %}<span class="badge pending">fehlt</span>{% endif %}</td>
         <td>{{ membership.get_role_display }}</td>
         <td>
           <form method="post" action="{% url 'groups:member_role' group.pk membership.pk %}" class="inline">
@@ -21,14 +22,15 @@
           </form>
         </td>
       </tr>
-    {% empty %}<tr><td colspan="4" class="muted">Noch keine Mitglieder.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="5" class="muted">Noch keine Mitglieder.</td></tr>{% endfor %}
   </table>
 </div>
 <div class="card">
-  <h2>Mitglied hinzufuegen</h2>
+  <h2>Mitglied hinzufügen</h2>
   <form method="post">{% csrf_token %}{{ form.as_p }}
-    <div class="actions"><button class="primary" type="submit">Hinzufuegen</button></div>
+    <div class="actions"><button class="primary" type="submit">Hinzufügen</button></div>
   </form>
   <p class="help">Konten entstehen beim ersten Login. Wer sich noch nie angemeldet hat, kann noch nicht zugeordnet werden.</p>
+  <p class="help">Die Personalnummer pflegt ein System-Admin unter Nutzer; sie wird für den Export der Buchhaltung gebraucht.</p>
 </div>
 {% endblock %}

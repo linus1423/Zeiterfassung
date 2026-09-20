@@ -5,7 +5,7 @@ from apps.groups.models import Activity, Group
 
 
 class Command(BaseCommand):
-    help = "Legt eine Beispielgruppe mit Taetigkeiten an, damit man sofort stempeln kann."
+    help = "Legt eine Beispielgruppe mit Tätigkeiten an, damit man sofort stempeln kann."
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -20,9 +20,9 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Gruppe '{group.name}' {'angelegt' if created else 'vorhanden'}, "
-                f"{group.activities.count()} Taetigkeiten."
+                f"{group.activities.count()} Tätigkeiten."
             )
         )
         self.stdout.write(
-            "Nutzer ordnest du im Adminbereich oder ueber die Mitgliederverwaltung zu."
+            "Nutzer ordnest du im Adminbereich oder über die Mitgliederverwaltung zu."
         )

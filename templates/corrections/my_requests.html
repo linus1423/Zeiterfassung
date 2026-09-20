@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Meine Korrekturantraege{% endblock %}
+{% block title %}Meine Korrekturanträge{% endblock %}
 {% block content %}
-<h1>Meine Korrekturantraege</h1>
+<h1>Meine Korrekturanträge</h1>
 <p><a class="button" href="{% url 'corrections:create' %}">Vergessene Zeit nachtragen</a></p>
 <div class="card">
   <div class="table-scroll">
     <table>
-      <tr><th>Gestellt am</th><th>Art</th><th>Gruppe</th><th>Gewuenscht</th><th>Status</th><th></th></tr>
+      <tr><th>Gestellt am</th><th>Art</th><th>Gruppe</th><th>Gewünscht</th><th>Status</th><th></th></tr>
       {% for request in requests %}
         <tr>
           <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
@@ -24,12 +24,12 @@
           <td>
             {% if request.is_pending %}
               <form method="post" action="{% url 'corrections:withdraw' request.pk %}">{% csrf_token %}
-                <button type="submit">Zuruecknehmen</button>
+                <button type="submit">Zurücknehmen</button>
               </form>
             {% endif %}
           </td>
         </tr>
-      {% empty %}<tr><td colspan="6" class="muted">Noch keine Antraege.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="6" class="muted">Noch keine Anträge.</td></tr>{% endfor %}
     </table>
   </div>
 </div>

@@ -146,7 +146,7 @@ def test_member_cannot_close_a_period_of_a_foreign_group(group, other_group, gro
 def test_a_cycle_change_does_not_allow_a_second_lock(group, group_admin, last_period):
     closing.close_period(group, last_period, group_admin)
 
-    # Nach der Umstellung des Zyklus liegen die Zeitraeume anders, der alte
+    # Nach der Umstellung des Zyklus liegen die Zeiträume anders, der alte
     # Abschluss sperrt seine Tage aber weiter.
     group.month_start_day = 15
     group.save(update_fields=["month_start_day"])

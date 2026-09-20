@@ -34,9 +34,9 @@ def group_list(request):
 
 @login_required
 def group_create(request):
-    """Eine neue Gruppe anlegen. Nur fuer System-Admins."""
+    """Eine neue Gruppe anlegen. Nur für System-Admins."""
     if not request.user.is_superuser:
-        raise PermissionDenied("Nur System-Admins duerfen Gruppen anlegen.")
+        raise PermissionDenied("Nur System-Admins dürfen Gruppen anlegen.")
 
     form = GroupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -84,7 +84,7 @@ def group_detail(request, group_id):
         per_user[entry.user.full_name] = (
             per_user.get(entry.user.full_name, timedelta()) + entry.duration
         )
-        label = entry.activity.name if entry.activity else "ohne Taetigkeit"
+        label = entry.activity.name if entry.activity else "ohne Tätigkeit"
         per_activity[label] = per_activity.get(label, timedelta()) + entry.duration
 
     context = {
@@ -116,10 +116,10 @@ def activity_list(request, group_id):
             activity = form.save(commit=False)
             activity.group = group
             if Activity.objects.filter(group=group, name__iexact=activity.name).exists():
-                form.add_error("name", "Diese Taetigkeit gibt es in der Gruppe schon.")
+                form.add_error("name", "Diese Tätigkeit gibt es in der Gruppe schon.")
             else:
                 activity.save()
-                messages.success(request, "Taetigkeit angelegt.")
+                messages.success(request, "Tätigkeit angelegt.")
                 return redirect("groups:activities", group_id=group.pk)
 
     return render(
@@ -137,7 +137,7 @@ def activity_edit(request, group_id, activity_id):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Taetigkeit gespeichert.")
+        messages.success(request, "Tätigkeit gespeichert.")
         return redirect("groups:activities", group_id=group.pk)
 
     return render(
@@ -154,7 +154,7 @@ def member_list(request, group_id):
         GroupMembership.objects.create(
             group=group, user=form.cleaned_user, role=form.cleaned_data["role"]
         )
-        messages.success(request, f"{form.cleaned_user} wurde der Gruppe hinzugefuegt.")
+        messages.success(request, f"{form.cleaned_user} wurde der Gruppe hinzugefügt.")
         return redirect("groups:members", group_id=group.pk)
 
     memberships = group.memberships.select_related("user").order_by(
@@ -185,7 +185,7 @@ def member_role(request, group_id, membership_id):
         GroupMembership.Role.MEMBER if membership.is_admin else GroupMembership.Role.ADMIN
     )
     membership.save(update_fields=["role"])
-    messages.success(request, f"Rolle von {membership.user} geaendert.")
+    messages.success(request, f"Rolle von {membership.user} geändert.")
     return redirect("groups:members", group_id=group.pk)
 
 
@@ -234,7 +234,7 @@ def group_settings(request, group_id):
 
 @login_required
 def period_list(request, group_id):
-    """Abrechnungszeitraeume der Gruppe abschliessen und wieder oeffnen (Issue 5)."""
+    """Abrechnungszeiträume der Gruppe abschließen und wieder öffnen (Issue 5)."""
     group = require_group_read(request.user, group_id)
 
     if request.method == "POST":

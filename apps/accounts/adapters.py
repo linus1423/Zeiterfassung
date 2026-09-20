@@ -5,8 +5,8 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 class NoLocalSignupAdapter(DefaultAccountAdapter):
     """Verhindert lokale Registrierung.
 
-    Konten entstehen ausschliesslich ueber den Identity-Provider. Der
-    Notfallzugang fuer System-Admins laeuft ueber die Django-Adminoberflaeche.
+    Konten entstehen ausschließlich über den Identity-Provider. Der
+    Notfallzugang für System-Admins läuft über die Django-Adminoberfläche.
     """
 
     def is_open_for_signup(self, request) -> bool:
@@ -21,7 +21,7 @@ class OIDCSocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def populate_user(self, request, sociallogin, data):
         # Den eindeutigen Benutzernamen erzeugt allauth selbst; hier werden nur
-        # die Angaben aus dem Token uebernommen.
+        # die Angaben aus dem Token übernommen.
         user = super().populate_user(request, sociallogin, data)
         email = (data.get("email") or "").strip().lower()
         if email:

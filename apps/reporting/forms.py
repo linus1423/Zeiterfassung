@@ -26,7 +26,7 @@ CSV_DIALECTS = {
 
 
 class ExportForm(forms.Form):
-    """Zeitraum, Filter, Verdichtung und Spaltenauswahl fuer den Export."""
+    """Zeitraum, Filter, Verdichtung und Spaltenauswahl für den Export."""
 
     start = forms.DateField(label="Von", widget=forms.DateInput(attrs={"type": "date"}))
     end = forms.DateField(label="Bis", widget=forms.DateInput(attrs={"type": "date"}))
@@ -38,7 +38,7 @@ class ExportForm(forms.Form):
     )
     users = forms.ModelMultipleChoiceField(label="Nutzer", queryset=None, required=False)
     activities = forms.ModelMultipleChoiceField(
-        label="Taetigkeiten", queryset=Activity.objects.none(), required=False
+        label="Tätigkeiten", queryset=Activity.objects.none(), required=False
     )
     grouping = forms.ChoiceField(
         label="Verdichtung",

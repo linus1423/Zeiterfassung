@@ -3,7 +3,7 @@ from django.db import models
 
 
 class ExportProfile(models.Model):
-    """Gespeicherte Zusammenstellung fuer den Export.
+    """Gespeicherte Zusammenstellung für den Export.
 
     Damit muss die Buchhaltung Spalten, Filter und Verdichtung nicht jeden
     Monat neu zusammenklicken.
@@ -13,7 +13,7 @@ class ExportProfile(models.Model):
         ENTRY = "entry", "Je Zeiteintrag"
         USER_DAY = "user_day", "Je Nutzer und Tag"
         USER_MONTH = "user_month", "Je Nutzer und Monat"
-        ACTIVITY = "activity", "Je Taetigkeit"
+        ACTIVITY = "activity", "Je Tätigkeit"
 
     name = models.CharField("Name", max_length=120)
     owner = models.ForeignKey(
@@ -23,7 +23,7 @@ class ExportProfile(models.Model):
         related_name="export_profiles",
     )
     is_shared = models.BooleanField(
-        "Geteilt", default=False, help_text="Auch fuer andere Nutzer der Buchhaltung sichtbar."
+        "Geteilt", default=False, help_text="Auch für andere Nutzer der Buchhaltung sichtbar."
     )
     columns = models.JSONField("Spalten", default=list)
     grouping = models.CharField(
@@ -31,7 +31,7 @@ class ExportProfile(models.Model):
     )
     filters = models.JSONField("Filter", default=dict, blank=True)
     created_at = models.DateTimeField("Angelegt am", auto_now_add=True)
-    updated_at = models.DateTimeField("Geaendert am", auto_now=True)
+    updated_at = models.DateTimeField("Geändert am", auto_now=True)
 
     class Meta:
         verbose_name = "Export-Vorlage"

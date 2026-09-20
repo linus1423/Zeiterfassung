@@ -1,12 +1,12 @@
-"""Benachrichtigungen rund um Korrekturantraege (Issue 3).
+"""Benachrichtigungen rund um Korrekturanträge (Issue 3).
 
-Der Versand haengt an `transaction.on_commit`, damit keine Mail zu einem
-Vorgang rausgeht, der am Ende zurueckgerollt wird. Ohne konfigurierten
-Mailserver bleibt es beim Zaehler in der Navigation; das Tool funktioniert
+Der Versand hängt an `transaction.on_commit`, damit keine Mail zu einem
+Vorgang rausgeht, der am Ende zurückgerollt wird. Ohne konfigurierten
+Mailserver bleibt es beim Zähler in der Navigation; das Tool funktioniert
 also auch ohne SMTP.
 
-Der Versand laeuft im Request, begrenzt durch EMAIL_TIMEOUT. Sobald das
-Mailaufkommen dafuer zu gross wird, gehoert hier eine Warteschlange hin.
+Der Versand läuft im Request, begrenzt durch EMAIL_TIMEOUT. Sobald das
+Mailaufkommen dafür zu groß wird, gehört hier eine Warteschlange hin.
 """
 
 from __future__ import annotations
@@ -52,8 +52,8 @@ def _send(subject: str, template: str, context: dict, recipients: list[str]) -> 
             connection=connection,
         )
     except Exception as exc:  # noqa: BLE001
-        # Der Versand laeuft nach dem Commit: ein Fehler hier wuerde sonst
-        # eine Fehlerseite fuer einen erfolgreichen Vorgang erzeugen. Der
+        # Der Versand läuft nach dem Commit: ein Fehler hier würde sonst
+        # eine Fehlerseite für einen erfolgreichen Vorgang erzeugen. Der
         # Fehlversuch steht im Protokoll.
         logger.warning("Benachrichtigung konnte nicht versandt werden: %s", exc)
         log(AuditLog.Action.NOTIFICATION_FAILED, note=f"{subject}: {exc}")
@@ -91,7 +91,7 @@ def notify_admins_of_new_request(request_obj: CorrectionRequest) -> None:
 
 
 def notify_requester_of_decision(request_obj: CorrectionRequest) -> None:
-    """Meldet dem Antragsteller die Entscheidung samt Begruendung."""
+    """Meldet dem Antragsteller die Entscheidung samt Begründung."""
     if not emails_enabled():
         return
 

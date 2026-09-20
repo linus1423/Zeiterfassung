@@ -27,7 +27,7 @@ def pending_request(entry, member, group, activity):
         proposed_start=entry.start,
         proposed_end=entry.start + timedelta(hours=7),
         proposed_activity=activity,
-        reason="Ich habe zu spaet ausgestempelt.",
+        reason="Ich habe zu spät ausgestempelt.",
     )
 
 

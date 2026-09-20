@@ -9,7 +9,7 @@
     {% if correction.time_entry %}
       <p>
         {{ correction.time_entry.start|date:"d.m.Y H:i" }} bis
-        {% if correction.time_entry.end %}{{ correction.time_entry.end|date:"H:i" }}{% else %}laeuft{% endif %}<br>
+        {% if correction.time_entry.end %}{{ correction.time_entry.end|date:"H:i" }}{% else %}läuft{% endif %}<br>
         {{ correction.time_entry.group.name }}
         {% if correction.time_entry.activity %} · {{ correction.time_entry.activity.name }}{% endif %}
       </p>
@@ -18,9 +18,9 @@
     {% endif %}
   </div>
   <div class="card">
-    <h2>Gewuenscht</h2>
+    <h2>Gewünscht</h2>
     {% if correction.kind == "delete" %}
-      <p><strong>Der Eintrag soll geloescht werden.</strong></p>
+      <p><strong>Der Eintrag soll gelöscht werden.</strong></p>
     {% else %}
       <p>
         {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"H:i" }}<br>
@@ -46,7 +46,7 @@
   </div>
 </div>
 <div class="card">
-  <h2>Begruendung des Antragstellers</h2>
+  <h2>Begründung des Antragstellers</h2>
   <p>{{ correction.reason|linebreaksbr }}</p>
 </div>
 {% if period_lock %}
@@ -54,7 +54,7 @@
   <p>
     Der Zeitraum {{ period_lock.period.label }} ist seit dem
     {{ period_lock.closed_at|date:"d.m.Y" }} abgeschlossen. Dieser Antrag kann nicht
-    mehr genehmigt werden; ein System-Admin muesste den Abschluss erst wieder oeffnen.
+    mehr genehmigt werden; ein System-Admin müsste den Abschluss erst wieder öffnen.
   </p>
 </div>
 {% endif %}
@@ -64,14 +64,14 @@
       <div class="actions">
         <button class="primary" type="submit" name="action" value="approve">Genehmigen</button>
         <button class="danger" type="submit" name="action" value="reject">Ablehnen</button>
-        <a class="button" href="{% url 'corrections:inbox' %}">Zurueck</a>
+        <a class="button" href="{% url 'corrections:inbox' %}">Zurück</a>
       </div>
     </form>
-    <p class="help">Eine Ablehnung braucht eine Begruendung. Jede Entscheidung wird protokolliert.</p>
+    <p class="help">Eine Ablehnung braucht eine Begründung. Jede Entscheidung wird protokolliert.</p>
   {% else %}
     <p>
       {% if correction.is_pending %}
-        Diesen Antrag kannst du nicht entscheiden. Eigene Antraege entscheidet ein anderer Admin.
+        Diesen Antrag kannst du nicht entscheiden. Eigene Anträge entscheidet ein anderer Admin.
       {% else %}
         Dieser Antrag ist bereits entschieden: {{ correction.get_status_display }}.
       {% endif %}

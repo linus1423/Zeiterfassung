@@ -18,8 +18,8 @@ class Group(models.Model):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(MAX_MONTH_START_DAY)],
         help_text=(
-            "1 bedeutet Kalendermonat. Bei 15 laeuft ein Zeitraum vom 15. bis zum 14. "
-            "des Folgemonats. Hoechstens 28, damit es den Tag in jedem Monat gibt."
+            "1 bedeutet Kalendermonat. Bei 15 läuft ein Zeitraum vom 15. bis zum 14. "
+            "des Folgemonats. Höchstens 28, damit es den Tag in jedem Monat gibt."
         ),
     )
     idp_identifier = models.CharField(
@@ -129,7 +129,7 @@ class GroupMembership(models.Model):
 
 
 class Activity(models.Model):
-    """Taetigkeit, auf die gestempelt werden kann. Gehoert genau einer Gruppe."""
+    """Tätigkeit, auf die gestempelt werden kann. Gehört genau einer Gruppe."""
 
     group = models.ForeignKey(
         Group, verbose_name="Gruppe", on_delete=models.CASCADE, related_name="activities"
@@ -139,14 +139,14 @@ class Activity(models.Model):
     is_active = models.BooleanField(
         "Aktiv",
         default=True,
-        help_text="Deaktivierte Taetigkeiten sind nicht mehr waehlbar, "
-        "alte Zeiteintraege bleiben erhalten.",
+        help_text="Deaktivierte Tätigkeiten sind nicht mehr wählbar, "
+        "alte Zeiteinträge bleiben erhalten.",
     )
     sort_order = models.PositiveIntegerField("Reihenfolge", default=100)
 
     class Meta:
-        verbose_name = "Taetigkeit"
-        verbose_name_plural = "Taetigkeiten"
+        verbose_name = "Tätigkeit"
+        verbose_name_plural = "Tätigkeiten"
         ordering = ["group__name", "sort_order", "name"]
         constraints = [
             models.UniqueConstraint(fields=["group", "name"], name="unique_activity_per_group")
@@ -159,8 +159,8 @@ class Activity(models.Model):
 class PeriodLock(models.Model):
     """Abschluss eines Abrechnungszeitraums einer Gruppe.
 
-    Nach dem Abschluss lehnt das System Korrekturen fuer diesen Zeitraum ab,
-    damit ein bereits exportierter Monat nicht nachtraeglich abweicht
+    Nach dem Abschluss lehnt das System Korrekturen für diesen Zeitraum ab,
+    damit ein bereits exportierter Monat nicht nachträglich abweicht
     (Issue 5). Aufheben darf das nur ein System-Admin.
     """
 
@@ -182,7 +182,7 @@ class PeriodLock(models.Model):
 
     class Meta:
         verbose_name = "Abschluss"
-        verbose_name_plural = "Abschluesse"
+        verbose_name_plural = "Abschlüsse"
         ordering = ["-period_start", "group__name"]
         constraints = [
             models.UniqueConstraint(
