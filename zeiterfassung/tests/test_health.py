@@ -21,7 +21,7 @@ def test_readyz_antwortet_wenn_die_datenbank_erreichbar_ist(client):
 
 
 def test_readyz_meldet_503_wenn_die_abfrage_scheitert(client):
-    """Geprüft wird die Abfrage selbst, nicht nur das Oeffnen der Verbindung:
+    """Geprüft wird die Abfrage selbst, nicht nur das Öffnen der Verbindung:
     mit CONN_MAX_AGE hält Django die Verbindung offen, und eine abgerissene
     fällt erst auf, wenn etwas darüber läuft."""
     with patch(
