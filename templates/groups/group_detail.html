@@ -5,6 +5,7 @@
 <h1>{{ group.name }}</h1>
 <p>
   <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
+  · <a href="{% url 'audit:group' group.pk %}">Protokoll</a>
   {% if is_admin %}
     · <a href="{% url 'groups:activities' group.pk %}">Tätigkeiten verwalten</a>
     · <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
@@ -66,7 +67,7 @@
   <h2>Einträge ({{ entry_count }})</h2>
   <div class="table-scroll">
     <table>
-      <tr><th>Datum</th><th>Person</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Notiz</th><th class="num">Arbeitszeit</th>{% if is_admin %}<th></th>{% endif %}</tr>
+      <tr><th>Datum</th><th>Person</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Notiz</th><th class="num">Arbeitszeit</th><th></th></tr>
       {% for entry in entries %}
         <tr>
           <td>{{ entry.start|date:"d.m.Y" }}</td>
@@ -76,9 +77,10 @@
           <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
           <td class="muted">{{ entry.note|default:"" }}</td>
           <td class="num">{{ entry.duration|dauer }}</td>
-          {% if is_admin %}
-            <td>{% if entry.end %}<a href="{% url 'groups:entry_edit' group.pk entry.pk %}">Ändern</a>{% endif %}</td>
-          {% endif %}
+          <td>
+            {% if is_admin and entry.end %}<a href="{% url 'groups:entry_edit' group.pk entry.pk %}">Ändern</a> · {% endif %}
+            <a href="{% url 'audit:entry' entry.pk %}">Protokoll</a>
+          </td>
         </tr>
       {% empty %}<tr><td colspan="8" class="muted">Keine Einträge im Zeitraum.</td></tr>{% endfor %}
     </table>

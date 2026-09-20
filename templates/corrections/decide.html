@@ -13,6 +13,7 @@
         {{ correction.time_entry.group.name }}
         {% if correction.time_entry.activity %} · {{ correction.time_entry.activity.name }}{% endif %}
       </p>
+      <p><a href="{% url 'audit:entry' correction.time_entry.pk %}">Protokoll dieses Eintrags</a></p>
     {% else %}
       <p class="muted">Kein bestehender Eintrag, es handelt sich um einen Nachtrag.</p>
     {% endif %}

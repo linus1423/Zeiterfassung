@@ -664,3 +664,17 @@ abgeschlossener Zeitraum sperrt, Zeiten desselben Nutzers dürfen sich nicht
 geänderte Zeit gilt danach als korrigiert (`source = correction`) und nicht
 mehr als unvollständig. Die Buchhaltung liest weiterhin nur und ändert nichts
 (Rückfrage 22).
+
+**Protokoll einsehbar** (Issue 33). Das Änderungsprotokoll steht jetzt in der
+Anwendung selbst und nicht mehr nur in der Django-Adminoberfläche. Aus der
+Gruppenübersicht führt "Protokoll" zur Liste der Vorgänge dieser Gruppe, mit
+Filter nach Person (handelnd oder betroffen), Aktion und Zeitraum und mit
+Blättern zu je 50 Einträgen. Je Zeiteintrag gibt es eine eigene Seite mit
+seiner Geschichte, verlinkt aus der Eintragsliste und aus der
+Entscheidungsansicht eines Antrags; sie zeigt auch die Vorgänge der Anträge zu
+diesem Eintrag. Die Änderungen werden als Sätze angezeigt, vorher und nachher,
+statt als Rohdaten.
+
+Lesen dürfen Gruppen-Admins ihre Gruppen und die Buchhaltung alle, beides rein
+lesend; für Mitglieder ist die Ansicht gesperrt. Vorgänge ohne Gruppe, etwa
+Exporte, erscheinen in keiner Gruppenansicht.
