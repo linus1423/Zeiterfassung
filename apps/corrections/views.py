@@ -61,7 +61,7 @@ def request_create(request, entry_id=None):
             try:
                 services.create_request(
                     requested_by=request.user,
-                    group=form.cleaned_data["group"],
+                    group=entry.group if entry else form.cleaned_data["group"],
                     kind=CorrectionRequest.Kind.EDIT if entry else CorrectionRequest.Kind.CREATE,
                     reason=form.cleaned_data["reason"],
                     entry=entry,
