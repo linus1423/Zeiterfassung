@@ -43,19 +43,19 @@ class ClockInForm(forms.Form):
         super().__init__(*args, **kwargs)
         group_ids = user.member_group_ids()
         groups = Group.objects.filter(pk__in=group_ids, is_active=True)
+        # Ein Abfrageobjekt je Feld: das Feld braucht es zum Prüfen, die Liste
+        # für die Auswahl. Ausgewertet wird jedes höchstens einmal.
+        activity_queryset = Activity.objects.filter(group_id__in=group_ids, is_active=True)
         activities = list(
-            Activity.objects.filter(group_id__in=group_ids, is_active=True)
-            .select_related("group")
-            .order_by("group__name", "sort_order", "name")
+            activity_queryset.select_related("group").order_by("group__name", "sort_order", "name")
         )
 
         self.fields["group"].queryset = groups
-        self.fields["activity"].queryset = Activity.objects.filter(
-            group_id__in=group_ids, is_active=True
-        )
+        self.fields["activity"].queryset = activity_queryset
 
         # Wer nur einer Gruppe angehört, soll sie nicht jedes Mal auswählen.
-        self.single_group = groups[0] if len(groups) == 1 else None
+        group_list = list(groups)
+        self.single_group = group_list[0] if len(group_list) == 1 else None
         if self.single_group is not None:
             self.fields["group"].widget = forms.HiddenInput()
             self.fields["group"].initial = self.single_group.pk
@@ -98,11 +98,10 @@ class SwitchActivityForm(forms.Form):
         queryset = Activity.objects.filter(group_id=entry.group_id, is_active=True).exclude(
             pk=entry.activity_id
         )
+        choosable = list(queryset.order_by("sort_order", "name"))
         self.fields["activity"].queryset = queryset
-        self.fields["activity"].choices = activity_choices(
-            list(queryset.order_by("sort_order", "name")), grouped=False
-        )
-        self.has_choices = queryset.exists()
+        self.fields["activity"].choices = activity_choices(choosable, grouped=False)
+        self.has_choices = bool(choosable)
 
 
 class PeriodForm(forms.Form):

@@ -238,8 +238,9 @@ def my_entries(request):
         data["start"], data["end"] = quick_range
 
     form = MyEntriesFilterForm(request.user, data)
+    is_valid = form.is_valid()
     start_day, end_day = default_start, today
-    if form.is_valid():
+    if is_valid:
         start_day = form.cleaned_data["start"]
         end_day = form.cleaned_data["end"]
 
@@ -249,7 +250,7 @@ def my_entries(request):
     queryset = TimeEntry.objects.filter(
         user=request.user, start__gte=period_start, start__lt=period_end
     )
-    activity = form.cleaned_data.get("activity") if form.is_valid() else None
+    activity = form.cleaned_data.get("activity") if is_valid else None
     if activity is not None:
         queryset = queryset.filter(activity=activity)
 
@@ -257,7 +258,11 @@ def my_entries(request):
 
     export = request.GET.get("export", "")
     if export in ("csv", "xlsx"):
-        return _my_export_response(entries, start_day, end_day, export)
+        # Bei fehlerhaften Eingaben gäbe es sonst eine Datei mit dem
+        # Vorgabezeitraum statt der Fehlermeldung.
+        if is_valid:
+            return _my_export_response(entries, start_day, end_day, export)
+        messages.error(request, "Bitte zuerst die Eingaben im Filter berichtigen.")
 
     by_day: dict[date, timedelta] = {}
     for entry in entries:
