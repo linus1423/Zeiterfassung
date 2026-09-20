@@ -1,7 +1,7 @@
 """Auswertung und Export.
 
-Aus den Zeiteintraegen werden Zeilen gebaut (je Eintrag oder verdichtet),
-daraus entsteht eine Excel- oder CSV-Datei mit frei waehlbaren Spalten.
+Aus den Zeiteinträgen werden Zeilen gebaut (je Eintrag oder verdichtet),
+daraus entsteht eine Excel- oder CSV-Datei mit frei wählbaren Spalten.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def query_entries(
     user_ids: Iterable[int] | None = None,
     activity_ids: Iterable[int] | None = None,
 ):
-    """Abgeschlossene Eintraege im Zeitraum, begrenzt auf das, was der Nutzer lesen darf."""
+    """Abgeschlossene Einträge im Zeitraum, begrenzt auf das, was der Nutzer lesen darf."""
     period_start, _ = day_bounds(start)
     _, period_end = day_bounds(end)
 
@@ -97,7 +97,7 @@ def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
 def build_rows(
     entries: Iterable[TimeEntry], grouping: str, closed: ClosedPeriods | None = None
 ) -> list[dict]:
-    """Baut die Exportzeilen in der gewuenschten Verdichtung."""
+    """Baut die Exportzeilen in der gewünschten Verdichtung."""
     rows = [_base_row(entry, closed) for entry in entries]
     if grouping == "entry":
         return rows
@@ -125,7 +125,7 @@ def build_rows(
                 "period_closed",
             )
         elif grouping == "user_month":
-            # Der Schluessel ist der Abrechnungszeitraum, nicht der Kalendermonat:
+            # Der Schlüssel ist der Abrechnungszeitraum, nicht der Kalendermonat:
             # Gruppen mit eigenem Zyklus bleiben so getrennt (Issue 8).
             key = (row["email"], row["period_start"], row["period_end"])
             keep = (
@@ -169,7 +169,7 @@ def _hhmm(seconds: float) -> str:
 
 
 def cell_value(row: dict, column: Column):
-    """Rohwert einer Zelle, noch ohne Formatierung fuer ein bestimmtes Format."""
+    """Rohwert einer Zelle, noch ohne Formatierung für ein bestimmtes Format."""
     if column.key == "hours":
         return _hours(row.get("work_seconds", 0.0))
     if column.key == "hhmm":
@@ -258,7 +258,7 @@ _RISKY_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def csv_safe(value: str) -> str:
-    """Schuetzt vor Formel-Einschleusung: Excel wertet fuehrende = + - @ als Formel aus."""
+    """Schützt vor Formel-Einschleusung: Excel wertet führende = + - @ als Formel aus."""
     if value and value[0] in _RISKY_PREFIXES:
         return "'" + value
     return value
@@ -278,7 +278,7 @@ def format_scalar(value, column: Column, decimal_separator: str = ",") -> str:
 
 
 def format_value(row: dict, column: Column, decimal_separator: str = ",") -> str:
-    """Menschenlesbarer Text einer Zelle, fuer CSV und fuer die Vorschau."""
+    """Menschenlesbarer Text einer Zelle, für CSV und für die Vorschau."""
     return format_scalar(cell_value(row, column), column, decimal_separator)
 
 
@@ -289,7 +289,7 @@ def to_csv_rows(
     decimal_separator: str = ",",
     with_total: bool = True,
 ) -> Iterator[list[str]]:
-    """Liefert die CSV-Zeilen einzeln, damit auch grosse Exporte gestreamt werden koennen."""
+    """Liefert die CSV-Zeilen einzeln, damit auch große Exporte gestreamt werden können."""
     yield [column.label for column in columns]
     for row in rows:
         yield [format_value(row, column, decimal_separator) for column in columns]

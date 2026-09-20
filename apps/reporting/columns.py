@@ -1,6 +1,6 @@
-"""Definition der waehlbaren Exportspalten.
+"""Definition der wählbaren Exportspalten.
 
-Eine Spalte kennt ihren Schluessel, ihre Beschriftung und ihren Typ. Der Typ
+Eine Spalte kennt ihren Schlüssel, ihre Beschriftung und ihren Typ. Der Typ
 entscheidet, wie der Wert in Excel formatiert wird, damit dort gerechnet
 werden kann.
 """
@@ -33,7 +33,7 @@ COLUMNS: tuple[Column, ...] = (
     Column("email", "E-Mail", TEXT),
     Column("group", "Gruppe", TEXT),
     Column("cost_center", "Kostenstelle", TEXT),
-    Column("activity", "Taetigkeit", TEXT),
+    Column("activity", "Tätigkeit", TEXT),
     Column("date", "Datum", DATE),
     Column("weekday", "Wochentag", TEXT),
     Column("week", "Kalenderwoche", NUMBER),
@@ -48,11 +48,11 @@ COLUMNS: tuple[Column, ...] = (
     Column("break_hhmm", "Pausendauer", HHMM),
     Column("hours", "Arbeitszeit (h)", HOURS),
     Column("hhmm", "Arbeitszeit (hh:mm)", HHMM),
-    Column("entry_count", "Anzahl Eintraege", NUMBER),
+    Column("entry_count", "Anzahl Einträge", NUMBER),
     Column("source", "Erfassungsart", TEXT, aggregated=False),
-    Column("incomplete", "Unvollstaendig", TEXT, aggregated=False),
+    Column("incomplete", "Unvollständig", TEXT, aggregated=False),
     Column("note", "Notiz", TEXT, aggregated=False),
-    Column("updated_at", "Zuletzt geaendert am", TEXT, aggregated=False),
+    Column("updated_at", "Zuletzt geändert am", TEXT, aggregated=False),
 )
 
 COLUMNS_BY_KEY = {column.key: column for column in COLUMNS}

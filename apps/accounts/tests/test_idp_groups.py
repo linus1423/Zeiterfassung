@@ -126,7 +126,7 @@ def test_an_idp_role_is_lowered_again(sync_on, make_user, group, group_admin):
     summary = sync_memberships(user, {"groups": ["Werkstatt"], "admin_groups": []})
 
     assert user.group_memberships.get().role == GroupMembership.Role.MEMBER
-    assert summary["geaendert"]
+    assert summary["geändert"]
 
 
 def test_the_last_admin_keeps_the_role(sync_on, make_user, group):

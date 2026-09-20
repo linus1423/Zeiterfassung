@@ -1,17 +1,17 @@
-"""Gruppenzugehoerigkeit aus den Claims des Identity-Providers (Issue 4).
+"""Gruppenzugehörigkeit aus den Claims des Identity-Providers (Issue 4).
 
 Die offenen Punkte aus dem Issue sind so entschieden:
 
 * Welcher Claim: `OIDC_GROUPS_CLAIM`, Vorgabe `groups`. Verglichen wird gegen
   Kurzname, Name und das Feld "Bezeichnung beim Identity-Provider" der Gruppe.
   Keycloak liefert verschachtelte Pfade wie `/werk/werkstatt`; dann passt auch
-  das letzte Pfadstueck.
+  das letzte Pfadstück.
 * Im Tool gepflegte Mitgliedschaften bleiben unangetastet. Der Provider legt
-  eigene Mitgliedschaften an und aendert auch nur diese. Bei
-  `OIDC_GROUP_SYNC_MODE=replace` entzieht er sie wieder, sonst ergaenzt er nur.
-* Die Admin-Rolle kommt nur aus dem Token, wenn das ausdruecklich konfiguriert
-  ist: entweder ueber einen eigenen Claim (`OIDC_ADMIN_GROUPS_CLAIM`) oder
-  ueber eine Namenskonvention (`OIDC_ADMIN_GROUP_SUFFIX`, etwa `-admins`).
+  eigene Mitgliedschaften an und ändert auch nur diese. Bei
+  `OIDC_GROUP_SYNC_MODE=replace` entzieht er sie wieder, sonst ergänzt er nur.
+* Die Admin-Rolle kommt nur aus dem Token, wenn das ausdrücklich konfiguriert
+  ist: entweder über einen eigenen Claim (`OIDC_ADMIN_GROUPS_CLAIM`) oder
+  über eine Namenskonvention (`OIDC_ADMIN_GROUP_SUFFIX`, etwa `-admins`).
 
 Ohne `OIDC_GROUP_SYNC=true` passiert hier nichts.
 """
@@ -103,7 +103,7 @@ def sync_memberships(user, claims: dict) -> dict[str, list[str]]:
         membership.group_id: membership
         for membership in GroupMembership.objects.select_related("group").filter(user=user)
     }
-    summary: dict[str, list[str]] = {"neu": [], "geaendert": [], "entzogen": []}
+    summary: dict[str, list[str]] = {"neu": [], "geändert": [], "entzogen": []}
 
     for group_id, role in wanted.items():
         membership = existing.get(group_id)
@@ -123,9 +123,7 @@ def sync_memberships(user, claims: dict) -> dict[str, list[str]]:
                 continue
             membership.role = role
             membership.save(update_fields=["role"])
-            summary["geaendert"].append(
-                f"{membership.group.name} ({membership.get_role_display()})"
-            )
+            summary["geändert"].append(f"{membership.group.name} ({membership.get_role_display()})")
 
     if settings.OIDC_GROUP_SYNC_MODE == "replace":
         for group_id, membership in existing.items():
@@ -142,13 +140,13 @@ def sync_memberships(user, claims: dict) -> dict[str, list[str]]:
             actor=user,
             subject=user,
             changes=summary,
-            note="Mitgliedschaften aus dem Identity-Provider uebernommen.",
+            note="Mitgliedschaften aus dem Identity-Provider übernommen.",
         )
     return summary
 
 
 def claims_from_sociallogin(sociallogin) -> dict:
-    """Die Claims eines Logins, unabhaengig davon, wo allauth sie ablegt."""
+    """Die Claims eines Logins, unabhängig davon, wo allauth sie ablegt."""
     account = getattr(sociallogin, "account", None)
     data = getattr(account, "extra_data", None)
     return data if isinstance(data, dict) else {}

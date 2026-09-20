@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ person.full_name }}{% endblock %}
+{% block content %}
+<h1>{{ person.full_name }}</h1>
+
+<div class="card">
+  <table>
+    <tr><th>Name</th><td>{{ person.full_name }}</td></tr>
+    <tr><th>E-Mail</th><td>{{ person.email }}</td></tr>
+    <tr><th>Gruppen</th>
+      <td>
+        {% for membership in memberships %}
+          {{ membership.group.name }} ({{ membership.get_role_display }}){% if not forloop.last %}, {% endif %}
+        {% empty %}keine{% endfor %}
+      </td>
+    </tr>
+  </table>
+  <p class="help">Name und E-Mail kommen aus dem Identity-Provider und lassen sich hier nicht ändern.</p>
+</div>
+
+<div class="card">
+  <h2>Stammdaten</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Speichern</button>
+      <a class="badge" href="{% url 'accounts:user_list' %}">Zurück</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -26,15 +26,15 @@ def my_requests(request):
         .select_related("group", "time_entry", "proposed_activity", "decided_by")
         .order_by("-created_at")
     )
-    # Wer seine Antraege ansieht, hat die Entscheidungen gesehen; damit geht
-    # der Zaehler in der Navigation wieder aus.
+    # Wer seine Anträge ansieht, hat die Entscheidungen gesehen; damit geht
+    # der Zähler in der Navigation wieder aus.
     services.mark_decisions_seen(request.user)
     return render(request, "corrections/my_requests.html", {"requests": requests})
 
 
 @login_required
 def request_create(request, entry_id=None):
-    """Aenderung eines bestehenden Eintrags oder Nachtrag eines vergessenen."""
+    """Änderung eines bestehenden Eintrags oder Nachtrag eines vergessenen."""
     entry = None
     if entry_id is not None:
         entry = get_object_or_404(
@@ -74,7 +74,7 @@ def request_create(request, entry_id=None):
                 messages.error(request, str(exc))
             else:
                 messages.success(
-                    request, "Antrag gestellt. Ein Admin der Gruppe entscheidet darueber."
+                    request, "Antrag gestellt. Ein Admin der Gruppe entscheidet darüber."
                 )
                 return redirect("corrections:mine")
 
@@ -97,7 +97,7 @@ def request_delete(request, entry_id):
         messages.error(
             request,
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-            "Korrekturen sind dort nicht mehr moeglich.",
+            "Korrekturen sind dort nicht mehr möglich.",
         )
         return redirect("tracking:my_entries")
 
@@ -114,7 +114,7 @@ def request_delete(request, entry_id):
         except services.CorrectionError as exc:
             messages.error(request, str(exc))
         else:
-            messages.success(request, "Antrag auf Loeschung gestellt.")
+            messages.success(request, "Antrag auf Löschung gestellt.")
             return redirect("corrections:mine")
 
     return render(request, "corrections/delete_form.html", {"form": form, "entry": entry})
@@ -126,7 +126,7 @@ def request_withdraw(request, request_id):
     correction = get_object_or_404(CorrectionRequest, pk=request_id)
     try:
         services.withdraw(correction, request.user)
-        messages.success(request, "Antrag zurueckgenommen.")
+        messages.success(request, "Antrag zurückgenommen.")
     except services.CorrectionError as exc:
         messages.error(request, str(exc))
     return redirect("corrections:mine")
@@ -134,7 +134,7 @@ def request_withdraw(request, request_id):
 
 @login_required
 def inbox(request):
-    """Offene Antraege der Gruppen, in denen der Nutzer Admin ist."""
+    """Offene Anträge der Gruppen, in denen der Nutzer Admin ist."""
     group_ids = request.user.admin_group_ids()
     requests = (
         CorrectionRequest.objects.filter(
@@ -162,7 +162,7 @@ def decide(request, request_id):
         pk=request_id,
     )
     if not request.user.is_group_admin(correction.group):
-        raise PermissionDenied("Nur Admins dieser Gruppe duerfen Antraege entscheiden.")
+        raise PermissionDenied("Nur Admins dieser Gruppe dürfen Anträge entscheiden.")
 
     form = DecisionForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -171,7 +171,7 @@ def decide(request, request_id):
         try:
             if action == "approve":
                 services.approve(correction, request.user, note)
-                messages.success(request, "Antrag genehmigt, die Zeit wurde geaendert.")
+                messages.success(request, "Antrag genehmigt, die Zeit wurde geändert.")
             elif action == "reject":
                 services.reject(correction, request.user, note)
                 messages.success(request, "Antrag abgelehnt.")

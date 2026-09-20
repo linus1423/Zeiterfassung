@@ -1,5 +1,5 @@
 def navigation(request):
-    """Stellt die Navigationsrechte bereit, damit Templates nicht selbst pruefen."""
+    """Stellt die Navigationsrechte bereit, damit Templates nicht selbst prüfen."""
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
         return {"nav": {}}
@@ -13,8 +13,8 @@ def navigation(request):
             group_id__in=admin_group_ids, status=CorrectionRequest.Status.PENDING
         ).count()
 
-    # Entscheidungen zu eigenen Antraegen, die der Nutzer noch nicht gesehen
-    # hat. Damit erfaehrt er sie auch ohne Mailserver (Issue 3).
+    # Entscheidungen zu eigenen Anträgen, die der Nutzer noch nicht gesehen
+    # hat. Damit erfährt er sie auch ohne Mailserver (Issue 3).
     new_decisions = CorrectionRequest.objects.filter(
         requested_by=user,
         status__in=(CorrectionRequest.Status.APPROVED, CorrectionRequest.Status.REJECTED),

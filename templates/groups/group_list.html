@@ -21,7 +21,7 @@
           <td>
             <a href="{% url 'groups:periods' row.group.pk %}">Abschluss</a>
             {% if row.is_admin %}
-              · <a href="{% url 'groups:activities' row.group.pk %}">Taetigkeiten</a>
+              · <a href="{% url 'groups:activities' row.group.pk %}">Tätigkeiten</a>
               · <a href="{% url 'groups:members' row.group.pk %}">Mitglieder</a>
               · <a href="{% url 'groups:settings' row.group.pk %}">Einstellungen</a>
             {% endif %}

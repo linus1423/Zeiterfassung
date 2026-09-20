@@ -1,6 +1,6 @@
-"""Ablauf der Korrekturantraege.
+"""Ablauf der Korrekturanträge.
 
-Genehmigen aendert den Zeiteintrag und schreibt ins Protokoll. Der Antrag
+Genehmigen ändert den Zeiteintrag und schreibt ins Protokoll. Der Antrag
 bleibt als Beleg erhalten.
 """
 
@@ -37,7 +37,7 @@ def may_decide(user, request_obj: CorrectionRequest) -> bool:
 
 
 def affected_days(request_obj: CorrectionRequest) -> list:
-    """Die Tage, die ein Antrag beruehrt: bisheriger und gewuenschter Zeitpunkt."""
+    """Die Tage, die ein Antrag berührt: bisheriger und gewünschter Zeitpunkt."""
     values = [request_obj.proposed_start, request_obj.proposed_end]
     if request_obj.time_entry_id and request_obj.time_entry is not None:
         values.append(request_obj.time_entry.start)
@@ -78,7 +78,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
     if lock is not None:
         raise CorrectionError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-            "Die Zeit kann nicht mehr geaendert werden."
+            "Die Zeit kann nicht mehr geändert werden."
         )
 
     if locked.kind == CorrectionRequest.Kind.DELETE:
@@ -128,7 +128,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             entry.full_clean(exclude=["user", "group"])
         except ValidationError as exc:
             raise CorrectionError(
-                "Die gewuenschte Zeit ist nicht gueltig: " + "; ".join(exc.messages)
+                "Die gewünschte Zeit ist nicht gültig: " + "; ".join(exc.messages)
             ) from exc
         entry.save()
         _apply_breaks(entry, locked.proposed_breaks)
@@ -165,7 +165,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
     if not may_decide(decided_by, locked):
         raise CorrectionError("Dieser Antrag darf von dir nicht entschieden werden.")
     if not note.strip():
-        raise CorrectionError("Eine Ablehnung braucht eine Begruendung.")
+        raise CorrectionError("Eine Ablehnung braucht eine Begründung.")
 
     locked.status = CorrectionRequest.Status.REJECTED
     locked.decided_by = decided_by
@@ -190,7 +190,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
 def withdraw(request_obj: CorrectionRequest, user) -> CorrectionRequest:
     locked = CorrectionRequest.objects.select_for_update().get(pk=request_obj.pk)
     if locked.requested_by_id != user.pk:
-        raise CorrectionError("Nur der Antragsteller kann zuruecknehmen.")
+        raise CorrectionError("Nur der Antragsteller kann zurücknehmen.")
     if not locked.is_pending:
         raise CorrectionError("Dieser Antrag ist bereits entschieden.")
 
@@ -236,7 +236,7 @@ def create_request(
     if lock is not None:
         raise CorrectionError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-            "Korrekturen sind dort nicht mehr moeglich."
+            "Korrekturen sind dort nicht mehr möglich."
         )
 
     correction.save()
@@ -252,7 +252,7 @@ def create_request(
 
 
 def mark_decisions_seen(user) -> None:
-    """Entschiedene eigene Antraege als gesehen markieren (Zaehler in der Navigation)."""
+    """Entschiedene eigene Anträge als gesehen markieren (Zähler in der Navigation)."""
     CorrectionRequest.objects.filter(
         requested_by=user,
         status__in=(CorrectionRequest.Status.APPROVED, CorrectionRequest.Status.REJECTED),

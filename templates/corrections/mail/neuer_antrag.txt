@@ -1,10 +1,10 @@
 Hallo,
 
-{{ requester.full_name }} hat fuer die Gruppe {{ group.name }} eine Korrektur beantragt.
+{{ requester.full_name }} hat für die Gruppe {{ group.name }} eine Korrektur beantragt.
 
 Art: {{ correction.get_kind_display }}
-{% if correction.proposed_start %}Gewuenscht: {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"d.m.Y H:i" }}
-{% endif %}Begruendung: {{ correction.reason }}
+{% if correction.proposed_start %}Gewünscht: {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"d.m.Y H:i" }}
+{% endif %}Begründung: {{ correction.reason }}
 
 Entscheiden: {{ inbox_url }}
 

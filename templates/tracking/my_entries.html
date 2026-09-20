@@ -5,21 +5,33 @@
 <h1>Meine Zeiten</h1>
 
 <div class="card">
+  <div class="actions quick">
+    <a class="badge{% if quick == 'woche' %} count{% endif %}" href="?bereich=woche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Diese Woche</a>
+    <a class="badge{% if quick == 'vorwoche' %} count{% endif %}" href="?bereich=vorwoche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Vorige Woche</a>
+    <a class="badge{% if quick == 'monat' %} count{% endif %}" href="?bereich=monat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Dieser Zeitraum</a>
+    <a class="badge{% if quick == 'vormonat' %} count{% endif %}" href="?bereich=vormonat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Voriger Zeitraum</a>
+  </div>
   <form method="get" class="grid two">
-    {{ form.as_p }}
-    <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
+    <div>{{ form.start.label_tag }}{{ form.start }}{{ form.start.errors }}</div>
+    <div>{{ form.end.label_tag }}{{ form.end }}{{ form.end.errors }}</div>
+    <div>{{ form.activity.label_tag }}{{ form.activity }}{{ form.activity.errors }}</div>
+    <div class="actions">
+      <button class="primary" type="submit">Anzeigen</button>
+      <button type="submit" name="export" value="xlsx">Als Excel</button>
+      <button type="submit" name="export" value="csv">Als CSV</button>
+    </div>
   </form>
 </div>
 
 <div class="card">
-  <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}</h2>
+  <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}{% if activity %} · {{ activity.name }}{% endif %}</h2>
   <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden)</p>
   {% if entries %}
     <div class="table-scroll">
       <table>
         <tr>
-          <th>Datum</th><th>Gruppe</th><th>Taetigkeit</th><th>Beginn</th><th>Ende</th>
-          <th class="num">Pause</th><th class="num">Arbeitszeit</th><th></th>
+          <th>Datum</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th>
+          <th>Notiz</th><th class="num">Pause</th><th class="num">Arbeitszeit</th><th></th>
         </tr>
         {% for entry in entries %}
           <tr>
@@ -27,9 +39,10 @@
             <td>{{ entry.group.name }}</td>
             <td>{{ entry.activity.name|default:"-" }}</td>
             <td>{{ entry.start|time:"H:i" }}</td>
-            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}laeuft{% endif %}</td>
+            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
+            <td class="muted">{{ entry.note|default:"" }}</td>
             <td class="num">{{ entry.break_duration|dauer }}</td>
-            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollstaendig</span>{% endif %}</td>
+            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}</td>
             <td>
               {% if entry.end %}
                 <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
@@ -44,14 +57,31 @@
   {% endif %}
 </div>
 
-<div class="card">
-  <h2>Tagessummen</h2>
-  <table>
-    {% for day, total_day in by_day %}
-      <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
-    {% empty %}
-      <tr><td class="muted">Keine Daten.</td></tr>
-    {% endfor %}
-  </table>
+<div class="grid two">
+  <div class="card">
+    <h2>Wochensummen</h2>
+    <table>
+      {% for week in by_week %}
+        <tr>
+          <td>KW {{ week.week }}</td>
+          <td class="muted">{{ week.start|date:"d.m." }} bis {{ week.end|date:"d.m.Y" }}</td>
+          <td class="num">{{ week.total|dauer }} h</td>
+        </tr>
+      {% empty %}
+        <tr><td class="muted">Keine Daten.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Tagessummen</h2>
+    <table>
+      {% for day, total_day in by_day %}
+        <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
+      {% empty %}
+        <tr><td class="muted">Keine Daten.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
 </div>
 {% endblock %}

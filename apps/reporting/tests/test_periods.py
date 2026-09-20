@@ -52,7 +52,7 @@ def test_a_calendar_month_group_keeps_the_plain_label(group, member):
 
 
 def test_the_cycle_splits_the_monthly_summary(cycle_group, member):
-    # Beide Tage liegen im September, aber in verschiedenen Abrechnungszeitraeumen.
+    # Beide Tage liegen im September, aber in verschiedenen Abrechnungszeiträumen.
     entries = [
         _entry(member, cycle_group, date(2026, 9, 10)),
         _entry(member, cycle_group, date(2026, 9, 20)),
@@ -115,7 +115,7 @@ def test_the_export_page_lists_the_closed_periods(client, group, group_admin, ac
     response = client.get(reverse("reporting:export"))
     content = response.content.decode()
 
-    assert "Abgeschlossene Zeitraeume" in content
+    assert "Abgeschlossene Zeiträume" in content
     assert period.start.strftime("%d.%m.%Y") in content
 
 

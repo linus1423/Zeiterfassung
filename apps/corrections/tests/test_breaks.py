@@ -107,7 +107,7 @@ def test_overlapping_breaks_are_refused(client, member, workday):
     )
 
     assert response.status_code == 200
-    assert "ueberschneiden" in response.content.decode()
+    assert "überschneiden" in response.content.decode()
     assert not CorrectionRequest.objects.exists()
 
 

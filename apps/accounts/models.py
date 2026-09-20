@@ -5,7 +5,7 @@ from django.db import models
 class User(AbstractUser):
     """Eigenes Nutzermodell.
 
-    Die Rolle "Buchhaltung" haengt am Nutzer, weil sie fuer die gesamte
+    Die Rolle "Buchhaltung" hängt am Nutzer, weil sie für die gesamte
     Installation gilt und nicht an eine Gruppe gebunden ist. Die Rolle
     "Gruppen-Admin" steht dagegen in GroupMembership.
     """
@@ -16,7 +16,7 @@ class User(AbstractUser):
     is_accounting = models.BooleanField(
         "Buchhaltung",
         default=False,
-        help_text="Darf die Zeiten aller Gruppen lesen und exportieren, aber nichts aendern.",
+        help_text="Darf die Zeiten aller Gruppen lesen und exportieren, aber nichts ändern.",
     )
 
     class Meta:
@@ -36,7 +36,7 @@ class User(AbstractUser):
 
     @property
     def sees_all_groups(self) -> bool:
-        """Buchhaltung und System-Admins sehen gruppenuebergreifend."""
+        """Buchhaltung und System-Admins sehen gruppenübergreifend."""
         return self.is_accounting or self.is_superuser
 
     def memberships(self):
@@ -71,7 +71,7 @@ class User(AbstractUser):
         """Darf der Nutzer irgendeine Gruppe verwalten?
 
         Ein System-Admin darf das immer, auch solange es noch gar keine Gruppe
-        gibt: sonst fuehrte kein Weg zum Anlegen der ersten.
+        gibt: sonst führte kein Weg zum Anlegen der ersten.
         """
         from apps.groups.models import GroupMembership
 

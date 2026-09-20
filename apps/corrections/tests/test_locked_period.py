@@ -1,4 +1,4 @@
-"""Nach dem Monatsabschluss sind keine Korrekturen mehr moeglich (Issue 5)."""
+"""Nach dem Monatsabschluss sind keine Korrekturen mehr möglich (Issue 5)."""
 
 from datetime import timedelta
 
@@ -35,7 +35,7 @@ def test_a_request_for_a_closed_period_is_refused(closed_entry, member, group, a
             requested_by=member,
             group=group,
             kind=CorrectionRequest.Kind.EDIT,
-            reason="Zu spaet ausgestempelt",
+            reason="Zu spät ausgestempelt",
             entry=closed_entry,
             proposed_start=closed_entry.start,
             proposed_end=closed_entry.end - timedelta(hours=1),
@@ -58,7 +58,7 @@ def test_an_older_request_can_no_longer_be_approved(
         proposed_start=closed_entry.start,
         proposed_end=closed_entry.end - timedelta(hours=1),
         proposed_activity=activity,
-        reason="Zu spaet ausgestempelt",
+        reason="Zu spät ausgestempelt",
     )
 
     with pytest.raises(services.CorrectionError) as error:
@@ -120,7 +120,7 @@ def test_the_form_names_the_closed_period(client, closed_entry, member, group, a
             "activity": activity.pk,
             "start": local_start.strftime("%Y-%m-%dT%H:%M"),
             "end": local_start.strftime("%Y-%m-%dT17:00"),
-            "reason": "Zu spaet ausgestempelt",
+            "reason": "Zu spät ausgestempelt",
             "pausen-TOTAL_FORMS": "1",
             "pausen-INITIAL_FORMS": "0",
             "pausen-MIN_NUM_FORMS": "0",

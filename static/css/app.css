@@ -133,3 +133,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 table.breaks th { font-weight: 600; }
 table.breaks input { width: 100%; }
+
+/* Schnellschalter über der eigenen Zeitliste und der Wechsel der Tätigkeit */
+.actions.quick { margin-bottom: 0.5rem; }
+.actions.quick a { text-decoration: none; }
+.actions.quick a.count { background: var(--accent); border-color: var(--accent); color: #fff; }
+form.switch { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.75rem; }
+form.switch .actions { margin-top: 0.25rem; }
+form.switch select { max-width: 20rem; }
