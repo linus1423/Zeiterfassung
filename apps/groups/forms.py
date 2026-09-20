@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.utils.text import slugify
+
+from apps.tracking.forms import DateTimeLocalInput
 
 from .models import Activity, Group, GroupMembership
 from .periods import MAX_MONTH_START_DAY
@@ -90,3 +93,57 @@ class ClosePeriodForm(forms.Form):
     note = forms.CharField(
         label="Bemerkung", required=False, widget=forms.Textarea(attrs={"rows": 2})
     )
+
+
+class AdminEntryForm(forms.Form):
+    """Zeiteintrag eines Mitglieds direkt ändern oder nachtragen (Issue 31).
+
+    Beim Ändern steht die Person schon fest, deshalb fällt das Feld dann weg.
+    Die Begründung ist Pflicht, weil sie im Protokoll die einzige Auskunft
+    darüber ist, warum jemand anderes an einer fremden Zeit gearbeitet hat.
+    """
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.none(), label="Person", empty_label=None, required=False
+    )
+    activity = forms.ModelChoiceField(
+        queryset=Activity.objects.none(), label="Tätigkeit", required=False
+    )
+    start = forms.DateTimeField(label="Beginn", widget=DateTimeLocalInput())
+    end = forms.DateTimeField(label="Ende", widget=DateTimeLocalInput())
+    note = forms.CharField(label="Notiz", required=False, max_length=500)
+    reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, group, *args, entry=None, **kwargs):
+        self.group = group
+        self.entry = entry
+        super().__init__(*args, **kwargs)
+        self.fields["activity"].queryset = Activity.objects.filter(
+            group=group, is_active=True
+        ).order_by("sort_order", "name")
+
+        if entry is None:
+            self.fields["user"].required = True
+            self.fields["user"].queryset = User.objects.filter(
+                group_memberships__group=group, is_active=True
+            ).distinct()
+        else:
+            del self.fields["user"]
+            if not self.is_bound:
+                self.initial.update(
+                    {
+                        "activity": entry.activity_id,
+                        "start": entry.start,
+                        "end": entry.end,
+                        "note": entry.note,
+                    }
+                )
+
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get("start"), cleaned.get("end")
+        if start and end and end <= start:
+            self.add_error("end", "Das Ende muss nach dem Beginn liegen.")
+        if start and start > timezone.now():
+            self.add_error("start", "Ein Beginn in der Zukunft ist nicht möglich.")
+        return cleaned

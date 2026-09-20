@@ -68,6 +68,39 @@
       </div>
     </form>
     <p class="help">Eine Ablehnung braucht eine Begründung. Jede Entscheidung wird protokolliert.</p>
+    {% if may_adjust %}
+      <details {% if adjusting %}open{% endif %}>
+        <summary>Genehmigen mit Änderung</summary>
+        <p class="help">
+          Ist der Antrag nur um eine Kleinigkeit daneben, ändere die Zeiten hier und
+          übernimm sie. Der Antragsteller sieht in seiner Antragsliste, was übernommen wurde.
+        </p>
+        <form method="post">{% csrf_token %}{{ adjust_form.as_p }}
+          <h3>Pausen</h3>
+          {{ adjust_breaks.management_form }}
+          {% if adjust_breaks.non_form_errors %}
+            <ul class="messages">{% for error in adjust_breaks.non_form_errors %}<li class="error">{{ error }}</li>{% endfor %}</ul>
+          {% endif %}
+          <table class="breaks">
+            <tr><th>Von</th><th>Bis</th></tr>
+            {% for pause in adjust_breaks %}
+              <tr>
+                <td>{{ pause.start }}{{ pause.start.errors }}</td>
+                <td>{{ pause.end }}{{ pause.end.errors }}</td>
+              </tr>
+              {% if pause.non_field_errors %}
+                <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
+              {% endif %}
+            {% endfor %}
+          </table>
+          <div class="actions">
+            <button class="primary" type="submit" name="action" value="approve_adjusted">
+              Mit Änderung genehmigen
+            </button>
+          </div>
+        </form>
+      </details>
+    {% endif %}
   {% else %}
     <p>
       {% if correction.is_pending %}
