@@ -76,7 +76,7 @@
           <td>{{ entry.start|time:"H:i" }}</td>
           <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
           <td class="muted">{{ entry.note|default:"" }}</td>
-          <td class="num">{{ entry.duration|dauer }}</td>
+          <td class="num">{{ entry.duration|dauer }}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
           <td>
             {% if is_admin and entry.end %}<a href="{% url 'groups:entry_edit' group.pk entry.pk %}">Ändern</a> · {% endif %}
             <a href="{% url 'audit:entry' entry.pk %}">Protokoll</a>

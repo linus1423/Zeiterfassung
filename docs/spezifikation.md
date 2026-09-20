@@ -678,3 +678,24 @@ statt als Rohdaten.
 Lesen dürfen Gruppen-Admins ihre Gruppen und die Buchhaltung alle, beides rein
 lesend; für Mitglieder ist die Ansicht gesperrt. Vorgänge ohne Gruppe, etwa
 Exporte, erscheinen in keiner Gruppenansicht.
+
+**Zeiten über Mitternacht** (Issue 32). Eine Schicht von 22:00 bis 06:00 zählte
+bisher vollständig zu ihrem Starttag; eine Nachtschicht vom 31. auf den 1. lag
+damit ganz im alten Abrechnungszeitraum. Jetzt wird jeder Eintrag für die
+Auswertung an der lokalen Tagesgrenze anteilig aufgeteilt, wie es Kapitel 4
+schon immer vorsieht; gespeichert bleibt er ungeteilt.
+
+Die Aufteilung steht in `apps/tracking/daysplit.py` und gilt für die
+Tagessummen der Stempeluhr und von "Meine Zeiten", die Wochensummen, die
+Summen der Gruppenübersicht und den Export in allen Verdichtungen. Die Pausen
+werden mitgeteilt und zählen dort, wo sie liegen. Im Export ergibt ein Eintrag
+über Mitternacht je berührtem Tag eine Zeile und zählt an beiden Tagen mit
+seinem jeweiligen Anteil. In den Listen bleibt er eine Zeile mit seiner ganzen
+Dauer, gekennzeichnet mit "über Mitternacht", damit Zeile und Tagessumme
+zusammenpassen.
+
+Zeiträume schließen jetzt auch Einträge ein, die davor beginnen und in sie
+hineinlaufen; gezählt wird davon nur der Anteil im Zeitraum. Gerechnet wird
+über UTC, weil ein Tag beim Wechsel zwischen Sommer- und Winterzeit 23 oder 25
+Stunden hat und Python zwei Zeitpunkte derselben Zeitzone sonst ohne Rücksicht
+darauf voneinander abzieht.

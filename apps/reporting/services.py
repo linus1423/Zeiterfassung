@@ -17,8 +17,8 @@ from django.utils import timezone
 from apps.groups.closing import ClosedPeriods
 from apps.groups.periods import MONTH_NAMES, WEEKDAY_NAMES, period_for
 from apps.groups.permissions import readable_groups
+from apps.tracking.daysplit import DayPart, entries_in_range, parts_in_range
 from apps.tracking.models import TimeEntry
-from apps.tracking.utils import day_bounds
 
 from .columns import DATE, HHMM, HOURS, NUMBER, TEXT, TIME, Column
 
@@ -41,12 +41,13 @@ def query_entries(
     user_ids: Iterable[int] | None = None,
     activity_ids: Iterable[int] | None = None,
 ):
-    """Abgeschlossene Einträge im Zeitraum, begrenzt auf das, was der Nutzer lesen darf."""
-    period_start, _ = day_bounds(start)
-    _, period_end = day_bounds(end)
+    """Abgeschlossene Einträge im Zeitraum, begrenzt auf das, was der Nutzer lesen darf.
 
+    Dazu gehören auch Einträge, die vor dem Zeitraum beginnen und in ihn
+    hineinlaufen; ihr Anteil wird beim Bauen der Zeilen abgeschnitten.
+    """
     queryset = (
-        TimeEntry.objects.filter(end__isnull=False, start__gte=period_start, start__lt=period_end)
+        entries_in_range(TimeEntry.objects.filter(end__isnull=False), start, end)
         .filter(group__in=readable_groups(user))
         .select_related("user", "group", "activity")
         .prefetch_related("breaks")
@@ -61,13 +62,15 @@ def query_entries(
     return queryset
 
 
-def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
-    local_start = timezone.localtime(entry.start)
-    local_end = timezone.localtime(entry.end) if entry.end else None
-    iso_year, iso_week, _ = local_start.date().isocalendar()
+def _base_row(part: DayPart, closed: ClosedPeriods | None = None) -> dict:
+    """Eine Zeile aus dem Anteil eines Eintrags an einem Tag (Issue 32)."""
+    entry = part.entry
+    local_start = timezone.localtime(part.start)
+    local_end = timezone.localtime(part.end)
+    iso_year, iso_week, _ = part.day.isocalendar()
     # Der Abrechnungszeitraum folgt dem Zyklus der Gruppe (Issue 8).
-    period = period_for(local_start.date(), entry.group.month_start_day)
-    is_closed = closed is not None and closed.is_closed(entry.group_id, local_start.date())
+    period = period_for(part.day, entry.group.month_start_day)
+    is_closed = closed is not None and closed.is_closed(entry.group_id, part.day)
     return {
         "personnel_number": entry.user.personnel_number,
         "last_name": entry.user.last_name,
@@ -77,8 +80,8 @@ def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
         "group": entry.group.name,
         "cost_center": entry.group.cost_center,
         "activity": entry.activity.name if entry.activity else "",
-        "date": local_start.date(),
-        "weekday": WEEKDAYS[local_start.weekday()],
+        "date": part.day,
+        "weekday": WEEKDAYS[part.day.weekday()],
         "week": iso_week,
         "month": period.month_label,
         "year": period.start.year,
@@ -87,9 +90,9 @@ def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
         "period_end": period.end,
         "period_closed": "ja" if is_closed else "",
         "start": local_start.time().replace(second=0, microsecond=0),
-        "end": local_end.time().replace(second=0, microsecond=0) if local_end else None,
-        "break_seconds": entry.break_duration.total_seconds(),
-        "work_seconds": entry.duration.total_seconds(),
+        "end": local_end.time().replace(second=0, microsecond=0),
+        "break_seconds": part.breaks.total_seconds(),
+        "work_seconds": part.work.total_seconds(),
         "entry_count": 1,
         "source": entry.get_source_display(),
         "incomplete": "ja" if entry.is_incomplete else "",
@@ -100,10 +103,20 @@ def _base_row(entry: TimeEntry, closed: ClosedPeriods | None = None) -> dict:
 
 
 def build_rows(
-    entries: Iterable[TimeEntry], grouping: str, closed: ClosedPeriods | None = None
+    entries: Iterable[TimeEntry],
+    grouping: str,
+    closed: ClosedPeriods | None = None,
+    *,
+    first_day: date | None = None,
+    last_day: date | None = None,
 ) -> list[dict]:
-    """Baut die Exportzeilen in der gewünschten Verdichtung."""
-    rows = [_base_row(entry, closed) for entry in entries]
+    """Baut die Exportzeilen in der gewünschten Verdichtung.
+
+    Ein Eintrag über Mitternacht ergibt je berührtem Tag eine Zeile und zählt
+    damit an beiden Tagen (Issue 32). Mit first_day und last_day bleibt nur
+    der Anteil übrig, der im ausgewerteten Zeitraum liegt.
+    """
+    rows = [_base_row(part, closed) for part in parts_in_range(entries, first_day, last_day)]
     if grouping == "entry":
         return rows
 

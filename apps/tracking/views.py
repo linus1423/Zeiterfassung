@@ -13,9 +13,9 @@ from apps.groups.models import Group
 from apps.groups.periods import period_for
 
 from . import services
+from .daysplit import entries_in_range, parts_in_range
 from .forms import ClockInForm, MyEntriesFilterForm, SwitchActivityForm
 from .models import BreakEntry, TimeEntry
-from .utils import day_bounds
 
 # Spalten des Downloads der eigenen Zeiten. Bewusst fest: die frei wählbare
 # Zusammenstellung bleibt der Auswertung vorbehalten.
@@ -44,15 +44,17 @@ def _entries_with_breaks(queryset):
 def clock(request):
     """Stempeluhr: Zustand, Knöpfe und die Einträge von heute."""
     state = services.get_state(request.user)
-    today_start, today_end = day_bounds(timezone.localdate())
+    today = timezone.localdate()
+    # Auch der Eintrag von gestern Abend, der über Mitternacht läuft (Issue 32).
     today_entries = list(
         _entries_with_breaks(
-            TimeEntry.objects.filter(user=request.user, start__gte=today_start, start__lt=today_end)
+            entries_in_range(TimeEntry.objects.filter(user=request.user), today, today)
         ).order_by("start")
     )
 
-    worked_today = sum((entry.duration for entry in today_entries), timedelta())
-    paused_today = sum((entry.break_duration for entry in today_entries), timedelta())
+    today_parts = parts_in_range(today_entries, today, today)
+    worked_today = sum((part.work for part in today_parts), timedelta())
+    paused_today = sum((part.breaks for part in today_parts), timedelta())
 
     incomplete = TimeEntry.objects.filter(
         user=request.user, is_incomplete=True, start__gte=timezone.now() - timedelta(days=30)
@@ -178,11 +180,11 @@ def _quick_range(name: str, start_day: int, today: date) -> tuple[date, date] | 
     return None
 
 
-def _week_totals(entries) -> list[dict]:
+def _week_totals(parts) -> list[dict]:
     """Summen je Kalenderwoche, neueste zuerst."""
     weeks: dict[tuple[int, int], dict] = {}
-    for entry in entries:
-        day = timezone.localtime(entry.start).date()
+    for part in parts:
+        day = part.day
         iso_year, iso_week, _ = day.isocalendar()
         week = weeks.get((iso_year, iso_week))
         if week is None:
@@ -195,7 +197,7 @@ def _week_totals(entries) -> list[dict]:
                 "total": timedelta(),
             }
             weeks[(iso_year, iso_week)] = week
-        week["total"] += entry.duration
+        week["total"] += part.work
     return [weeks[key] for key in sorted(weeks, reverse=True)]
 
 
@@ -205,7 +207,12 @@ def _my_export_response(entries, start_day: date, end_day: date, export: str):
     from apps.reporting.columns import resolve
 
     columns = resolve(list(MY_EXPORT_COLUMNS))
-    rows = reporting.build_rows([entry for entry in entries if entry.end is not None], "entry")
+    rows = reporting.build_rows(
+        [entry for entry in entries if entry.end is not None],
+        "entry",
+        first_day=start_day,
+        last_day=end_day,
+    )
     filename = f"meine-zeiten_{slugify(f'{start_day:%Y-%m-%d}_bis_{end_day:%Y-%m-%d}')}"
 
     if export == "xlsx":
@@ -244,12 +251,9 @@ def my_entries(request):
         start_day = form.cleaned_data["start"]
         end_day = form.cleaned_data["end"]
 
-    period_start, _ = day_bounds(start_day)
-    _, period_end = day_bounds(end_day)
-
-    queryset = TimeEntry.objects.filter(
-        user=request.user, start__gte=period_start, start__lt=period_end
-    )
+    # Einträge, die vor dem Zeitraum beginnen und hineinlaufen, gehören dazu;
+    # gezählt wird davon nur der Anteil im Zeitraum (Issue 32).
+    queryset = entries_in_range(TimeEntry.objects.filter(user=request.user), start_day, end_day)
     activity = form.cleaned_data.get("activity") if is_valid else None
     if activity is not None:
         queryset = queryset.filter(activity=activity)
@@ -264,17 +268,17 @@ def my_entries(request):
             return _my_export_response(entries, start_day, end_day, export)
         messages.error(request, "Bitte zuerst die Eingaben im Filter berichtigen.")
 
+    parts = parts_in_range(entries, start_day, end_day)
     by_day: dict[date, timedelta] = {}
-    for entry in entries:
-        day = timezone.localtime(entry.start).date()
-        by_day[day] = by_day.get(day, timedelta()) + entry.duration
+    for part in parts:
+        by_day[part.day] = by_day.get(part.day, timedelta()) + part.work
 
     context = {
         "form": form,
         "entries": entries,
-        "total": sum((entry.duration for entry in entries), timedelta()),
+        "total": sum((part.work for part in parts), timedelta()),
         "by_day": sorted(by_day.items(), reverse=True),
-        "by_week": _week_totals(entries),
+        "by_week": _week_totals(parts),
         "start_day": start_day,
         "end_day": end_day,
         "quick": quick,

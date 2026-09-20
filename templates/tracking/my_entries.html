@@ -42,7 +42,7 @@
             <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
             <td class="muted">{{ entry.note|default:"" }}</td>
             <td class="num">{{ entry.break_duration|dauer }}</td>
-            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}</td>
+            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
             <td>
               {% if entry.end %}
                 <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
