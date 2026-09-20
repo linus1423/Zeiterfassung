@@ -10,9 +10,9 @@ from django.views.decorators.http import require_POST
 
 from apps.audit.models import AuditLog, log
 from apps.tracking import entry_editing
+from apps.tracking.daysplit import entries_in_range, parts_in_range
 from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
-from apps.tracking.utils import day_bounds
 
 from . import closing
 from .forms import (
@@ -76,11 +76,10 @@ def group_detail(request, group_id):
     if form.is_valid():
         start_day, end_day = form.cleaned_data["start"], form.cleaned_data["end"]
 
-    period_start, _ = day_bounds(start_day)
-    _, period_end = day_bounds(end_day)
-
+    # Auch Einträge, die vor dem Zeitraum beginnen und hineinlaufen; gezählt
+    # wird davon nur der Anteil im Zeitraum (Issue 32).
     entries = list(
-        TimeEntry.objects.filter(group=group, start__gte=period_start, start__lt=period_end)
+        entries_in_range(TimeEntry.objects.filter(group=group), start_day, end_day)
         .select_related("user", "activity")
         .prefetch_related(Prefetch("breaks", queryset=BreakEntry.objects.order_by("start")))
         .order_by("-start")
@@ -88,12 +87,12 @@ def group_detail(request, group_id):
 
     per_user: dict[str, timedelta] = {}
     per_activity: dict[str, timedelta] = {}
-    for entry in entries:
-        per_user[entry.user.full_name] = (
-            per_user.get(entry.user.full_name, timedelta()) + entry.duration
-        )
+    parts = parts_in_range(entries, start_day, end_day)
+    for part in parts:
+        entry = part.entry
+        per_user[entry.user.full_name] = per_user.get(entry.user.full_name, timedelta()) + part.work
         label = entry.activity.name if entry.activity else "ohne Tätigkeit"
-        per_activity[label] = per_activity.get(label, timedelta()) + entry.duration
+        per_activity[label] = per_activity.get(label, timedelta()) + part.work
 
     context = {
         "group": group,
@@ -106,7 +105,7 @@ def group_detail(request, group_id):
         .prefetch_related("breaks"),
         "per_user": sorted(per_user.items()),
         "per_activity": sorted(per_activity.items()),
-        "total": sum((entry.duration for entry in entries), timedelta()),
+        "total": sum((part.work for part in parts), timedelta()),
         "is_admin": request.user.is_group_admin(group),
         "period": period,
         "period_closed": closing.is_closed(group, end_day),

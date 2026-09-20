@@ -66,7 +66,13 @@ def export_view(request, profile_id=None):
             activity_ids=[activity.pk for activity in form.cleaned_data["activities"]],
         )
         closed = ClosedPeriods(readable_groups(request.user).values_list("pk", flat=True))
-        rows = services.build_rows(entries, form.cleaned_data["grouping"], closed)
+        rows = services.build_rows(
+            entries,
+            form.cleaned_data["grouping"],
+            closed,
+            first_day=form.cleaned_data["start"],
+            last_day=form.cleaned_data["end"],
+        )
 
         action = request.POST.get("action", "preview")
         if action == "xlsx":

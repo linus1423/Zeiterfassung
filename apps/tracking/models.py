@@ -1,10 +1,20 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
+
+
+def elapsed(start, end) -> timedelta:
+    """Die tatsächlich vergangene Zeit zwischen zwei Zeitpunkten.
+
+    Über UTC gerechnet, weil Python zwei Zeitpunkte mit derselben Zeitzone
+    ohne Rücksicht auf die Umstellung zwischen Sommer- und Winterzeit
+    voneinander abzieht (Issue 32).
+    """
+    return end.astimezone(UTC) - start.astimezone(UTC)
 
 
 class TimeEntryQuerySet(models.QuerySet):
@@ -102,7 +112,7 @@ class TimeEntry(models.Model):
     @property
     def gross_duration(self) -> timedelta:
         """Anwesenheit inklusive Pausen."""
-        return (self.end or timezone.now()) - self.start
+        return elapsed(self.start, self.end or timezone.now())
 
     @property
     def break_duration(self) -> timedelta:
@@ -116,6 +126,20 @@ class TimeEntry(models.Model):
         """Arbeitszeit, also Anwesenheit abzüglich Pausen."""
         value = self.gross_duration - self.break_duration
         return value if value > timedelta() else timedelta()
+
+    @property
+    def spans_days(self) -> bool:
+        """Läuft der Eintrag über Mitternacht?
+
+        Dann zählt er anteilig zu beiden Tagen (Issue 32), und die Anzeige
+        weist darauf hin, damit die Zeile und die Tagessumme zusammenpassen.
+        """
+        if self.end is None:
+            return False
+        # Eine Minute vor dem Ende: ein Eintrag, der um Punkt Mitternacht
+        # endet, gehört noch ganz zum Vortag.
+        last = timezone.localtime(self.end - timedelta(microseconds=1)).date()
+        return timezone.localtime(self.start).date() != last
 
     @property
     def open_break(self):
@@ -161,4 +185,4 @@ class BreakEntry(models.Model):
 
     @property
     def duration(self) -> timedelta:
-        return (self.end or timezone.now()) - self.start
+        return elapsed(self.start, self.end or timezone.now())

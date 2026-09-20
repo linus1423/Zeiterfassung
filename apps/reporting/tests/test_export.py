@@ -1,5 +1,5 @@
 import io
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 from django.utils import timezone
@@ -13,9 +13,14 @@ from apps.tracking.models import BreakEntry, TimeEntry
 @pytest.fixture
 def entries(member, group, activity):
     created = []
-    base = timezone.now().replace(microsecond=0) - timedelta(days=2)
+    # Feste Tageszeit statt "jetzt minus zwei Tage": je nach Uhrzeit des
+    # Testlaufs liefe der Eintrag sonst über Mitternacht und würde für die
+    # Auswertung auf zwei Tage aufgeteilt (Issue 32).
+    first_day = timezone.localdate() - timedelta(days=2)
     for offset in (0, 1):
-        start = base + timedelta(days=offset)
+        start = timezone.make_aware(
+            datetime.combine(first_day + timedelta(days=offset), time(8, 0))
+        )
         entry = TimeEntry.objects.create(
             user=member, group=group, activity=activity, start=start, end=start + timedelta(hours=8)
         )
