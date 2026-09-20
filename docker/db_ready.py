@@ -2,7 +2,7 @@
 
 Wird vom Einstiegspunkt in einer Schleife aufgerufen. Compose kann mit
 `depends_on: service_healthy` warten, systemd kann das nicht: eine Unit gilt als
-gestartet, sobald der Container laeuft, nicht sobald PostgreSQL antwortet.
+gestartet, sobald der Container läuft, nicht sobald PostgreSQL antwortet.
 Deshalb wartet der Container selbst, und beide Wege verhalten sich gleich.
 """
 

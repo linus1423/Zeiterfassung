@@ -12,8 +12,8 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Feste UID und GID. Rootless Podman bildet sie ueber den Subuid-Bereich des
-# Hosts ab; das Image laeuft dadurch unveraendert unter Docker (als UID 10001)
+# Feste UID und GID. Rootless Podman bildet sie über den Subuid-Bereich des
+# Hosts ab; das Image läuft dadurch unverändert unter Docker (als UID 10001)
 # und rootless unter Podman.
 RUN groupadd --gid 10001 app \
     && useradd --create-home --uid 10001 --gid 10001 app
@@ -23,13 +23,13 @@ COPY . .
 # Statische Dateien einsammeln; der Schlüssel wird dafür nicht gebraucht.
 RUN DJANGO_DEBUG=true python manage.py collectstatic --noinput
 
-# Erst danach die Rechte setzen, damit auch staticfiles/ dem Benutzer gehoert.
+# Erst danach die Rechte setzen, damit auch staticfiles/ dem Benutzer gehört.
 RUN chown -R app:app /app
 USER app
 
 EXPOSE 8000
 
-# Gilt fuer Docker und Podman gleichermassen. Der Scheduler benutzt dasselbe
+# Gilt für Docker und Podman gleichermaßen. Der Scheduler benutzt dasselbe
 # Image ohne Webserver und schaltet den Healthcheck deshalb ab.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["python", "/app/docker/healthcheck.py"]

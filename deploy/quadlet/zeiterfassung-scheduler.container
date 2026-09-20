@@ -1,9 +1,9 @@
-# Vergessene Stempelungen beenden. Unter Compose laeuft dafuer ein Dienst mit
-# einer Schleife aus "sleep"; unter systemd macht das der zugehoerige Timer
+# Vergessene Stempelungen beenden. Unter Compose läuft dafür ein Dienst mit
+# einer Schleife aus "sleep"; unter systemd macht das der zugehörige Timer
 # (zeiterfassung-scheduler.timer). Vorteile: der Lauf steht im Journal, er
-# laesst sich mit "systemctl start zeiterfassung-scheduler" von Hand ausloesen,
+# lässt sich mit "systemctl start zeiterfassung-scheduler" von Hand auslösen,
 # ein ausgefallener Lauf wird nach einem Neustart nachgeholt (Persistent=true),
-# und zwischen zwei Laeufen laeuft kein Container.
+# und zwischen zwei Läufen läuft kein Container.
 #
 # Absichtlich ohne [Install]: gestartet wird die Unit nur vom Timer.
 [Unit]
@@ -28,7 +28,7 @@ NoNewPrivileges=true
 DropCapability=ALL
 
 # Kein Webserver in diesem Container, also auch nichts anzufragen. Ohne diese
-# Zeile wuerde der Healthcheck aus dem Image greifen und immer fehlschlagen.
+# Zeile würde der Healthcheck aus dem Image greifen und immer fehlschlagen.
 HealthCmd=none
 
 Exec=python manage.py close_stale_entries

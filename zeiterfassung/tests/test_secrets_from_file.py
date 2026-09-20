@@ -1,4 +1,4 @@
-"""Geheimnisse duerfen als Datei statt als Umgebungsvariable kommen."""
+"""Geheimnisse dürfen als Datei statt als Umgebungsvariable kommen."""
 
 import os
 
@@ -10,10 +10,10 @@ from zeiterfassung.settings import _secrets_from_files
 
 def test_liest_den_wert_aus_der_datei(tmp_path, monkeypatch):
     datei = tmp_path / "secret"
-    # Ein abschliessender Zeilenumbruch ist ueblich und gehoert nicht zum Wert.
+    # Ein abschließender Zeilenumbruch ist üblich und gehört nicht zum Wert.
     datei.write_text("geheimer-schluessel\n", encoding="utf-8")
-    # setenv statt delenv, damit monkeypatch den urspruenglichen Zustand
-    # danach wiederherstellt; leer zaehlt wie nicht gesetzt.
+    # setenv statt delenv, damit monkeypatch den ursprünglichen Zustand
+    # danach wiederherstellt; leer zählt wie nicht gesetzt.
     monkeypatch.setenv("DJANGO_SECRET_KEY", "")
     monkeypatch.setenv("DJANGO_SECRET_KEY_FILE", str(datei))
 
@@ -21,7 +21,7 @@ def test_liest_den_wert_aus_der_datei(tmp_path, monkeypatch):
 
 
 def test_der_wert_landet_nicht_in_der_prozessumgebung(tmp_path, monkeypatch):
-    """Sonst stuende er in /proc/<pid>/environ und in jedem Kindprozess."""
+    """Sonst stünde er in /proc/<pid>/environ und in jedem Kindprozess."""
     datei = tmp_path / "secret"
     datei.write_text("geheimer-schluessel", encoding="utf-8")
     monkeypatch.setenv("DJANGO_SECRET_KEY", "")

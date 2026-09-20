@@ -1,5 +1,5 @@
 #!/bin/sh
-# Gemeinsamer Einstiegspunkt fuer Docker Compose und Podman Quadlet.
+# Gemeinsamer Einstiegspunkt für Docker Compose und Podman Quadlet.
 #
 # Wartet auf die Datenbank, wendet auf Wunsch die Migrationen an und startet
 # danach das eigentliche Kommando. Damit braucht der Quadlet-Aufbau keine
@@ -23,7 +23,7 @@ if [ "${WAIT_FOR_DATABASE:-true}" = "true" ]; then
     done
 fi
 
-# Nur der Webdienst migriert; der Scheduler wuerde sonst parallel dieselben
+# Nur der Webdienst migriert; der Scheduler würde sonst parallel dieselben
 # Migrationen anwenden wollen.
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     log "Migrationen werden angewendet."

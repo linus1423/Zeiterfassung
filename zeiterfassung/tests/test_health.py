@@ -1,4 +1,4 @@
-"""Die Endpunkte, die Docker und Podman fuer den Healthcheck anfragen."""
+"""Die Endpunkte, die Docker und Podman für den Healthcheck anfragen."""
 
 from unittest.mock import patch
 
@@ -21,9 +21,9 @@ def test_readyz_antwortet_wenn_die_datenbank_erreichbar_ist(client):
 
 
 def test_readyz_meldet_503_wenn_die_abfrage_scheitert(client):
-    """Geprueft wird die Abfrage selbst, nicht nur das Oeffnen der Verbindung:
-    mit CONN_MAX_AGE haelt Django die Verbindung offen, und eine abgerissene
-    faellt erst auf, wenn etwas darueber laeuft."""
+    """Geprüft wird die Abfrage selbst, nicht nur das Oeffnen der Verbindung:
+    mit CONN_MAX_AGE hält Django die Verbindung offen, und eine abgerissene
+    fällt erst auf, wenn etwas darüber läuft."""
     with patch(
         "django.db.backends.base.base.BaseDatabaseWrapper.cursor",
         side_effect=OperationalError("Verbindung abgerissen"),
@@ -45,7 +45,7 @@ def test_healthz_ohne_passenden_host(client, settings):
 
 
 def test_healthz_ohne_https_umleitung(client, settings):
-    """SECURE_SSL_REDIRECT wuerde eine Anfrage ueber http umleiten; der
+    """SECURE_SSL_REDIRECT würde eine Anfrage über http umleiten; der
     Healthcheck spricht aber http auf 127.0.0.1."""
     settings.SECURE_SSL_REDIRECT = True
 

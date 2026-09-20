@@ -31,10 +31,10 @@ services:
     ports:
       - "8000:8000"
 
-  # Vergessene Stempelungen beenden (Issue 7). Laeuft als eigener Dienst im
+  # Vergessene Stempelungen beenden (Issue 7). Läuft als eigener Dienst im
   # selben Stack, damit dafür kein Cronjob auf dem Host und kein Broker
-  # gebraucht wird. Das Kommando ist unschaedlich, wenn es nichts zu tun gibt.
-  # Unter Podman uebernimmt das ein systemd-Timer, siehe docs/podman-quadlet.md.
+  # gebraucht wird. Das Kommando ist unschädlich, wenn es nichts zu tun gibt.
+  # Unter Podman übernimmt das ein systemd-Timer, siehe docs/podman-quadlet.md.
   scheduler:
     build: .
     restart: unless-stopped
