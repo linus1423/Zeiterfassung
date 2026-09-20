@@ -134,3 +134,17 @@ def test_quick_range_month_uses_the_cycle():
 
     assert start == date(2026, 9, 15)
     assert end == date(2026, 9, 20)
+
+
+def test_invalid_filter_shows_errors_instead_of_a_download(client, member, entries):
+    client.force_login(member)
+
+    response = client.get(
+        reverse("tracking:my_entries"),
+        {"start": "2026-09-30", "end": "2026-09-01", "export": "csv"},
+    )
+
+    assert response.status_code == 200
+    assert "text/csv" not in response["Content-Type"]
+    assert response.context["form"].errors
+    assert "berichtigen" in response.content.decode()
