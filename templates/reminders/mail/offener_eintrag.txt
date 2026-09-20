@@ -1,0 +1,7 @@
+Hallo {{ reminder.recipient.full_name }},
+
+{{ reminder.message }}
+
+Stempeluhr: {{ link }}
+
+Diese Nachricht kommt von der Zeiterfassung, eine Antwort darauf liest niemand.

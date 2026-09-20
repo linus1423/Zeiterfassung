@@ -1,4 +1,5 @@
-# Vergessene Stempelungen beenden. Unter Compose läuft dafür ein Dienst mit
+# Vergessene Stempelungen beenden und die Erinnerungen verschicken (Issue 34).
+# Unter Compose läuft dafür ein Dienst mit
 # einer Schleife aus "sleep"; unter systemd macht das der zugehörige Timer
 # (zeiterfassung-scheduler.timer). Vorteile: der Lauf steht im Journal, er
 # lässt sich mit "systemctl start zeiterfassung-scheduler" von Hand auslösen,
@@ -7,7 +8,7 @@
 #
 # Absichtlich ohne [Install]: gestartet wird die Unit nur vom Timer.
 [Unit]
-Description=Vergessene Stempelungen der Zeiterfassung beenden
+Description=Wiederkehrende Aufgaben der Zeiterfassung
 Requires=zeiterfassung-db.service
 After=zeiterfassung-db.service zeiterfassung-web.service
 
@@ -31,7 +32,9 @@ DropCapability=ALL
 # Zeile würde der Healthcheck aus dem Image greifen und immer fehlschlagen.
 HealthCmd=none
 
-Exec=python manage.py close_stale_entries
+# Mit Semikolon verkettet: ein fehlgeschlagenes Kommando hält die übrigen
+# nicht auf, der Fehler steht im Journal.
+Exec=sh -c "python manage.py close_stale_entries; python manage.py remind_open_entries; python manage.py remind_pending_corrections; python manage.py remind_period_closing"
 
 [Service]
 Type=oneshot

@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
 from apps.groups import closing
+from apps.reminders import services as reminders
 from apps.tracking.entries import (
     apply_breaks,
     lock_user,
@@ -231,6 +232,8 @@ def approve(
         subject=locked.requested_by,
         note="Mit Änderung genehmigt." if overrides else "",
     )
+    # Ein entschiedener Antrag liegt nicht mehr offen (Issue 34).
+    reminders.resolve_correction(locked.pk)
     notifications.notify_requester_of_decision(locked)
     return locked
 
@@ -258,6 +261,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
         subject=locked.requested_by,
         note=note,
     )
+    reminders.resolve_correction(locked.pk)
     notifications.notify_requester_of_decision(locked)
     return locked
 
@@ -279,6 +283,7 @@ def withdraw(request_obj: CorrectionRequest, user) -> CorrectionRequest:
         group=locked.group,
         subject=user,
     )
+    reminders.resolve_correction(locked.pk)
     return locked
 
 

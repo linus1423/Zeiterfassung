@@ -68,6 +68,10 @@ env = environ.Env(
     STATUTORY_BREAK_WARNINGS=(bool, True),
     DATA_RETENTION_MONTHS=(int, 24),
     CORRECTION_EMAILS_ENABLED=(bool, False),
+    REMINDER_EMAILS_ENABLED=(bool, False),
+    OPEN_ENTRY_REMINDER_HOURS=(int, 10),
+    PENDING_CORRECTION_REMINDER_DAYS=(int, 3),
+    PERIOD_CLOSING_REMINDER_DAYS=(int, 3),
     DJANGO_EMAIL_PORT=(int, 587),
     DJANGO_EMAIL_USE_TLS=(bool, True),
     DJANGO_EMAIL_TIMEOUT=(int, 10),
@@ -113,6 +117,7 @@ INSTALLED_APPS = [
     "apps.tracking",
     "apps.corrections",
     "apps.reporting",
+    "apps.reminders",
 ]
 
 MIDDLEWARE = [
@@ -305,6 +310,9 @@ OIDC_ADMIN_GROUP_SUFFIX = env("OIDC_ADMIN_GROUP_SUFFIX")
 # --- Benachrichtigungen (Issue 3) ------------------------------------------
 # Ohne Mailserver bleibt es beim Zähler in der Navigation.
 CORRECTION_EMAILS_ENABLED = env("CORRECTION_EMAILS_ENABLED")
+# Erinnerungen, bevor ein Fehler entsteht (Issue 34). Ohne Mailserver
+# stehen sie unter "Hinweise" im Tool.
+REMINDER_EMAILS_ENABLED = env("REMINDER_EMAILS_ENABLED")
 SITE_BASE_URL = env("SITE_BASE_URL", default="")
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="zeiterfassung@localhost")
 EMAIL_BACKEND = env(
@@ -332,6 +340,13 @@ STATUTORY_BREAK_WARNINGS = env("STATUTORY_BREAK_WARNINGS")
 # Aufbewahrungsfrist für personenbezogene Zeitdaten in Monaten (Issue 6).
 # Zwei Jahre entsprechen der üblichen Frist für Arbeitszeitnachweise.
 DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
+# Erinnerung ans Ausstempeln. Gehört deutlich unter MAX_OPEN_ENTRY_HOURS,
+# sonst kommt der Hinweis erst, wenn der Eintrag schon gekappt ist.
+OPEN_ENTRY_REMINDER_HOURS = env("OPEN_ENTRY_REMINDER_HOURS")
+# Frist, nach der ein offener Korrekturantrag die Admins erinnert.
+PENDING_CORRECTION_REMINDER_DAYS = env("PENDING_CORRECTION_REMINDER_DAYS")
+# Frist nach Ende eines Zeitraums, nach der an den Abschluss erinnert wird.
+PERIOD_CLOSING_REMINDER_DAYS = env("PERIOD_CLOSING_REMINDER_DAYS")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

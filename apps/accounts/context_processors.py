@@ -5,6 +5,7 @@ def navigation(request):
         return {"nav": {}}
 
     from apps.corrections.models import CorrectionRequest
+    from apps.reminders import services as reminder_services
 
     admin_group_ids = user.administrated_group_ids()
     pending = 0
@@ -28,5 +29,7 @@ def navigation(request):
             "is_superuser": user.is_superuser,
             "pending_corrections": pending,
             "new_decisions": new_decisions,
+            # Hinweise, die Arbeit ersparen, bevor etwas schiefgeht (Issue 34).
+            "reminders": reminder_services.open_count(user),
         }
     }

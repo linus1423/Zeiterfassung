@@ -15,6 +15,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
+from apps.reminders import services as reminders
 
 from .models import Group, PeriodLock
 from .periods import Period, group_period
@@ -115,6 +116,8 @@ def close_period(group: Group, period: Period, user, note: str = "") -> PeriodLo
         group=group,
         note=f"{period.label} abgeschlossen." + (f" {note}" if note else ""),
     )
+    # Die Erinnerung an diesen Abschluss hat sich erledigt (Issue 34).
+    reminders.resolve_period(group.pk, period.start)
     return lock
 
 

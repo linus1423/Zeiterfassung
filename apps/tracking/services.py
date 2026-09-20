@@ -16,6 +16,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
+from apps.reminders import services as reminders
 
 from .models import BreakEntry, TimeEntry
 
@@ -121,6 +122,7 @@ def switch_activity(user, activity) -> TimeEntry:
     entry.end = boundary
     entry.save(update_fields=["end", "updated_at"])
     log(AuditLog.Action.CLOCK_OUT, actor=user, target=entry, group=entry.group, subject=user)
+    reminders.resolve_entry(entry.pk)
 
     new_entry = TimeEntry.objects.create(
         user=user,
@@ -180,6 +182,9 @@ def clock_out(user) -> TimeEntry:
     entry.end = max(now, entry.start + timedelta(seconds=1))
     entry.save(update_fields=["end", "updated_at"])
     log(AuditLog.Action.CLOCK_OUT, actor=user, target=entry, group=entry.group, subject=user)
+    # Der Hinweis auf das vergessene Ausstempeln hat sich damit erledigt
+    # (Issue 34); er soll nicht bis zum nächsten Lauf des Diensts stehen.
+    reminders.resolve_entry(entry.pk)
     return entry
 
 
@@ -215,6 +220,7 @@ def close_stale_entries(max_hours: int | None = None) -> int:
                 subject=locked.user,
                 note=f"Automatisch beendet nach {max_hours} Stunden.",
             )
+            reminders.resolve_entry(locked.pk)
             closed += 1
 
     return closed
