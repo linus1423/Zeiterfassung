@@ -257,8 +257,9 @@ Klick nicht zwei Einträge erzeugt.
 5. Der Antragsteller wird benachrichtigt (siehe Rückfrage 9).
 
 Der Nutzer ändert seine Zeiten nie direkt. Ein Admin kann Zeiten seiner Gruppe direkt
-ändern, das wird aber ebenfalls protokolliert. Ein Admin darf seinen eigenen Antrag
-nicht selbst entscheiden (siehe Rückfrage 10).
+ändern und fehlende nachtragen, das wird aber ebenfalls protokolliert; ein fast
+richtiger Antrag lässt sich auch mit Änderung genehmigen (siehe Kapitel 14). Ein
+Admin darf seinen eigenen Antrag nicht selbst entscheiden (siehe Rückfrage 10).
 
 ---
 
@@ -644,3 +645,22 @@ beendet und im selben Moment ein neuer mit der neuen Tätigkeit begonnen, ohne
 Lücke dazwischen. Die Gruppe bleibt dabei dieselbe, ein Wechsel der Gruppe
 läuft weiter über Stop und Start. Während einer Pause ist der Wechsel nicht
 möglich; beides steht als Aus- und Einstempeln im Protokoll.
+
+**Zeiten direkt ändern** (Issue 31). Ein Gruppen-Admin ändert Zeiten seiner
+Gruppe jetzt auch direkt, ohne den Umweg über einen Antrag: in der
+Gruppenübersicht führt bei jedem abgeschlossenen Eintrag "Ändern" zum
+Formular, und "Zeit nachtragen" legt eine fehlende Zeit für ein Mitglied an,
+etwa wenn jemand krank ist. Eine Begründung ist Pflicht. In der
+Entscheidungsansicht eines Antrags gibt es zusätzlich "Genehmigen mit
+Änderung": der Admin passt Beginn, Ende, Tätigkeit und Pausen an und
+übernimmt sie, statt einen fast richtigen Antrag abzulehnen. Der Antrag
+selbst bleibt als Beleg unverändert; was tatsächlich übernommen wurde, steht
+daneben und ist für den Antragsteller in seiner Antragsliste sichtbar.
+
+Es gelten dabei dieselben Regeln wie beim genehmigten Antrag: ein
+abgeschlossener Zeitraum sperrt, Zeiten desselben Nutzers dürfen sich nicht
+überschneiden, ein laufender Eintrag lässt sich nicht ändern, und jede
+Änderung steht mit vorher und nachher im Protokoll (`entry_updated`). Die
+geänderte Zeit gilt danach als korrigiert (`source = correction`) und nicht
+mehr als unvollständig. Die Buchhaltung liest weiterhin nur und ändert nichts
+(Rückfrage 22).

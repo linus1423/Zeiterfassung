@@ -5,6 +5,18 @@ from django.db import models
 from django.utils.dateparse import parse_datetime
 
 
+def _break_periods(items) -> list[dict]:
+    """Gespeicherte Pausen als Zeitpunkte, für die Anzeige."""
+    periods = []
+    for item in items or []:
+        start = parse_datetime(item.get("start") or "")
+        end = parse_datetime(item.get("end") or "")
+        if start and end:
+            periods.append({"start": start, "end": end, "duration": end - start})
+    periods.sort(key=lambda item: item["start"])
+    return periods
+
+
 class CorrectionRequest(models.Model):
     """Antrag auf Korrektur der eigenen Zeiterfassung.
 
@@ -58,6 +70,20 @@ class CorrectionRequest(models.Model):
     )
     proposed_breaks = models.JSONField("Gewünschte Pausen", default=list, blank=True)
     reason = models.TextField("Begründung")
+    # Genehmigt ein Admin mit Änderung (Issue 31), steht hier, was er
+    # tatsächlich übernommen hat. Der Antrag selbst bleibt unverändert,
+    # damit der Antragsteller beides nebeneinander sieht.
+    applied_start = models.DateTimeField("Übernommener Beginn", null=True, blank=True)
+    applied_end = models.DateTimeField("Übernommenes Ende", null=True, blank=True)
+    applied_activity = models.ForeignKey(
+        "groups.Activity",
+        verbose_name="Übernommene Tätigkeit",
+        on_delete=models.PROTECT,
+        related_name="applied_corrections",
+        null=True,
+        blank=True,
+    )
+    applied_breaks = models.JSONField("Übernommene Pausen", default=list, blank=True)
     status = models.CharField(
         "Status", max_length=10, choices=Status.choices, default=Status.PENDING
     )
@@ -97,16 +123,18 @@ class CorrectionRequest(models.Model):
         return self.status in (self.Status.APPROVED, self.Status.REJECTED)
 
     @property
+    def was_adjusted(self) -> bool:
+        """Wurde der Antrag beim Genehmigen geändert übernommen?"""
+        return self.applied_start is not None
+
+    @property
+    def applied_break_periods(self) -> list[dict]:
+        return _break_periods(self.applied_breaks)
+
+    @property
     def proposed_break_periods(self) -> list[dict]:
         """Die beantragten Pausen als Zeitpunkte, für die Anzeige im Antrag."""
-        periods = []
-        for item in self.proposed_breaks or []:
-            start = parse_datetime(item.get("start") or "")
-            end = parse_datetime(item.get("end") or "")
-            if start and end:
-                periods.append({"start": start, "end": end, "duration": end - start})
-        periods.sort(key=lambda item: item["start"])
-        return periods
+        return _break_periods(self.proposed_breaks)
 
     @property
     def proposed_break_total(self) -> timedelta:

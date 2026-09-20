@@ -9,12 +9,20 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.audit.models import AuditLog, log
-from apps.tracking.forms import PeriodForm
+from apps.tracking import entry_editing
+from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
 from apps.tracking.utils import day_bounds
 
 from . import closing
-from .forms import ActivityForm, ClosePeriodForm, GroupForm, GroupSettingsForm, MembershipForm
+from .forms import (
+    ActivityForm,
+    AdminEntryForm,
+    ClosePeriodForm,
+    GroupForm,
+    GroupSettingsForm,
+    MembershipForm,
+)
 from .models import Activity, GroupMembership, PeriodLock
 from .periods import period_for
 from .permissions import readable_groups, require_group_admin, require_group_read
@@ -104,6 +112,82 @@ def group_detail(request, group_id):
         "period_closed": closing.is_closed(group, end_day),
     }
     return render(request, "groups/group_detail.html", context)
+
+
+def _entry_form_page(request, group, entry):
+    """Formular zum Ändern oder Nachtragen einer Zeit, für beide Fälle gleich."""
+    posted = request.POST if request.method == "POST" else None
+    form = AdminEntryForm(group, posted, entry=entry)
+    breaks = break_formset(posted, entry=entry)
+
+    if request.method == "POST":
+        valid = form.is_valid() and breaks.is_valid()
+        if valid:
+            valid = validate_breaks_within(
+                breaks, form.cleaned_data["start"], form.cleaned_data["end"]
+            )
+        if valid:
+            try:
+                _save_admin_entry(request, group, entry, form, breaks)
+            except entry_editing.EntryEditError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, "Zeit geändert." if entry else "Zeit nachgetragen.")
+                return redirect("groups:detail", group_id=group.pk)
+
+    return render(
+        request,
+        "groups/entry_form.html",
+        {"group": group, "form": form, "breaks": breaks, "entry": entry},
+    )
+
+
+def _save_admin_entry(request, group, entry, form, breaks):
+    data = form.cleaned_data
+    if entry is None:
+        return entry_editing.create_entry(
+            editor=request.user,
+            user=data["user"],
+            group=group,
+            reason=data["reason"],
+            start=data["start"],
+            end=data["end"],
+            activity=data.get("activity"),
+            note=data.get("note", ""),
+            breaks=breaks.breaks(),
+        )
+    return entry_editing.update_entry(
+        entry,
+        editor=request.user,
+        reason=data["reason"],
+        start=data["start"],
+        end=data["end"],
+        activity=data.get("activity"),
+        note=data.get("note", ""),
+        breaks=breaks.breaks(),
+    )
+
+
+@login_required
+def entry_create(request, group_id):
+    """Eine vergessene Zeit für ein Mitglied nachtragen (Issue 31)."""
+    group = require_group_admin(request.user, group_id)
+    return _entry_form_page(request, group, None)
+
+
+@login_required
+def entry_edit(request, group_id, entry_id):
+    """Eine Zeit der eigenen Gruppe direkt ändern (Issue 31)."""
+    group = require_group_admin(request.user, group_id)
+    entry = get_object_or_404(
+        TimeEntry.objects.select_related("user", "activity").prefetch_related("breaks"),
+        pk=entry_id,
+        group=group,
+    )
+    if entry.is_open:
+        messages.error(request, "Ein laufender Eintrag kann nicht geändert werden.")
+        return redirect("groups:detail", group_id=group.pk)
+    return _entry_form_page(request, group, entry)
 
 
 @login_required

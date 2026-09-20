@@ -10,6 +10,7 @@ from apps.tracking.models import TimeEntry
 
 from . import services
 from .forms import (
+    ApprovalAdjustForm,
     CorrectionRequestForm,
     DecisionForm,
     DeleteRequestForm,
@@ -23,7 +24,9 @@ from .models import CorrectionRequest
 def my_requests(request):
     requests = list(
         CorrectionRequest.objects.filter(requested_by=request.user)
-        .select_related("group", "time_entry", "proposed_activity", "decided_by")
+        .select_related(
+            "group", "time_entry", "proposed_activity", "applied_activity", "decided_by"
+        )
         .order_by("-created_at")
     )
     # Wer seine Anträge ansieht, hat die Entscheidungen gesehen; damit geht
@@ -164,23 +167,40 @@ def decide(request, request_id):
     if not request.user.is_group_admin(correction.group):
         raise PermissionDenied("Nur Admins dieser Gruppe dürfen Anträge entscheiden.")
 
-    form = DecisionForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        note = form.cleaned_data["note"]
-        action = request.POST.get("action")
-        try:
-            if action == "approve":
-                services.approve(correction, request.user, note)
-                messages.success(request, "Antrag genehmigt, die Zeit wurde geändert.")
-            elif action == "reject":
-                services.reject(correction, request.user, note)
-                messages.success(request, "Antrag abgelehnt.")
-            else:
-                messages.error(request, "Unbekannte Aktion.")
-                return redirect("corrections:decide", request_id=correction.pk)
-            return redirect("corrections:inbox")
-        except services.CorrectionError as exc:
-            messages.error(request, str(exc))
+    # Zwei Formulare auf einer Seite: die schlichte Entscheidung und die
+    # Übernahme mit geänderten Zeiten. Gebunden wird nur das abgeschickte,
+    # sonst meldete das jeweils andere Pflichtfelder an.
+    action = request.POST.get("action", "") if request.method == "POST" else ""
+    adjusting = action == "approve_adjusted"
+    form = DecisionForm(request.POST if request.method == "POST" and not adjusting else None)
+    adjust_form = ApprovalAdjustForm(correction, request.POST if adjusting else None)
+    adjust_breaks = break_formset(
+        request.POST if adjusting else None,
+        initial=[
+            {"start": pause["start"], "end": pause["end"]}
+            for pause in correction.proposed_break_periods
+        ],
+    )
+
+    if request.method == "POST":
+        if adjusting:
+            if _approve_with_changes(request, correction, adjust_form, adjust_breaks):
+                return redirect("corrections:inbox")
+        elif form.is_valid():
+            note = form.cleaned_data["note"]
+            try:
+                if action == "approve":
+                    services.approve(correction, request.user, note)
+                    messages.success(request, "Antrag genehmigt, die Zeit wurde geändert.")
+                elif action == "reject":
+                    services.reject(correction, request.user, note)
+                    messages.success(request, "Antrag abgelehnt.")
+                else:
+                    messages.error(request, "Unbekannte Aktion.")
+                    return redirect("corrections:decide", request_id=correction.pk)
+                return redirect("corrections:inbox")
+            except services.CorrectionError as exc:
+                messages.error(request, str(exc))
 
     return render(
         request,
@@ -188,7 +208,39 @@ def decide(request, request_id):
         {
             "correction": correction,
             "form": form,
+            "adjust_form": adjust_form,
+            "adjust_breaks": adjust_breaks,
+            "adjusting": adjusting,
+            "may_adjust": correction.kind != CorrectionRequest.Kind.DELETE,
             "may_decide": services.may_decide(request.user, correction),
             "period_lock": services.closed_period_lock(correction),
         },
     )
+
+
+def _approve_with_changes(request, correction, adjust_form, adjust_breaks) -> bool:
+    """Genehmigen mit geänderten Zeiten (Issue 31). Gibt zurück, ob es geklappt hat."""
+    if not (adjust_form.is_valid() and adjust_breaks.is_valid()):
+        return False
+    start, end = adjust_form.cleaned_data["start"], adjust_form.cleaned_data["end"]
+    if not validate_breaks_within(adjust_breaks, start, end):
+        return False
+
+    try:
+        services.approve(
+            correction,
+            request.user,
+            adjust_form.cleaned_data["note"],
+            overrides={
+                "start": start,
+                "end": end,
+                "activity": adjust_form.cleaned_data.get("activity"),
+                "breaks": adjust_breaks.breaks(),
+            },
+        )
+    except services.CorrectionError as exc:
+        messages.error(request, str(exc))
+        return False
+
+    messages.success(request, "Antrag mit Änderung genehmigt.")
+    return True
