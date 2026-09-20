@@ -135,7 +135,7 @@ def request_withdraw(request, request_id):
 @login_required
 def inbox(request):
     """Offene Antraege der Gruppen, in denen der Nutzer Admin ist."""
-    group_ids = request.user.admin_group_ids()
+    group_ids = request.user.administrated_group_ids()
     requests = (
         CorrectionRequest.objects.filter(
             group_id__in=group_ids, status=CorrectionRequest.Status.PENDING

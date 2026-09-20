@@ -56,6 +56,19 @@ class User(AbstractUser):
             .values_list("group_id", flat=True)
         )
 
+    def administrated_group_ids(self) -> list[int]:
+        """Gruppen, deren Korrekturantraege der Nutzer bearbeiten darf.
+
+        Fuer einen System-Admin sind das alle aktiven Gruppen, passend zu
+        `is_group_admin`. Genau dafuer gibt es ihn: stellt der einzige Admin
+        einer Gruppe selbst einen Antrag, entscheidet der System-Admin.
+        """
+        from apps.groups.models import Group
+
+        if self.is_superuser:
+            return list(Group.objects.filter(is_active=True).values_list("pk", flat=True))
+        return self.admin_group_ids()
+
     def is_group_admin(self, group) -> bool:
         from apps.groups.models import GroupMembership
 
