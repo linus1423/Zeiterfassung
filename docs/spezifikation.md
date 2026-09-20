@@ -402,6 +402,27 @@ Arbeitsspeicher sprengt.
 | Hintergrundjobs | Für das automatische Beenden vergessener Einträge, siehe Rückfrage 6 |
 | Sprache | Oberfläche auf Deutsch, Code und Kommentare auf Englisch |
 
+### Überschneidungsfreiheit in der Datenbank
+
+Dass sich die Zeiten einer Person nicht überschneiden dürfen, prüft die
+Anwendung vor jedem Schreiben, damit die Meldung verständlich bleibt. Unter
+PostgreSQL steht die Regel zusätzlich in der Datenbank: die Migration
+`tracking.0003` legt die Ausschlussbedingung `time_entry_no_overlap_per_user`
+über `tstzrange(start, end)` je Nutzer an. Damit gilt sie unabhängig vom Weg
+und auch dann, wenn zwei Vorgänge gleichzeitig schreiben. Der Zeitraum ist
+halboffen, ein Eintrag darf also dort beginnen, wo ein anderer endet; ein
+laufender Eintrag reicht bis unendlich und sperrt damit alles nach seinem
+Beginn.
+
+Die Bedingung braucht die Erweiterung `btree_gist`. Die Migration legt sie an,
+dafür muss das Datenbankkonto Erweiterungen anlegen dürfen (Eigentümer der
+Datenbank oder Superuser). Überschneidungen aus der Zeit davor melden die
+Migration mit den betroffenen Zeiteinträgen, statt mit einem rohen SQL-Fehler
+abzubrechen; sie müssen erst bereinigt werden.
+
+SQLite kennt keine Ausschlussbedingungen. Lokal und in den Tests bleibt es
+deshalb bei der Prüfung in der Anwendung.
+
 ### Projektstruktur
 
 ```
