@@ -1,0 +1,9 @@
+# Eigenes Netz fuer die Zeiterfassung. Nur die Container darin erreichen die
+# Datenbank; nach aussen wird ausschliesslich der Webport veroeffentlicht.
+# Die Namensaufloesung im Netz macht aus "zeiterfassung-db" die Adresse der
+# Datenbank, deshalb steht dieser Name in der DATABASE_URL.
+[Unit]
+Description=Netz der Zeiterfassung
+
+[Network]
+Driver=bridge

@@ -124,6 +124,8 @@ gehoert an diese Stelle eine Warteschlange.
 
 ## Betrieb
 
+### Docker Compose
+
 ```bash
 docker compose up --build
 ```
@@ -133,10 +135,44 @@ Die Datei `.env` wird dabei gelesen; `POSTGRES_PASSWORD` und
 `DJANGO_BEHIND_PROXY=true` in die Umgebung, damit Django die Verbindung als
 HTTPS erkennt.
 
-Vergessene Stempelungen beendet der Dienst `scheduler` aus dem Compose-Setup.
+### Podman mit Quadlet
+
+Derselbe Aufbau laeuft rootless unter systemd. Die Unit-Dateien liegen in
+`deploy/quadlet/`, die Anleitung in
+[docs/podman-quadlet.md](docs/podman-quadlet.md). Beide Wege benutzen dasselbe
+Image und denselben Einstiegspunkt.
+
+### Zustand pruefen
+
+| Pfad | Bedeutung |
+|---|---|
+| `/healthz` | der Prozess antwortet; das fragt der Healthcheck des Containers |
+| `/readyz` | zusaetzlich: die Datenbank ist erreichbar; das fragt ein Loadbalancer |
+
+Beide Pfade brauchen keine Anmeldung und antworten als reiner Text. Wer sie
+nicht von aussen erreichbar haben will, blockt sie im Reverse Proxy.
+
+### Geheimnisse als Datei
+
+`DJANGO_SECRET_KEY`, `DATABASE_URL`, `DJANGO_EMAIL_HOST_PASSWORD`,
+`KEYCLOAK_CLIENT_SECRET` und `ENTRA_CLIENT_SECRET` duerfen statt als
+Umgebungsvariable auch als Datei uebergeben werden, indem `FOO_FILE` auf den
+Pfad zeigt:
+
+```
+DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key
+```
+
+Damit funktionieren `podman secret` und `docker secret`. Eine gesetzte
+Umgebungsvariable hat Vorrang.
+
+### Vergessene Stempelungen
+
+Unter Compose beendet der Dienst `scheduler` sie.
 Er ruft `python manage.py close_stale_entries` in einer Schleife auf, standard-
-maessig jede Stunde (`SCHEDULER_INTERVAL_SECONDS`). Wer ohne Compose betreibt,
-legt dafuer einen Cronjob oder einen systemd-Timer an:
+maessig jede Stunde (`SCHEDULER_INTERVAL_SECONDS`). Unter Podman macht das ein
+systemd-Timer. Wer ohne beides betreibt, legt einen Cronjob oder einen
+systemd-Timer an:
 
 ```bash
 python manage.py close_stale_entries
@@ -177,7 +213,7 @@ Dieselben Schritte laufen in GitHub Actions bei jedem Push
 ## Aufbau
 
 ```
-zeiterfassung/      Einstellungen, URLs, WSGI
+zeiterfassung/      Einstellungen, URLs, WSGI, Health-Endpunkte
 apps/accounts/      Nutzermodell, OIDC-Anbindung
 apps/groups/        Gruppen, Mitgliedschaften, Taetigkeiten, Zeitraeume, Rechtepruefung
 apps/tracking/      Zeiteintraege, Pausen, Stempel-Logik
@@ -185,6 +221,8 @@ apps/corrections/   Korrekturantraege und deren Ablauf
 apps/reporting/     Auswertung, Spaltenauswahl, Export nach Excel und CSV
 apps/audit/         unveraenderliches Protokoll aller Aenderungen
 templates/          Oberflaeche (Django-Templates)
+docker/             Einstiegspunkt und Healthcheck des Containers
+deploy/quadlet/     systemd-Units fuer den Betrieb mit Podman
 ```
 
 Die Regeln stehen in `services.py` der jeweiligen App, nicht in den Views.

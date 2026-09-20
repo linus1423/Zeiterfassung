@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: zeiterfassung
       POSTGRES_USER: zeiterfassung
@@ -8,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zeiterfassung"]
+      test: ["CMD-SHELL", "pg_isready -U zeiterfassung -d zeiterfassung"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,18 +21,20 @@ services:
     environment:
       DATABASE_URL: postgres://zeiterfassung:${POSTGRES_PASSWORD}@db:5432/zeiterfassung
       DJANGO_BEHIND_PROXY: "true"
+      # Der Einstiegspunkt wartet auf die Datenbank und migriert; das Kommando
+      # steht im Image (siehe Dockerfile), damit Compose und Quadlet dasselbe
+      # starten.
+      RUN_MIGRATIONS: "true"
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8000:8000"
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             gunicorn zeiterfassung.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 
   # Vergessene Stempelungen beenden (Issue 7). Laeuft als eigener Dienst im
   # selben Stack, damit dafuer kein Cronjob auf dem Host und kein Broker
   # gebraucht wird. Das Kommando ist unschaedlich, wenn es nichts zu tun gibt.
+  # Unter Podman uebernimmt das ein systemd-Timer, siehe docs/podman-quadlet.md.
   scheduler:
     build: .
     restart: unless-stopped
@@ -41,6 +44,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Kein Webserver im Container, also auch nichts anzufragen.
+    healthcheck:
+      disable: true
     command: >
       sh -c "while true; do
                python manage.py close_stale_entries || echo 'close_stale_entries fehlgeschlagen';

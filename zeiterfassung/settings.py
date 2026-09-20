@@ -4,12 +4,50 @@ All deployment specific values come from environment variables so that no
 credentials ever end up in the repository. See .env.example for the full list.
 """
 
+import os
 from pathlib import Path
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Geheimnisse, die statt als Umgebungsvariable auch als Datei uebergeben werden
+# duerfen: zu FOO gehoert dann FOO_FILE mit dem Pfad zur Datei.
+SECRETS_FROM_FILE = (
+    "DJANGO_SECRET_KEY",
+    "DATABASE_URL",
+    "DJANGO_EMAIL_HOST_PASSWORD",
+    "KEYCLOAK_CLIENT_SECRET",
+    "ENTRA_CLIENT_SECRET",
+)
+
+
+def _load_secrets_from_files() -> None:
+    """Liest Geheimnisse aus Dateien, wenn FOO_FILE statt FOO gesetzt ist.
+
+    Podman und Docker koennen ein Geheimnis als Datei in den Container haengen
+    (`podman secret`, `docker secret`). Das ist besser als eine
+    Umgebungsvariable: die steht in `podman inspect`, in der Prozessumgebung und
+    damit in jedem Kindprozess. Eine gesetzte Umgebungsvariable hat Vorrang,
+    damit bestehende Installationen unveraendert weiterlaufen.
+    """
+    for name in SECRETS_FROM_FILE:
+        path = os.environ.get(f"{name}_FILE", "").strip()
+        if not path or os.environ.get(name):
+            continue
+        try:
+            # Ein abschliessender Zeilenumbruch ist in solchen Dateien ueblich
+            # und gehoert nicht zum Wert.
+            value = Path(path).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ImproperlyConfigured(f"{name}_FILE ist nicht lesbar: {exc}") from exc
+        if not value:
+            raise ImproperlyConfigured(f"{name}_FILE ist leer: {path}")
+        os.environ[name] = value
+
+
+_load_secrets_from_files()
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
@@ -64,6 +102,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Muss vorne stehen: beantwortet /healthz und /readyz, bevor die
+    # Hostpruefung oder die HTTPS-Umleitung greifen (siehe health.py).
+    "zeiterfassung.health.HealthCheckMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
