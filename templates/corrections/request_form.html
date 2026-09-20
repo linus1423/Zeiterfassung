@@ -11,7 +11,7 @@
     {{ entry.group.name }}{% if entry.activity %} · {{ entry.activity.name }}{% endif %}
   </p>
   <p>
-    <a href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Loeschung beantragen</a>
+    <a href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Löschung beantragen</a>
   </p>
 </div>
 {% endif %}
@@ -35,13 +35,13 @@
       {% endfor %}
     </table>
     <p class="help">
-      Eine Zeile je Pause, hoechstens {{ breaks.max_num }}. Leere Zeilen werden verworfen.
+      Eine Zeile je Pause, höchstens {{ breaks.max_num }}. Leere Zeilen werden verworfen.
     </p>
     <div class="actions">
       <button class="primary" type="submit">Antrag stellen</button>
       <a class="button" href="{% url 'tracking:my_entries' %}">Abbrechen</a>
     </div>
   </form>
-  <p class="help">Ein Admin deiner Gruppe entscheidet ueber den Antrag. Bis dahin bleibt die erfasste Zeit unveraendert.</p>
+  <p class="help">Ein Admin deiner Gruppe entscheidet über den Antrag. Bis dahin bleibt die erfasste Zeit unverändert.</p>
 </div>
 {% endblock %}

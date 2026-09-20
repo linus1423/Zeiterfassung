@@ -3,10 +3,10 @@ from django.db import models
 
 
 class AuditLog(models.Model):
-    """Unveraenderliches Protokoll aller Aenderungen an Zeitdaten.
+    """Unveränderliches Protokoll aller Änderungen an Zeitdaten.
 
-    Arbeitszeiten muessen nachvollziehbar sein: wer hat wann was geaendert.
-    Eintraege werden nur geschrieben, nie geaendert oder geloescht.
+    Arbeitszeiten müssen nachvollziehbar sein: wer hat wann was geändert.
+    Einträge werden nur geschrieben, nie geändert oder gelöscht.
     """
 
     class Action(models.TextChoices):
@@ -15,16 +15,17 @@ class AuditLog(models.Model):
         BREAK_START = "break_start", "Pause begonnen"
         BREAK_END = "break_end", "Pause beendet"
         AUTO_CLOSE = "auto_close", "Automatisch beendet"
-        ENTRY_UPDATED = "entry_updated", "Zeiteintrag geaendert"
-        ENTRY_DELETED = "entry_deleted", "Zeiteintrag geloescht"
+        ENTRY_UPDATED = "entry_updated", "Zeiteintrag geändert"
+        ENTRY_DELETED = "entry_deleted", "Zeiteintrag gelöscht"
         CORRECTION_REQUESTED = "correction_requested", "Korrektur beantragt"
         CORRECTION_APPROVED = "correction_approved", "Korrektur genehmigt"
         CORRECTION_REJECTED = "correction_rejected", "Korrektur abgelehnt"
-        CORRECTION_WITHDRAWN = "correction_withdrawn", "Korrektur zurueckgezogen"
+        CORRECTION_WITHDRAWN = "correction_withdrawn", "Korrektur zurückgezogen"
         EXPORT = "export", "Export erstellt"
         PERIOD_CLOSED = "period_closed", "Zeitraum abgeschlossen"
-        PERIOD_REOPENED = "period_reopened", "Zeitraum wieder geoeffnet"
+        PERIOD_REOPENED = "period_reopened", "Zeitraum wieder geöffnet"
         USER_ANONYMIZED = "user_anonymized", "Konto anonymisiert"
+        USER_UPDATED = "user_updated", "Stammdaten geändert"
         MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
         GROUP_CREATED = "group_created", "Gruppe angelegt"
         NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
@@ -56,7 +57,7 @@ class AuditLog(models.Model):
         blank=True,
         related_name="audit_entries_about_me",
     )
-    changes = models.JSONField("Aenderungen", default=dict, blank=True)
+    changes = models.JSONField("Änderungen", default=dict, blank=True)
     note = models.TextField("Bemerkung", blank=True)
     created_at = models.DateTimeField("Zeitpunkt", auto_now_add=True)
 

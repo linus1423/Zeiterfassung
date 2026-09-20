@@ -4,9 +4,9 @@
 {% block content %}
 <h1>{{ group.name }}</h1>
 <p>
-  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeitraeume</a>
+  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
   {% if is_admin %}
-    · <a href="{% url 'groups:activities' group.pk %}">Taetigkeiten verwalten</a>
+    · <a href="{% url 'groups:activities' group.pk %}">Tätigkeiten verwalten</a>
     · <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
     · <a href="{% url 'groups:settings' group.pk %}">Einstellungen</a>
   {% endif %}
@@ -52,7 +52,7 @@
     </table>
   </div>
   <div class="card">
-    <h2>Summe je Taetigkeit</h2>
+    <h2>Summe je Tätigkeit</h2>
     <table>
       {% for name, total_activity in per_activity %}
         <tr><td>{{ name }}</td><td class="num">{{ total_activity|dauer }} h</td></tr>
@@ -62,22 +62,23 @@
 </div>
 
 <div class="card">
-  <h2>Eintraege ({{ entry_count }})</h2>
+  <h2>Einträge ({{ entry_count }})</h2>
   <div class="table-scroll">
     <table>
-      <tr><th>Datum</th><th>Person</th><th>Taetigkeit</th><th>Beginn</th><th>Ende</th><th class="num">Arbeitszeit</th></tr>
+      <tr><th>Datum</th><th>Person</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Notiz</th><th class="num">Arbeitszeit</th></tr>
       {% for entry in entries %}
         <tr>
           <td>{{ entry.start|date:"d.m.Y" }}</td>
           <td>{{ entry.user.full_name }}</td>
           <td>{{ entry.activity.name|default:"-" }}</td>
           <td>{{ entry.start|time:"H:i" }}</td>
-          <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}laeuft{% endif %}</td>
+          <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
+          <td class="muted">{{ entry.note|default:"" }}</td>
           <td class="num">{{ entry.duration|dauer }}</td>
         </tr>
-      {% empty %}<tr><td colspan="6" class="muted">Keine Eintraege im Zeitraum.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="7" class="muted">Keine Einträge im Zeitraum.</td></tr>{% endfor %}
     </table>
   </div>
-  {% if entry_count > 200 %}<p class="help">Es werden die neuesten 200 Eintraege angezeigt. Der vollstaendige Zeitraum steht im Export.</p>{% endif %}
+  {% if entry_count > 200 %}<p class="help">Es werden die neuesten 200 Einträge angezeigt. Der vollständige Zeitraum steht im Export.</p>{% endif %}
 </div>
 {% endblock %}

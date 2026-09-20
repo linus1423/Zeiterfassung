@@ -6,7 +6,7 @@ from apps.accounts import retention
 class Command(BaseCommand):
     help = (
         "Anonymisiert Konten, deren Aufbewahrungsfrist abgelaufen ist. "
-        "Zeigt ohne --apply nur an, was passieren wuerde."
+        "Zeigt ohne --apply nur an, was passieren würde."
     )
 
     def add_arguments(self, parser):
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--apply",
             action="store_true",
-            help="Die Konten tatsaechlich anonymisieren.",
+            help="Die Konten tatsächlich anonymisieren.",
         )
 
     def handle(self, *args, **options):
@@ -32,13 +32,13 @@ class Command(BaseCommand):
             last = (
                 f"letzte Zeit am {candidate.last_entry:%d.%m.%Y}"
                 if candidate.last_entry
-                else "keine Zeiteintraege"
+                else "keine Zeiteinträge"
             )
             self.stdout.write(f"  Konto {candidate.user.pk}: {last}")
 
         if not options["apply"]:
             self.stdout.write(
-                self.style.WARNING("Nichts geaendert. Mit --apply werden die Konten anonymisiert.")
+                self.style.WARNING("Nichts geändert. Mit --apply werden die Konten anonymisiert.")
             )
             return
 

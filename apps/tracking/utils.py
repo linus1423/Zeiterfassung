@@ -1,4 +1,4 @@
-"""Kleine Helfer rund um Zeitraeume."""
+"""Kleine Helfer rund um Zeiträume."""
 
 from datetime import date, datetime, time, timedelta
 

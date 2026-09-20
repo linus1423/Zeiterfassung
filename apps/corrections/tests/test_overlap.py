@@ -1,4 +1,4 @@
-"""Korrekturen duerfen keine doppelte Zeit erzeugen (Issue 17)."""
+"""Korrekturen dürfen keine doppelte Zeit erzeugen (Issue 17)."""
 
 from datetime import timedelta
 
@@ -78,7 +78,7 @@ def test_editing_an_entry_does_not_clash_with_itself(workday, member, group, gro
         requested_by=member,
         group=group,
         kind=CorrectionRequest.Kind.EDIT,
-        reason="Ich habe zu spaet ausgestempelt.",
+        reason="Ich habe zu spät ausgestempelt.",
         entry=workday,
         proposed_start=workday.start,
         proposed_end=workday.start + timedelta(hours=7),
@@ -104,7 +104,7 @@ def test_editing_into_another_entry_is_refused(workday, member, group, activity)
             requested_by=member,
             group=group,
             kind=CorrectionRequest.Kind.EDIT,
-            reason="Ich habe zu spaet ausgestempelt.",
+            reason="Ich habe zu spät ausgestempelt.",
             entry=workday,
             proposed_start=workday.start,
             proposed_end=later.start + timedelta(minutes=30),

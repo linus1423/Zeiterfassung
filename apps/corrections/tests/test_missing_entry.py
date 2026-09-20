@@ -1,4 +1,4 @@
-"""Aenderungsantrag, dessen Zeiteintrag nicht mehr da ist (Issue 14)."""
+"""Änderungsantrag, dessen Zeiteintrag nicht mehr da ist (Issue 14)."""
 
 from datetime import timedelta
 
@@ -21,7 +21,7 @@ def entry(member, group, activity):
 
 @pytest.fixture
 def orphaned_request(entry, member, group):
-    """Ein Aenderungsantrag, dessen Eintrag danach geloescht wurde."""
+    """Ein Änderungsantrag, dessen Eintrag danach gelöscht wurde."""
     correction = CorrectionRequest.objects.create(
         time_entry=entry,
         requested_by=member,
@@ -29,7 +29,7 @@ def orphaned_request(entry, member, group):
         kind=CorrectionRequest.Kind.EDIT,
         proposed_start=entry.start,
         proposed_end=entry.start + timedelta(hours=7),
-        reason="Ich habe zu spaet ausgestempelt.",
+        reason="Ich habe zu spät ausgestempelt.",
     )
     entry.delete()
     correction.refresh_from_db()
@@ -57,7 +57,7 @@ def test_decide_page_shows_a_message_instead_of_an_error(client, orphaned_reques
 
 
 def test_rejecting_still_works(orphaned_request, group_admin):
-    services.reject(orphaned_request, group_admin, "Der Eintrag ist bereits geloescht.")
+    services.reject(orphaned_request, group_admin, "Der Eintrag ist bereits gelöscht.")
 
     orphaned_request.refresh_from_db()
     assert orphaned_request.status == CorrectionRequest.Status.REJECTED

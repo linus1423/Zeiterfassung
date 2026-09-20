@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Nutzer{% endblock %}
+{% block content %}
+<h1>Nutzer</h1>
+
+<div class="card">
+  <form method="get" class="grid two">
+    <div>{{ form.q.label_tag }}{{ form.q }}</div>
+    <div class="actions"><button class="primary" type="submit">Suchen</button></div>
+  </form>
+  <p class="help">Name und E-Mail kommen aus der Anmeldung. Hier werden die Personalnummer und die Rolle Buchhaltung gepflegt.</p>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <table>
+      <tr>
+        <th>Name</th><th>E-Mail</th><th>Personalnummer</th><th>Gruppen</th>
+        <th>Buchhaltung</th><th>Aktiv</th><th></th>
+      </tr>
+      {% for person in users %}
+        <tr>
+          <td>{{ person.full_name }}</td>
+          <td class="muted">{{ person.email }}</td>
+          <td>{% if person.personnel_number %}{{ person.personnel_number }}{% else %}<span class="badge pending">fehlt</span>{% endif %}</td>
+          <td class="muted">
+            {% for membership in person.group_memberships.all %}{{ membership.group.name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}
+          </td>
+          <td>{% if person.is_accounting %}ja{% else %}nein{% endif %}</td>
+          <td>{% if person.is_active %}ja{% else %}nein{% endif %}</td>
+          <td><a href="{% url 'accounts:user_edit' person.pk %}">Bearbeiten</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted">Keine Konten gefunden.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% if total > limit %}
+    <p class="help">Von {{ total }} Konten werden die ersten {{ limit }} angezeigt. Bitte über die Suche eingrenzen.</p>
+  {% endif %}
+</div>
+{% endblock %}

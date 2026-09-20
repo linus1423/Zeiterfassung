@@ -15,10 +15,10 @@ class ActivityForm(forms.ModelForm):
 
 
 class MembershipForm(forms.Form):
-    """Nutzer per E-Mail zu einer Gruppe hinzufuegen.
+    """Nutzer per E-Mail zu einer Gruppe hinzufügen.
 
     Es werden nur bestehende Konten zugeordnet. Konten entstehen beim ersten
-    Login ueber den Identity-Provider.
+    Login über den Identity-Provider.
     """
 
     email = forms.EmailField(label="E-Mail-Adresse des Nutzers")
@@ -46,7 +46,7 @@ class MembershipForm(forms.Form):
 
 
 class GroupForm(forms.ModelForm):
-    """Neue Gruppe anlegen. Nur System-Admins duerfen das."""
+    """Neue Gruppe anlegen. Nur System-Admins dürfen das."""
 
     class Meta:
         model = Group
@@ -62,7 +62,7 @@ class GroupForm(forms.ModelForm):
         if Group.objects.filter(name__iexact=name).exists():
             raise forms.ValidationError("Eine Gruppe mit diesem Namen gibt es schon.")
         # Der Kurzname wird aus dem Namen erzeugt und muss ebenfalls eindeutig
-        # sein; "Werkstatt" und "werk statt" ergaeben denselben.
+        # sein; "Werkstatt" und "werk statt" ergäben denselben.
         if Group.objects.filter(slug=slugify(name)[:140]).exists():
             raise forms.ValidationError(
                 "Aus diesem Namen entsteht derselbe Kurzname wie bei einer bestehenden Gruppe."
@@ -84,7 +84,7 @@ class GroupSettingsForm(forms.ModelForm):
 
 
 class ClosePeriodForm(forms.Form):
-    """Abschluss eines Zeitraums, identifiziert ueber seinen ersten Tag."""
+    """Abschluss eines Zeitraums, identifiziert über seinen ersten Tag."""
 
     period_start = forms.DateField(widget=forms.HiddenInput())
     note = forms.CharField(

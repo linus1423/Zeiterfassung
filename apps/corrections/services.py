@@ -1,6 +1,6 @@
-"""Ablauf der Korrekturantraege.
+"""Ablauf der Korrekturanträge.
 
-Genehmigen aendert den Zeiteintrag und schreibt ins Protokoll. Der Antrag
+Genehmigen ändert den Zeiteintrag und schreibt ins Protokoll. Der Antrag
 bleibt als Beleg erhalten.
 """
 
@@ -37,7 +37,7 @@ def may_decide(user, request_obj: CorrectionRequest) -> bool:
 
 
 def affected_days(request_obj: CorrectionRequest) -> list:
-    """Die Tage, die ein Antrag beruehrt: bisheriger und gewuenschter Zeitpunkt."""
+    """Die Tage, die ein Antrag berührt: bisheriger und gewünschter Zeitpunkt."""
     values = [request_obj.proposed_start, request_obj.proposed_end]
     if request_obj.time_entry_id and request_obj.time_entry is not None:
         values.append(request_obj.time_entry.start)
@@ -50,7 +50,7 @@ def closed_period_lock(request_obj: CorrectionRequest):
 
 
 def overlapping_entry(user, start, end, *, exclude_id=None) -> TimeEntry | None:
-    """Ein anderer Zeiteintrag desselben Nutzers im gewuenschten Zeitraum."""
+    """Ein anderer Zeiteintrag desselben Nutzers im gewünschten Zeitraum."""
     if start is None or end is None:
         return None
     queryset = TimeEntry.objects.overlapping(user, start, end)
@@ -60,13 +60,13 @@ def overlapping_entry(user, start, end, *, exclude_id=None) -> TimeEntry | None:
 
 
 def _reject_overlap(user, start, end, *, exclude_id=None) -> None:
-    """Doppelt erfasste Zeit faellt spaeter niemandem mehr auf, also hier pruefen."""
+    """Doppelt erfasste Zeit fällt später niemandem mehr auf, also hier prüfen."""
     clash = overlapping_entry(user, start, end, exclude_id=exclude_id)
     if clash is None:
         return
     local = timezone.localtime(clash.start)
     raise CorrectionError(
-        "Die gewuenschte Zeit ueberschneidet sich mit einem anderen Zeiteintrag "
+        "Die gewünschte Zeit überschneidet sich mit einem anderen Zeiteintrag "
         f"vom {local:%d.%m.%Y} ab {local:%H:%M} Uhr."
     )
 
@@ -100,7 +100,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
     if lock is not None:
         raise CorrectionError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-            "Die Zeit kann nicht mehr geaendert werden."
+            "Die Zeit kann nicht mehr geändert werden."
         )
 
     if locked.kind == CorrectionRequest.Kind.DELETE:
@@ -140,7 +140,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
         )
     else:
         # Der Eintrag kann zwischen Antrag und Entscheidung verschwunden sein,
-        # etwa durch einen genehmigten Loeschantrag auf denselben Eintrag.
+        # etwa durch einen genehmigten Löschantrag auf denselben Eintrag.
         entry = (
             TimeEntry.objects.select_for_update().filter(pk=locked.time_entry_id).first()
             if locked.time_entry_id
@@ -162,7 +162,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             entry.full_clean(exclude=["user", "group"])
         except ValidationError as exc:
             raise CorrectionError(
-                "Die gewuenschte Zeit ist nicht gueltig: " + "; ".join(exc.messages)
+                "Die gewünschte Zeit ist nicht gültig: " + "; ".join(exc.messages)
             ) from exc
         entry.save()
         _apply_breaks(entry, locked.proposed_breaks)
@@ -199,7 +199,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
     if not may_decide(decided_by, locked):
         raise CorrectionError("Dieser Antrag darf von dir nicht entschieden werden.")
     if not note.strip():
-        raise CorrectionError("Eine Ablehnung braucht eine Begruendung.")
+        raise CorrectionError("Eine Ablehnung braucht eine Begründung.")
 
     locked.status = CorrectionRequest.Status.REJECTED
     locked.decided_by = decided_by
@@ -224,7 +224,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
 def withdraw(request_obj: CorrectionRequest, user) -> CorrectionRequest:
     locked = CorrectionRequest.objects.select_for_update().get(pk=request_obj.pk)
     if locked.requested_by_id != user.pk:
-        raise CorrectionError("Nur der Antragsteller kann zuruecknehmen.")
+        raise CorrectionError("Nur der Antragsteller kann zurücknehmen.")
     if not locked.is_pending:
         raise CorrectionError("Dieser Antrag ist bereits entschieden.")
 
@@ -254,9 +254,9 @@ def create_request(
     proposed_breaks: list[dict] | None = None,
 ) -> CorrectionRequest:
     """Legt einen Antrag an, protokolliert ihn und meldet ihn den Admins."""
-    # Ueber die Gruppe laufen zwei Dinge: wer entscheiden darf und welcher
+    # Über die Gruppe laufen zwei Dinge: wer entscheiden darf und welcher
     # Abschluss sperrt. Ein bestehender Eintrag gibt sie deshalb vor, sonst
-    # entschiede ein Admin einer fremden Gruppe ueber fremde Zeiten.
+    # entschiede ein Admin einer fremden Gruppe über fremde Zeiten.
     if entry is not None and entry.group_id != group.pk:
         raise CorrectionError("Ein bestehender Eintrag bleibt in seiner Gruppe.")
 
@@ -276,7 +276,7 @@ def create_request(
     if lock is not None:
         raise CorrectionError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-            "Korrekturen sind dort nicht mehr moeglich."
+            "Korrekturen sind dort nicht mehr möglich."
         )
 
     if kind != CorrectionRequest.Kind.DELETE:
@@ -300,7 +300,7 @@ def create_request(
 
 
 def mark_decisions_seen(user) -> None:
-    """Entschiedene eigene Antraege als gesehen markieren (Zaehler in der Navigation)."""
+    """Entschiedene eigene Anträge als gesehen markieren (Zähler in der Navigation)."""
     CorrectionRequest.objects.filter(
         requested_by=user,
         status__in=(CorrectionRequest.Status.APPROVED, CorrectionRequest.Status.REJECTED),

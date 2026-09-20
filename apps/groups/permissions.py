@@ -1,4 +1,4 @@
-"""Zentrale Rechtepruefungen.
+"""Zentrale Rechteprüfungen.
 
 Alle Views benutzen diese Funktionen, damit die Regeln an einer Stelle stehen
 und nicht in jeder View neu formuliert werden.
@@ -11,10 +11,10 @@ from .models import Group
 
 
 def require_group_admin(user, group_id) -> Group:
-    """Gibt die Gruppe zurueck, wenn der Nutzer dort Admin ist, sonst 403."""
+    """Gibt die Gruppe zurück, wenn der Nutzer dort Admin ist, sonst 403."""
     group = get_object_or_404(Group, pk=group_id)
     if not user.is_group_admin(group):
-        raise PermissionDenied("Nur Admins dieser Gruppe duerfen das.")
+        raise PermissionDenied("Nur Admins dieser Gruppe dürfen das.")
     return group
 
 

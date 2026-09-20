@@ -1,9 +1,9 @@
-"""Monatsabschluss: Zeitraeume gegen nachtraegliche Korrekturen sperren.
+"""Monatsabschluss: Zeiträume gegen nachträgliche Korrekturen sperren.
 
-Ein Abschluss gilt immer fuer eine Gruppe und einen Abrechnungszeitraum
-dieser Gruppe. Solange er besteht, nimmt das System fuer diesen Zeitraum
-keine Korrekturen mehr an. Abschliessen darf ein Admin der Gruppe,
-wieder oeffnen nur ein System-Admin.
+Ein Abschluss gilt immer für eine Gruppe und einen Abrechnungszeitraum
+dieser Gruppe. Solange er besteht, nimmt das System für diesen Zeitraum
+keine Korrekturen mehr an. Abschließen darf ein Admin der Gruppe,
+wieder öffnen nur ein System-Admin.
 """
 
 from __future__ import annotations
@@ -60,10 +60,10 @@ def lock_exists(group: Group, period: Period) -> bool:
 
 
 def overlapping_lock(group: Group, period: Period) -> PeriodLock | None:
-    """Ein Abschluss, der sich mit diesem Zeitraum ueberschneidet.
+    """Ein Abschluss, der sich mit diesem Zeitraum überschneidet.
 
-    Nach einer Aenderung des Zyklus passen alte Abschluesse nicht mehr auf die
-    neuen Zeitraeume; sie gelten aber weiter fuer die Tage, die sie sperren.
+    Nach einer Änderung des Zyklus passen alte Abschlüsse nicht mehr auf die
+    neuen Zeiträume; sie gelten aber weiter für die Tage, die sie sperren.
     """
     return PeriodLock.objects.filter(
         group=group, period_start__lte=period.end, period_end__gte=period.start
@@ -72,9 +72,9 @@ def overlapping_lock(group: Group, period: Period) -> PeriodLock | None:
 
 @transaction.atomic
 def close_period(group: Group, period: Period, user, note: str = "") -> PeriodLock:
-    """Schliesst einen Zeitraum ab. Ein laufender Zeitraum bleibt offen."""
+    """Schließt einen Zeitraum ab. Ein laufender Zeitraum bleibt offen."""
     if not may_close(user, group):
-        raise ClosingError("Nur Admins dieser Gruppe duerfen einen Zeitraum abschliessen.")
+        raise ClosingError("Nur Admins dieser Gruppe dürfen einen Zeitraum abschließen.")
     if period.end >= timezone.localdate():
         raise ClosingError("Ein Zeitraum kann erst nach seinem Ende abgeschlossen werden.")
 
@@ -82,7 +82,7 @@ def close_period(group: Group, period: Period, user, note: str = "") -> PeriodLo
     if existing is not None:
         raise ClosingError(
             f"Der Zeitraum {existing.period.label} ist bereits abgeschlossen "
-            "und ueberschneidet sich damit."
+            "und überschneidet sich damit."
         )
 
     try:
@@ -109,7 +109,7 @@ def close_period(group: Group, period: Period, user, note: str = "") -> PeriodLo
 @transaction.atomic
 def reopen_period(lock: PeriodLock, user, note: str = "") -> None:
     if not may_reopen(user):
-        raise ClosingError("Einen Abschluss kann nur ein System-Admin wieder oeffnen.")
+        raise ClosingError("Einen Abschluss kann nur ein System-Admin wieder öffnen.")
 
     group = lock.group
     label = lock.period.label
@@ -118,14 +118,14 @@ def reopen_period(lock: PeriodLock, user, note: str = "") -> None:
         AuditLog.Action.PERIOD_REOPENED,
         actor=user,
         group=group,
-        note=f"{label} wieder geoeffnet." + (f" {note}" if note else ""),
+        note=f"{label} wieder geöffnet." + (f" {note}" if note else ""),
     )
 
 
 class ClosedPeriods:
-    """Alle Abschluesse einmal laden, danach ohne weitere Abfragen nachsehen.
+    """Alle Abschlüsse einmal laden, danach ohne weitere Abfragen nachsehen.
 
-    Der Export prueft jede Zeile, deshalb wird nicht je Zeile abgefragt.
+    Der Export prüft jede Zeile, deshalb wird nicht je Zeile abgefragt.
     """
 
     def __init__(self, group_ids: Iterable[int] | None = None):
@@ -143,7 +143,7 @@ class ClosedPeriods:
 
 
 def period_overview(group: Group, count: int = 12, today: date | None = None) -> list[dict]:
-    """Die letzten Zeitraeume einer Gruppe samt Abschluss, fuer die Anzeige."""
+    """Die letzten Zeiträume einer Gruppe samt Abschluss, für die Anzeige."""
     from .periods import recent_periods
 
     periods = recent_periods(group, count=count, today=today)
@@ -155,8 +155,8 @@ def period_overview(group: Group, count: int = 12, today: date | None = None) ->
     current = group_period(group, today)
 
     def lock_for_period(period: Period) -> PeriodLock | None:
-        # Genau passend, sonst einer, der sich ueberschneidet: nach einer
-        # Zyklusaenderung sperren alte Abschluesse weiter ihre Tage.
+        # Genau passend, sonst einer, der sich überschneidet: nach einer
+        # Zyklusänderung sperren alte Abschlüsse weiter ihre Tage.
         exact = next((lock for lock in locks if lock.period_start == period.start), None)
         if exact is not None:
             return exact

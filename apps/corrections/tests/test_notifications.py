@@ -1,4 +1,4 @@
-"""Benachrichtigungen und Zaehler zu Korrekturantraegen (Issue 3)."""
+"""Benachrichtigungen und Zähler zu Korrekturanträgen (Issue 3)."""
 
 from datetime import timedelta
 
@@ -33,7 +33,7 @@ def _request(entry, member, group, activity):
         requested_by=member,
         group=group,
         kind=CorrectionRequest.Kind.EDIT,
-        reason="Zu spaet ausgestempelt",
+        reason="Zu spät ausgestempelt",
         entry=entry,
         proposed_start=entry.start,
         proposed_end=entry.end - timedelta(minutes=30),
@@ -45,7 +45,7 @@ def test_admins_are_informed_about_a_new_request(
     emails_on, entry, member, group, activity, group_admin, django_capture_on_commit_callbacks
 ):
     # Versandt wird erst nach dem Commit, damit keine Mail zu einem
-    # zurueckgerollten Antrag rausgeht.
+    # zurückgerollten Antrag rausgeht.
     with django_capture_on_commit_callbacks(execute=True):
         _request(entry, member, group, activity)
 
@@ -53,7 +53,7 @@ def test_admins_are_informed_about_a_new_request(
     message = mail.outbox[0]
     assert message.to == [group_admin.email]
     assert "Korrekturantrag" in message.subject
-    assert "Zu spaet ausgestempelt" in message.body
+    assert "Zu spät ausgestempelt" in message.body
     assert "https://zeiterfassung.example.com" in message.body
 
 

@@ -8,17 +8,17 @@ from apps.groups.models import Activity, Group
 
 from .models import CorrectionRequest
 
-# Ein Antrag deckt einen Arbeitstag ab, mehr als sechs Pausen sind dafuer
-# unrealistisch und halten das Formular uebersichtlich.
+# Ein Antrag deckt einen Arbeitstag ab, mehr als sechs Pausen sind dafür
+# unrealistisch und halten das Formular übersichtlich.
 MAX_BREAKS = 6
 
 
 class DateTimeLocalInput(forms.DateTimeInput):
-    """Feld fuer Datum und Uhrzeit im Browser.
+    """Feld für Datum und Uhrzeit im Browser.
 
     Der Wert kommt in drei Formen an: als Text aus einem abgeschickten
     Formular, als naive Ortszeit (so bereitet Django Anfangswerte auf) und
-    als Zeitpunkt mit Zeitzone. Alle drei muessen dasselbe Format ergeben,
+    als Zeitpunkt mit Zeitzone. Alle drei müssen dasselbe Format ergeben,
     sonst zeigt der Browser das Feld leer oder die Seite bricht ab.
     """
 
@@ -55,7 +55,7 @@ class BreakForm(forms.Form):
 
 
 class BaseBreakFormSet(forms.BaseFormSet):
-    """Prueft die Pausen gemeinsam: Reihenfolge, Ueberschneidung, Vollstaendigkeit."""
+    """Prüft die Pausen gemeinsam: Reihenfolge, Überschneidung, Vollständigkeit."""
 
     def clean(self):
         super().clean()
@@ -72,7 +72,7 @@ class BaseBreakFormSet(forms.BaseFormSet):
         previous_end = None
         for start, end, form in periods:
             if previous_end is not None and start < previous_end:
-                form.add_error("start", "Die Pausen duerfen sich nicht ueberschneiden.")
+                form.add_error("start", "Die Pausen dürfen sich nicht überschneiden.")
             previous_end = end
 
     def breaks(self) -> list[dict]:
@@ -87,14 +87,14 @@ class BaseBreakFormSet(forms.BaseFormSet):
 
 
 # Alle Zeilen werden gleich angezeigt: ohne JavaScript gibt es kein
-# "Zeile hinzufuegen", und leere Zeilen werden beim Speichern verworfen.
+# "Zeile hinzufügen", und leere Zeilen werden beim Speichern verworfen.
 BreakFormSet = forms.formset_factory(
     BreakForm, formset=BaseBreakFormSet, extra=MAX_BREAKS, max_num=MAX_BREAKS, validate_max=True
 )
 
 
 def break_formset(*args, entry=None, **kwargs):
-    """Formset fuer die Pausen, beim Aendern mit den bisherigen Pausen vorbelegt."""
+    """Formset für die Pausen, beim Ändern mit den bisherigen Pausen vorbelegt."""
     initial = None
     if entry is not None:
         initial = [
@@ -106,7 +106,7 @@ def break_formset(*args, entry=None, **kwargs):
 
 
 def validate_breaks_within(formset, start, end) -> bool:
-    """Prueft die Pausen gegen die beantragte Arbeitszeit."""
+    """Prüft die Pausen gegen die beantragte Arbeitszeit."""
     ok = True
     for form in formset.forms:
         if not form.cleaned_data or form.is_empty:
@@ -118,15 +118,15 @@ def validate_breaks_within(formset, start, end) -> bool:
 
 
 class CorrectionRequestForm(forms.Form):
-    """Antrag auf Aenderung oder Nachtrag eines Zeiteintrags."""
+    """Antrag auf Änderung oder Nachtrag eines Zeiteintrags."""
 
     group = forms.ModelChoiceField(queryset=Group.objects.none(), label="Gruppe", empty_label=None)
     activity = forms.ModelChoiceField(
-        queryset=Activity.objects.none(), label="Taetigkeit", required=False
+        queryset=Activity.objects.none(), label="Tätigkeit", required=False
     )
     start = forms.DateTimeField(label="Beginn", widget=DateTimeLocalInput())
     end = forms.DateTimeField(label="Ende", widget=DateTimeLocalInput())
-    reason = forms.CharField(label="Begruendung", widget=forms.Textarea(attrs={"rows": 3}))
+    reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
 
     def __init__(self, user, *args, entry=None, **kwargs):
         self.user = user
@@ -139,7 +139,7 @@ class CorrectionRequestForm(forms.Form):
         ).select_related("group")
 
         if entry is not None:
-            # Ein bestehender Eintrag behaelt seine Gruppe: ueber sie laeuft,
+            # Ein bestehender Eintrag behält seine Gruppe: über sie läuft,
             # wer entscheiden darf und welcher Abschluss sperrt.
             self.fields["group"].queryset = Group.objects.filter(pk=entry.group_id)
             self.fields["activity"].queryset = Activity.objects.filter(
@@ -164,12 +164,12 @@ class CorrectionRequestForm(forms.Form):
         if start and end and end <= start:
             self.add_error("end", "Das Ende muss nach dem Beginn liegen.")
         if start and start > timezone.now():
-            self.add_error("start", "Ein Beginn in der Zukunft ist nicht moeglich.")
+            self.add_error("start", "Ein Beginn in der Zukunft ist nicht möglich.")
         if self.entry is not None and group and group.pk != self.entry.group_id:
             self.add_error("group", "Ein bestehender Eintrag bleibt in seiner Gruppe.")
             group = None
         if activity and group and activity.group_id != group.pk:
-            self.add_error("activity", "Diese Taetigkeit gehoert nicht zur gewaehlten Gruppe.")
+            self.add_error("activity", "Diese Tätigkeit gehört nicht zur gewählten Gruppe.")
 
         if group:
             days = [timezone.localtime(value).date() for value in (start, end) if value is not None]
@@ -180,7 +180,7 @@ class CorrectionRequestForm(forms.Form):
                 self.add_error(
                     None,
                     f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
-                    "Korrekturen sind dort nicht mehr moeglich.",
+                    "Korrekturen sind dort nicht mehr möglich.",
                 )
 
         return cleaned
@@ -188,12 +188,12 @@ class CorrectionRequestForm(forms.Form):
 
 class DecisionForm(forms.Form):
     note = forms.CharField(
-        label="Begruendung", required=False, widget=forms.Textarea(attrs={"rows": 2})
+        label="Begründung", required=False, widget=forms.Textarea(attrs={"rows": 2})
     )
 
 
 class DeleteRequestForm(forms.Form):
-    reason = forms.CharField(label="Begruendung", widget=forms.Textarea(attrs={"rows": 3}))
+    reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
 
 
 CORRECTION_KINDS = CorrectionRequest.Kind

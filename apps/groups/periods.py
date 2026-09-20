@@ -1,4 +1,4 @@
-"""Abrechnungszeitraeume einer Gruppe.
+"""Abrechnungszeiträume einer Gruppe.
 
 Eine Gruppe rechnet entweder nach Kalendermonat ab oder nach einem eigenen
 Zyklus, der am X. eines Monats beginnt (Issue 8). Alle Stellen, die "Monat"
@@ -11,13 +11,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-# Ein Zyklus darf hoechstens am 28. beginnen, damit jeder Monat diesen Tag hat.
+# Ein Zyklus darf höchstens am 28. beginnen, damit jeder Monat diesen Tag hat.
 MAX_MONTH_START_DAY = 28
 
 MONTH_NAMES = (
     "Januar",
     "Februar",
-    "Maerz",
+    "März",
     "April",
     "Mai",
     "Juni",
@@ -57,8 +57,8 @@ def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
 def shift_months(day: date, delta: int) -> date:
     """Verschiebt ein Datum um ganze Monate, ohne Zusatzbibliothek.
 
-    Gibt es den Tag im Zielmonat nicht (31. Maerz minus einen Monat), wird auf
-    den letzten Tag des Zielmonats gekuerzt.
+    Gibt es den Tag im Zielmonat nicht (31. März minus einen Monat), wird auf
+    den letzten Tag des Zielmonats gekürzt.
     """
     year, month = _shift_month(day.year, day.month, delta)
     next_year, next_month = _shift_month(year, month, 1)
@@ -68,7 +68,7 @@ def shift_months(day: date, delta: int) -> date:
 
 @dataclass(frozen=True)
 class Period:
-    """Ein Abrechnungszeitraum, Ende einschliesslich."""
+    """Ein Abrechnungszeitraum, Ende einschließlich."""
 
     start: date
     end: date
@@ -80,7 +80,7 @@ class Period:
 
     @property
     def key(self) -> str:
-        """Stabiler Schluessel fuer Formulare und Verdichtung."""
+        """Stabiler Schlüssel für Formulare und Verdichtung."""
         return self.start.isoformat()
 
     @property
@@ -132,7 +132,7 @@ def group_period(group, day: date | None = None) -> Period:
 
 
 def recent_periods(group, count: int = 12, today: date | None = None) -> list[Period]:
-    """Die letzten Zeitraeume einer Gruppe, der aktuelle zuerst."""
+    """Die letzten Zeiträume einer Gruppe, der aktuelle zuerst."""
     period = group_period(group, today)
     periods = [period]
     for _ in range(max(0, count - 1)):

@@ -20,7 +20,7 @@ RUN groupadd --gid 10001 app \
 
 COPY . .
 
-# Statische Dateien einsammeln; der Schluessel wird dafuer nicht gebraucht.
+# Statische Dateien einsammeln; der Schlüssel wird dafür nicht gebraucht.
 RUN DJANGO_DEBUG=true python manage.py collectstatic --noinput
 
 # Erst danach die Rechte setzen, damit auch staticfiles/ dem Benutzer gehoert.

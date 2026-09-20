@@ -7,7 +7,7 @@ urlpatterns = [
     path("korrekturen/", include("apps.corrections.urls")),
     path("auswertung/", include("apps.reporting.urls")),
     path("konto/", include("apps.accounts.urls")),
-    # allauth uebernimmt den OIDC-Ablauf (Weiterleitung, Rueckkanal, Abmelden).
+    # allauth übernimmt den OIDC-Ablauf (Weiterleitung, Rückkanal, Abmelden).
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]

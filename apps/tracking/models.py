@@ -15,7 +15,7 @@ class TimeEntryQuerySet(models.QuerySet):
         return self.filter(end__isnull=False)
 
     def overlapping(self, user, start, end=None):
-        """Eintraege desselben Nutzers, die sich mit [start, end) ueberschneiden."""
+        """Einträge desselben Nutzers, die sich mit [start, end) überschneiden."""
         qs = self.filter(user=user)
         if end is None:
             return qs.filter(Q(end__isnull=True) | Q(end__gt=start))
@@ -23,7 +23,7 @@ class TimeEntryQuerySet(models.QuerySet):
 
 
 class TimeEntry(models.Model):
-    """Eine Stempelung von Start bis Stop. Pausen haengen als BreakEntry daran."""
+    """Eine Stempelung von Start bis Stop. Pausen hängen als BreakEntry daran."""
 
     class Source(models.TextChoices):
         CLOCK = "clock", "Gestempelt"
@@ -44,7 +44,7 @@ class TimeEntry(models.Model):
     )
     activity = models.ForeignKey(
         "groups.Activity",
-        verbose_name="Taetigkeit",
+        verbose_name="Tätigkeit",
         on_delete=models.PROTECT,
         related_name="time_entries",
         null=True,
@@ -57,18 +57,18 @@ class TimeEntry(models.Model):
         "Erfassungsart", max_length=12, choices=Source.choices, default=Source.CLOCK
     )
     is_incomplete = models.BooleanField(
-        "Unvollstaendig",
+        "Unvollständig",
         default=False,
         help_text="Automatisch beendet, weil das Ausstempeln vergessen wurde.",
     )
     created_at = models.DateTimeField("Angelegt am", auto_now_add=True)
-    updated_at = models.DateTimeField("Geaendert am", auto_now=True)
+    updated_at = models.DateTimeField("Geändert am", auto_now=True)
 
     objects = TimeEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Zeiteintrag"
-        verbose_name_plural = "Zeiteintraege"
+        verbose_name_plural = "Zeiteinträge"
         ordering = ["-start"]
         constraints = [
             models.UniqueConstraint(
@@ -93,7 +93,7 @@ class TimeEntry(models.Model):
         if self.end and self.end <= self.start:
             raise ValidationError({"end": "Das Ende muss nach dem Beginn liegen."})
         if self.activity and self.activity.group_id != self.group_id:
-            raise ValidationError({"activity": "Die Taetigkeit gehoert zu einer anderen Gruppe."})
+            raise ValidationError({"activity": "Die Tätigkeit gehört zu einer anderen Gruppe."})
 
     @property
     def is_open(self) -> bool:
@@ -113,7 +113,7 @@ class TimeEntry(models.Model):
 
     @property
     def duration(self) -> timedelta:
-        """Arbeitszeit, also Anwesenheit abzueglich Pausen."""
+        """Arbeitszeit, also Anwesenheit abzüglich Pausen."""
         value = self.gross_duration - self.break_duration
         return value if value > timedelta() else timedelta()
 

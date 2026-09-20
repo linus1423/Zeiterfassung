@@ -137,7 +137,7 @@ def _csv_response(request, rows, columns, form):
     dialect = CSV_DIALECTS.get(form.cleaned_data.get("csv_dialect") or "de", CSV_DIALECTS["de"])
     _log_export(request, form, len(rows), "csv")
 
-    # Das BOM gehoert genau einmal an den Anfang, nicht an jeden Block, sonst
+    # Das BOM gehört genau einmal an den Anfang, nicht an jeden Block, sonst
     # zeigt Excel Steuerzeichen mitten in der Datei.
     stream = services.csv_bytes(
         rows,
@@ -155,7 +155,7 @@ def _csv_response(request, rows, columns, form):
 def _save_profile(request, form):
     profile_form = ProfileSaveForm(request.POST)
     if not profile_form.is_valid():
-        messages.error(request, "Bitte einen Namen fuer die Vorlage angeben.")
+        messages.error(request, "Bitte einen Namen für die Vorlage angeben.")
         return redirect("reporting:export")
 
     filters = {
@@ -185,5 +185,5 @@ def _save_profile(request, form):
 def profile_delete(request, profile_id):
     profile = get_object_or_404(ExportProfile, pk=profile_id, owner=request.user)
     profile.delete()
-    messages.success(request, "Vorlage geloescht.")
+    messages.success(request, "Vorlage gelöscht.")
     return redirect("reporting:export")

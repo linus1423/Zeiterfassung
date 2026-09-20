@@ -599,3 +599,48 @@ Gruppenansicht, den Abschluss und die Verdichtung "Je Nutzer und Monat": zwei Ta
 selben Kalendermonat können in verschiedenen Abrechnungszeiträumen liegen und werden
 dann getrennt ausgewiesen. Der Export hat dafür die Spalten Abrechnungszeitraum,
 Zeitraum von, Zeitraum bis und Abgeschlossen.
+
+---
+
+## 14. Umgesetzte Erweiterungen (20.09.2026)
+
+Diese Punkte kamen aus dem Durchgang über die Funktionsweise und lagen als
+Issues 25 bis 30 im Repository.
+
+**Umlaute in der Oberfläche** (Issue 25). Alle für Nutzer sichtbaren Texte
+stehen jetzt in korrektem Deutsch: Templates, Formularbeschriftungen,
+Meldungen, Feldbezeichnungen und Hilfetexte. Bezeichner im Code, URL-Pfade und
+die Werte der Auswahlfelder in der Datenbank sind unverändert geblieben, damit
+sich weder Adressen noch gespeicherte Daten ändern.
+
+**Notiz sichtbar** (Issue 26). Die beim Einstempeln erfasste Notiz steht jetzt
+in der Tagesliste der Stempeluhr, in "Meine Zeiten" und in der Eintragsliste
+der Gruppenübersicht. Bisher war sie nur als Exportspalte zu sehen.
+
+**Auswahl beim Einstempeln** (Issue 27). Gehört jemand nur einer Gruppe an,
+entfällt das Gruppenfeld. Bei mehreren Gruppen sind die Tätigkeiten in der
+Auswahl nach Gruppe gebündelt, sodass zwei gleichnamige Tätigkeiten
+unterscheidbar sind. Gruppe und Tätigkeit des letzten Eintrags sind
+vorbelegt, solange es sie noch gibt und sie aktiv sind.
+
+**Meine Zeiten** (Issue 28). Zusätzlich zu den Tagessummen gibt es
+Wochensummen, einen Filter nach Tätigkeit und Schnellschalter für diese Woche,
+vorige Woche, diesen und vorigen Abrechnungszeitraum. Der Vorgabezeitraum folgt
+dem Abrechnungszyklus der Gruppe; gehört jemand zu Gruppen mit
+unterschiedlichen Zyklen, bleibt es beim Kalendermonat. Die eigenen Zeiten
+lassen sich als Excel oder CSV herunterladen, mit fester Spaltenliste: die frei
+wählbare Zusammenstellung bleibt der Auswertung vorbehalten.
+
+**Nutzerstammdaten** (Issue 29). System-Admins pflegen unter "Nutzer" die
+Personalnummer und die Rolle Buchhaltung, mit Suche über Name, E-Mail und
+Personalnummer. Die Personalnummer ist eindeutig; Name und E-Mail kommen
+weiterhin aus dem Identity-Provider und sind nicht änderbar. Jede Änderung
+steht im Protokoll (`user_updated`). Die Mitgliederliste einer Gruppe zeigt die
+Personalnummer mit, damit ein Gruppen-Admin sieht, wo sie fehlt.
+
+**Tätigkeit wechseln** (Issue 30, Rückfrage 8). Im Zustand "arbeitet" gibt es
+auf der Stempeluhr die Auswahl "Tätigkeit wechseln". Der laufende Eintrag wird
+beendet und im selben Moment ein neuer mit der neuen Tätigkeit begonnen, ohne
+Lücke dazwischen. Die Gruppe bleibt dabei dieselbe, ein Wechsel der Gruppe
+läuft weiter über Stop und Start. Während einer Pause ist der Wechsel nicht
+möglich; beides steht als Aus- und Einstempeln im Protokoll.

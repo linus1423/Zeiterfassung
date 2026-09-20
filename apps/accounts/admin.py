@@ -5,8 +5,8 @@ from django.contrib.auth.models import Group as AuthGroup
 from .models import User
 
 # Djangos Berechtigungsgruppen werden nicht benutzt, die Gruppen dieses
-# Projekts stehen in apps.groups. Zwei gleichnamige Eintraege im Admin
-# waeren nur verwirrend.
+# Projekts stehen in apps.groups. Zwei gleichnamige Einträge im Admin
+# wären nur verwirrend.
 admin.site.unregister(AuthGroup)
 
 

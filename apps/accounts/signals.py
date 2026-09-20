@@ -1,4 +1,4 @@
-"""Was beim Login passiert: Gruppen aus dem Token uebernehmen (Issue 4)."""
+"""Was beim Login passiert: Gruppen aus dem Token übernehmen (Issue 4)."""
 
 import logging
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @receiver(user_logged_in)
 def sync_groups_on_login(sender, request, user, sociallogin=None, **kwargs):
-    """Uebernimmt die Gruppen des Identity-Providers, wenn das eingeschaltet ist.
+    """Übernimmt die Gruppen des Identity-Providers, wenn das eingeschaltet ist.
 
     Ein Fehler hier darf die Anmeldung nicht verhindern: wer sich nicht
     anmelden kann, kann auch nicht stempeln.

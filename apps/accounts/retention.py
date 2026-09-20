@@ -1,14 +1,14 @@
 """Aufbewahrung und Anonymisierung (Issue 6).
 
-Arbeitszeitnachweise muessen aufbewahrt werden, personenbezogene Daten aber
+Arbeitszeitnachweise müssen aufbewahrt werden, personenbezogene Daten aber
 nicht unbegrenzt. Nach Ablauf der Frist (`DATA_RETENTION_MONTHS`, Vorgabe
 zwei Jahre) wird das Konto anonymisiert: Name, Adresse und Personalnummer
-verschwinden, die Zeiteintraege bleiben fuer die Statistik erhalten, sind
+verschwinden, die Zeiteinträge bleiben für die Statistik erhalten, sind
 aber keiner Person mehr zuzuordnen.
 
 Ein Konto wird nur angefasst, wenn seit der Frist nichts mehr passiert ist:
 keine Zeiten, keine Anmeldung, kein offener Korrekturantrag. Frische Konten,
-die noch nie gestempelt haben, bleiben also unberuehrt.
+die noch nie gestempelt haben, bleiben also unberührt.
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ def anonymize(user, *, actor=None) -> None:
         ]
     )
 
-    # Ohne die Verknuepfung zum Identity-Provider ist das Konto auch dort
+    # Ohne die Verknüpfung zum Identity-Provider ist das Konto auch dort
     # nicht mehr zuzuordnen.
     try:
         from allauth.socialaccount.models import SocialAccount
@@ -120,7 +120,7 @@ def anonymize(user, *, actor=None) -> None:
     except ImportError:  # pragma: no cover
         pass
 
-    # Die Mitgliedschaften werden nicht mehr gebraucht, die Zeiteintraege
+    # Die Mitgliedschaften werden nicht mehr gebraucht, die Zeiteinträge
     # tragen ihre Gruppe selbst.
     user.group_memberships.all().delete()
 
