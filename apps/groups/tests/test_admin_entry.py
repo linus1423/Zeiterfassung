@@ -180,3 +180,39 @@ def test_only_members_of_the_group_can_be_backdated(group_admin, group, make_use
         )
 
     assert "kein Mitglied" in str(exc.value)
+
+
+def test_a_deactivated_activity_stays_on_the_entry(client, group_admin, group, entry, activity):
+    """Deaktivierte Tätigkeiten bleiben an alten Einträgen stehen, auch beim Ändern."""
+    activity.is_active = False
+    activity.save(update_fields=["is_active"])
+    client.force_login(group_admin)
+
+    form = client.get(reverse("groups:entry_edit", args=[group.pk, entry.pk])).context["form"]
+    assert activity in form.fields["activity"].queryset
+
+    response = client.post(
+        reverse("groups:entry_edit", args=[group.pk, entry.pk]),
+        _form_data(entry.start, entry.end - timedelta(minutes=30), activity=activity.pk),
+    )
+
+    assert response.status_code == 302
+    entry.refresh_from_db()
+    assert entry.activity == activity
+
+
+def test_the_log_shows_a_changed_break(client, group_admin, group, entry):
+    """Ändert sich nur die Pause, muss das Protokoll den Unterschied zeigen."""
+    client.force_login(group_admin)
+    data = _form_data(entry.start, entry.end)
+    pause_start = entry.start + timedelta(hours=4)
+    data["pausen-0-start"] = timezone.localtime(pause_start).strftime("%Y-%m-%dT%H:%M")
+    data["pausen-0-end"] = timezone.localtime(pause_start + timedelta(minutes=30)).strftime(
+        "%Y-%m-%dT%H:%M"
+    )
+
+    client.post(reverse("groups:entry_edit", args=[group.pk, entry.pk]), data)
+
+    log_entry = AuditLog.objects.filter(action=AuditLog.Action.ENTRY_UPDATED).latest("created_at")
+    assert log_entry.changes["vorher"]["breaks"] == []
+    assert len(log_entry.changes["nachher"]["breaks"]) == 1

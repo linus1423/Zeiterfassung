@@ -12,7 +12,13 @@ from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
 from apps.groups import closing
-from apps.tracking.entries import apply_breaks, overlap_message, overlapping_entry, snapshot
+from apps.tracking.entries import (
+    apply_breaks,
+    lock_user,
+    overlap_message,
+    overlapping_entry,
+    snapshot,
+)
 from apps.tracking.models import TimeEntry
 
 from . import notifications
@@ -58,26 +64,38 @@ def _reject_overlap(user, start, end, *, exclude_id=None) -> None:
         raise CorrectionError(overlap_message(clash))
 
 
-def _check_overrides(locked: CorrectionRequest, overrides: dict) -> None:
-    """Prüft die Werte, mit denen ein Admin einen Antrag geändert übernimmt."""
+def _resolved_overrides(locked: CorrectionRequest, overrides: dict) -> dict:
+    """Prüft die Werte, mit denen ein Admin einen Antrag geändert übernimmt.
+
+    Was nicht genannt ist, bleibt wie beantragt. Ein ausdrückliches None oder
+    eine leere Liste löschen dagegen, sonst könnte der Aufrufer Tätigkeit und
+    Pausen nicht mehr entfernen.
+    """
     if locked.kind == CorrectionRequest.Kind.DELETE:
         raise CorrectionError("Ein Löschantrag kann nicht geändert genehmigt werden.")
-    start, end = overrides.get("start"), overrides.get("end")
-    if start is None or end is None:
+
+    resolved = {
+        "start": overrides.get("start", locked.proposed_start),
+        "end": overrides.get("end", locked.proposed_end),
+        "activity": overrides.get("activity", locked.proposed_activity),
+        "breaks": overrides.get("breaks", locked.proposed_breaks),
+    }
+    if resolved["start"] is None or resolved["end"] is None:
         raise CorrectionError("Für die Übernahme mit Änderung fehlen Beginn oder Ende.")
-    if end <= start:
+    if resolved["end"] <= resolved["start"]:
         raise CorrectionError("Das Ende muss nach dem Beginn liegen.")
-    activity = overrides.get("activity")
+    activity = resolved["activity"]
     if activity is not None and activity.group_id != locked.group_id:
         raise CorrectionError("Die Tätigkeit gehört zu einer anderen Gruppe.")
+    return resolved
 
 
 def _record_applied(locked: CorrectionRequest, overrides: dict) -> None:
     """Hält fest, was statt des Beantragten übernommen wurde (Issue 31)."""
     locked.applied_start = overrides["start"]
     locked.applied_end = overrides["end"]
-    locked.applied_activity = overrides.get("activity")
-    locked.applied_breaks = overrides.get("breaks") or []
+    locked.applied_activity = overrides["activity"]
+    locked.applied_breaks = overrides["breaks"] or []
 
 
 @transaction.atomic
@@ -97,7 +115,7 @@ def approve(
     if not may_decide(decided_by, locked):
         raise CorrectionError("Dieser Antrag darf von dir nicht entschieden werden.")
     if overrides:
-        _check_overrides(locked, overrides)
+        overrides = _resolved_overrides(locked, overrides)
 
     # Der Abschluss kann zwischen Antrag und Entscheidung gesetzt worden sein.
     lock = closed_period_lock(locked, overrides)
@@ -124,8 +142,9 @@ def approve(
     elif locked.kind == CorrectionRequest.Kind.CREATE:
         start = overrides["start"] if overrides else locked.proposed_start
         end = overrides["end"] if overrides else locked.proposed_end
-        activity = overrides.get("activity") if overrides else locked.proposed_activity
-        breaks = overrides.get("breaks") if overrides else locked.proposed_breaks
+        activity = overrides["activity"] if overrides else locked.proposed_activity
+        breaks = overrides["breaks"] if overrides else locked.proposed_breaks
+        lock_user(locked.requested_by)
         _reject_overlap(locked.requested_by, start, end)
         entry = TimeEntry.objects.create(
             user=locked.requested_by,
@@ -162,7 +181,7 @@ def approve(
         if overrides:
             entry.start = overrides["start"]
             entry.end = overrides["end"]
-            entry.activity = overrides.get("activity")
+            entry.activity = overrides["activity"]
         else:
             entry.start = locked.proposed_start or entry.start
             entry.end = locked.proposed_end or entry.end
@@ -170,6 +189,7 @@ def approve(
                 entry.activity = locked.proposed_activity
         entry.source = TimeEntry.Source.CORRECTION
         entry.is_incomplete = False
+        lock_user(entry.user)
         _reject_overlap(entry.user, entry.start, entry.end, exclude_id=entry.pk)
         try:
             entry.full_clean(exclude=["user", "group"])
@@ -178,7 +198,7 @@ def approve(
                 "Die gewünschte Zeit ist nicht gültig: " + "; ".join(exc.messages)
             ) from exc
         entry.save()
-        apply_breaks(entry, overrides.get("breaks") if overrides else locked.proposed_breaks)
+        apply_breaks(entry, overrides["breaks"] if overrides else locked.proposed_breaks)
         log(
             AuditLog.Action.ENTRY_UPDATED,
             actor=decided_by,

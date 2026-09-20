@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -118,8 +119,13 @@ class AdminEntryForm(forms.Form):
         self.group = group
         self.entry = entry
         super().__init__(*args, **kwargs)
+        # Eine deaktivierte Tätigkeit bleibt an alten Einträgen stehen. Ohne
+        # sie in der Liste würde sie beim Speichern stillschweigend entfallen.
+        choosable = Q(is_active=True)
+        if entry is not None and entry.activity_id:
+            choosable |= Q(pk=entry.activity_id)
         self.fields["activity"].queryset = Activity.objects.filter(
-            group=group, is_active=True
+            Q(group=group) & choosable
         ).order_by("sort_order", "name")
 
         if entry is None:

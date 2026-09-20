@@ -178,3 +178,41 @@ def test_plain_approval_still_works(client, group_admin, pending_request, entry)
     pending_request.refresh_from_db()
     assert entry.end == pending_request.proposed_end
     assert pending_request.was_adjusted is False
+
+
+def test_omitted_values_keep_what_was_requested(group_admin, pending_request, entry, activity):
+    """Nennt der Aufruf nur Beginn und Ende, bleiben Tätigkeit und Pausen wie beantragt."""
+    pending_request.proposed_breaks = [
+        {
+            "start": (pending_request.proposed_start + timedelta(hours=4)).isoformat(),
+            "end": (pending_request.proposed_start + timedelta(hours=4, minutes=30)).isoformat(),
+        }
+    ]
+    pending_request.save(update_fields=["proposed_breaks"])
+
+    services.approve(
+        pending_request,
+        group_admin,
+        "",
+        overrides={
+            "start": pending_request.proposed_start,
+            "end": pending_request.proposed_end - timedelta(minutes=15),
+        },
+    )
+
+    entry.refresh_from_db()
+    pending_request.refresh_from_db()
+    assert entry.activity == activity
+    assert entry.breaks.count() == 1
+    assert pending_request.applied_activity == activity
+    assert len(pending_request.applied_breaks) == 1
+
+
+def test_a_deactivated_activity_stays_selectable(client, group_admin, pending_request, activity):
+    activity.is_active = False
+    activity.save(update_fields=["is_active"])
+    client.force_login(group_admin)
+
+    response = client.get(reverse("corrections:decide", args=[pending_request.pk]))
+
+    assert activity in response.context["adjust_form"].fields["activity"].queryset

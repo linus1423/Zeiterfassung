@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.groups import closing
@@ -109,8 +110,13 @@ class ApprovalAdjustForm(forms.Form):
     def __init__(self, correction, *args, **kwargs):
         self.correction = correction
         super().__init__(*args, **kwargs)
+        # Eine seit dem Antrag deaktivierte Tätigkeit bleibt wählbar, sonst
+        # entfiele sie bei der Übernahme stillschweigend.
+        choosable = Q(is_active=True)
+        if correction.proposed_activity_id:
+            choosable |= Q(pk=correction.proposed_activity_id)
         self.fields["activity"].queryset = Activity.objects.filter(
-            group=correction.group, is_active=True
+            Q(group=correction.group) & choosable
         ).order_by("sort_order", "name")
         if not self.is_bound:
             self.initial.update(

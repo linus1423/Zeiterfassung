@@ -19,7 +19,7 @@ from django.utils import timezone
 from apps.audit.models import AuditLog, log
 from apps.groups import closing
 
-from .entries import apply_breaks, overlap_message, overlapping_entry, snapshot
+from .entries import apply_breaks, lock_user, overlap_message, overlapping_entry, snapshot
 from .models import TimeEntry
 
 
@@ -81,6 +81,7 @@ def update_entry(
 
     locked = TimeEntry.objects.select_for_update().select_related("group").get(pk=entry.pk)
     _require_admin(editor, locked.group)
+    lock_user(locked.user)
     if locked.is_open:
         raise EntryEditError("Ein laufender Eintrag kann nicht geändert werden.")
     if activity is not None and activity.group_id != locked.group_id:
@@ -130,6 +131,7 @@ def create_entry(
         raise EntryEditError("Ein Nachtrag braucht eine Begründung.")
 
     _require_admin(editor, group)
+    lock_user(user)
     if not user.is_group_member(group):
         raise EntryEditError("Die Person ist kein Mitglied dieser Gruppe.")
     if activity is not None and activity.group_id != group.pk:
