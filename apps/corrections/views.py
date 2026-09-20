@@ -61,7 +61,7 @@ def request_create(request, entry_id=None):
             try:
                 services.create_request(
                     requested_by=request.user,
-                    group=form.cleaned_data["group"],
+                    group=entry.group if entry else form.cleaned_data["group"],
                     kind=CorrectionRequest.Kind.EDIT if entry else CorrectionRequest.Kind.CREATE,
                     reason=form.cleaned_data["reason"],
                     entry=entry,
@@ -135,7 +135,7 @@ def request_withdraw(request, request_id):
 @login_required
 def inbox(request):
     """Offene Anträge der Gruppen, in denen der Nutzer Admin ist."""
-    group_ids = request.user.admin_group_ids()
+    group_ids = request.user.administrated_group_ids()
     requests = (
         CorrectionRequest.objects.filter(
             group_id__in=group_ids, status=CorrectionRequest.Status.PENDING

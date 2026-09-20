@@ -1,0 +1,26 @@
+# Geheimnisse und lokale Daten gehoeren nicht ins Image: es kopiert mit
+# "COPY . ." das ganze Verzeichnis, und wer das Image ziehen kann, liest
+# alles darin. Im Betrieb kommen die Werte ueber env_file beziehungsweise
+# environment in den Container.
+.env
+.env.*
+!.env.example
+**/*.sqlite3
+
+# Historie und Werkzeuge
+.git
+.gitignore
+.github
+.dockerignore
+
+# Wird im Build selbst erzeugt
+staticfiles
+
+# Entwicklungsreste
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.venv
+venv
+**/*.log

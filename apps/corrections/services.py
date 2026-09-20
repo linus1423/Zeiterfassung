@@ -49,6 +49,28 @@ def closed_period_lock(request_obj: CorrectionRequest):
     return closing.blocking_lock(request_obj.group, affected_days(request_obj))
 
 
+def overlapping_entry(user, start, end, *, exclude_id=None) -> TimeEntry | None:
+    """Ein anderer Zeiteintrag desselben Nutzers im gewünschten Zeitraum."""
+    if start is None or end is None:
+        return None
+    queryset = TimeEntry.objects.overlapping(user, start, end)
+    if exclude_id is not None:
+        queryset = queryset.exclude(pk=exclude_id)
+    return queryset.order_by("start").first()
+
+
+def _reject_overlap(user, start, end, *, exclude_id=None) -> None:
+    """Doppelt erfasste Zeit fällt später niemandem mehr auf, also hier prüfen."""
+    clash = overlapping_entry(user, start, end, exclude_id=exclude_id)
+    if clash is None:
+        return
+    local = timezone.localtime(clash.start)
+    raise CorrectionError(
+        "Die gewünschte Zeit überschneidet sich mit einem anderen Zeiteintrag "
+        f"vom {local:%d.%m.%Y} ab {local:%H:%M} Uhr."
+    )
+
+
 def _entry_snapshot(entry: TimeEntry) -> dict:
     return {
         "start": entry.start.isoformat(),
@@ -96,6 +118,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             entry.delete()
             locked.time_entry = None
     elif locked.kind == CorrectionRequest.Kind.CREATE:
+        _reject_overlap(locked.requested_by, locked.proposed_start, locked.proposed_end)
         entry = TimeEntry.objects.create(
             user=locked.requested_by,
             group=locked.group,
@@ -116,7 +139,17 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             note="Nachtrag aus Korrekturantrag",
         )
     else:
-        entry = TimeEntry.objects.select_for_update().get(pk=locked.time_entry_id)
+        # Der Eintrag kann zwischen Antrag und Entscheidung verschwunden sein,
+        # etwa durch einen genehmigten Löschantrag auf denselben Eintrag.
+        entry = (
+            TimeEntry.objects.select_for_update().filter(pk=locked.time_entry_id).first()
+            if locked.time_entry_id
+            else None
+        )
+        if entry is None:
+            raise CorrectionError(
+                "Den Zeiteintrag gibt es nicht mehr. Der Antrag kann nur noch abgelehnt werden."
+            )
         before = _entry_snapshot(entry)
         entry.start = locked.proposed_start or entry.start
         entry.end = locked.proposed_end or entry.end
@@ -124,6 +157,7 @@ def approve(request_obj: CorrectionRequest, decided_by, note: str = "") -> Corre
             entry.activity = locked.proposed_activity
         entry.source = TimeEntry.Source.CORRECTION
         entry.is_incomplete = False
+        _reject_overlap(entry.user, entry.start, entry.end, exclude_id=entry.pk)
         try:
             entry.full_clean(exclude=["user", "group"])
         except ValidationError as exc:
@@ -220,6 +254,12 @@ def create_request(
     proposed_breaks: list[dict] | None = None,
 ) -> CorrectionRequest:
     """Legt einen Antrag an, protokolliert ihn und meldet ihn den Admins."""
+    # Über die Gruppe laufen zwei Dinge: wer entscheiden darf und welcher
+    # Abschluss sperrt. Ein bestehender Eintrag gibt sie deshalb vor, sonst
+    # entschiede ein Admin einer fremden Gruppe über fremde Zeiten.
+    if entry is not None and entry.group_id != group.pk:
+        raise CorrectionError("Ein bestehender Eintrag bleibt in seiner Gruppe.")
+
     correction = CorrectionRequest(
         time_entry=entry,
         requested_by=requested_by,
@@ -237,6 +277,14 @@ def create_request(
         raise CorrectionError(
             f"Der Zeitraum {lock.period.label} ist abgeschlossen. "
             "Korrekturen sind dort nicht mehr möglich."
+        )
+
+    if kind != CorrectionRequest.Kind.DELETE:
+        _reject_overlap(
+            requested_by,
+            proposed_start,
+            proposed_end,
+            exclude_id=entry.pk if entry is not None else None,
         )
 
     correction.save()

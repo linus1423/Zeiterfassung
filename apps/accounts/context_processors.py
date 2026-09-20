@@ -6,9 +6,9 @@ def navigation(request):
 
     from apps.corrections.models import CorrectionRequest
 
-    admin_group_ids = user.admin_group_ids()
+    admin_group_ids = user.administrated_group_ids()
     pending = 0
-    if admin_group_ids or user.is_superuser:
+    if admin_group_ids:
         pending = CorrectionRequest.objects.filter(
             group_id__in=admin_group_ids, status=CorrectionRequest.Status.PENDING
         ).count()
