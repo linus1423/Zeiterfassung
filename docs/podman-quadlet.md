@@ -45,7 +45,10 @@ podman build -t localhost/zeiterfassung:latest .
 ### 2. Geheimnisse anlegen
 
 ```bash
-DB_PASSWORT="$(openssl rand -base64 33)"
+# Nur Buchstaben und Ziffern: das Passwort steht gleich in einer URL, und
+# "openssl rand -base64" liefert auch "/" und "+", die dort etwas anderes
+# bedeuten wuerden.
+DB_PASSWORT="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40)"
 
 printf '%s' "$DB_PASSWORT" | podman secret create zeiterfassung-db-password -
 printf 'postgres://zeiterfassung:%s@zeiterfassung-db:5432/zeiterfassung' "$DB_PASSWORT" \
@@ -54,7 +57,9 @@ openssl rand -base64 48 | podman secret create zeiterfassung-django-secret-key -
 ```
 
 `zeiterfassung-db` ist der Containername der Datenbank; die Namensaufloesung im
-Podman-Netz macht daraus die richtige Adresse.
+Podman-Netz macht daraus die richtige Adresse. Wer ein bestehendes Passwort
+uebernimmt, das Sonderzeichen enthaelt, muss es in der URL prozentkodieren
+(`@` als `%40`, `/` als `%2F` und so weiter).
 
 Django liest diese drei Werte aus Dateien, nicht aus der Umgebung
 (`DJANGO_SECRET_KEY_FILE`, `DATABASE_URL_FILE`). Der Grund: eine
@@ -118,16 +123,19 @@ Ob die Units fehlerfrei uebersetzt wurden, zeigt:
 ### 5. Starten
 
 ```bash
-systemctl --user start zeiterfassung-web.service
+systemctl --user enable --now zeiterfassung-db.service zeiterfassung-web.service
 systemctl --user enable --now zeiterfassung-scheduler.timer
 
 systemctl --user status zeiterfassung-web.service
 podman ps
 ```
 
-`zeiterfassung-db.service` wird durch `Requires=` mitgestartet. Der erste Start
-dauert laenger: der Webcontainer wartet auf die Datenbank und wendet die
-Migrationen an (`journalctl --user -u zeiterfassung-web -f`).
+`enable --now` statt `start`: `WantedBy=default.target` in den Units wirkt erst,
+wenn die Unit auch eingeschaltet ist. Sonst laufen die Dienste zwar jetzt, aber
+nach einem Neustart des Servers nicht mehr, auch mit Lingering nicht.
+
+Der erste Start dauert laenger: der Webcontainer wartet auf die Datenbank und
+wendet die Migrationen an (`journalctl --user -u zeiterfassung-web -f`).
 
 ### 6. Ersten Zugang einrichten
 

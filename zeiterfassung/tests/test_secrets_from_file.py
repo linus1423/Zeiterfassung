@@ -5,7 +5,7 @@ import os
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
-from zeiterfassung.settings import _load_secrets_from_files
+from zeiterfassung.settings import _secrets_from_files
 
 
 def test_liest_den_wert_aus_der_datei(tmp_path, monkeypatch):
@@ -17,9 +17,19 @@ def test_liest_den_wert_aus_der_datei(tmp_path, monkeypatch):
     monkeypatch.setenv("DJANGO_SECRET_KEY", "")
     monkeypatch.setenv("DJANGO_SECRET_KEY_FILE", str(datei))
 
-    _load_secrets_from_files()
+    assert _secrets_from_files()["DJANGO_SECRET_KEY"] == "geheimer-schluessel"
 
-    assert os.environ["DJANGO_SECRET_KEY"] == "geheimer-schluessel"
+
+def test_der_wert_landet_nicht_in_der_prozessumgebung(tmp_path, monkeypatch):
+    """Sonst stuende er in /proc/<pid>/environ und in jedem Kindprozess."""
+    datei = tmp_path / "secret"
+    datei.write_text("geheimer-schluessel", encoding="utf-8")
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "")
+    monkeypatch.setenv("DJANGO_SECRET_KEY_FILE", str(datei))
+
+    _secrets_from_files()
+
+    assert os.environ["DJANGO_SECRET_KEY"] == ""
 
 
 def test_umgebungsvariable_hat_vorrang(tmp_path, monkeypatch):
@@ -28,18 +38,14 @@ def test_umgebungsvariable_hat_vorrang(tmp_path, monkeypatch):
     monkeypatch.setenv("DJANGO_SECRET_KEY", "aus-der-umgebung")
     monkeypatch.setenv("DJANGO_SECRET_KEY_FILE", str(datei))
 
-    _load_secrets_from_files()
-
-    assert os.environ["DJANGO_SECRET_KEY"] == "aus-der-umgebung"
+    assert "DJANGO_SECRET_KEY" not in _secrets_from_files()
 
 
 def test_ohne_file_variable_passiert_nichts(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.delenv("DATABASE_URL_FILE", raising=False)
 
-    _load_secrets_from_files()
-
-    assert os.environ["DATABASE_URL"] == ""
+    assert _secrets_from_files() == {}
 
 
 def test_fehlende_datei_faellt_auf(tmp_path, monkeypatch):
@@ -47,7 +53,7 @@ def test_fehlende_datei_faellt_auf(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL_FILE", str(tmp_path / "gibt-es-nicht"))
 
     with pytest.raises(ImproperlyConfigured):
-        _load_secrets_from_files()
+        _secrets_from_files()
 
 
 def test_leere_datei_faellt_auf(tmp_path, monkeypatch):
@@ -57,4 +63,4 @@ def test_leere_datei_faellt_auf(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL_FILE", str(datei))
 
     with pytest.raises(ImproperlyConfigured):
-        _load_secrets_from_files()
+        _secrets_from_files()

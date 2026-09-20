@@ -5,6 +5,7 @@ credentials ever end up in the repository. See .env.example for the full list.
 """
 
 import os
+from collections import ChainMap
 from pathlib import Path
 
 import environ
@@ -23,15 +24,24 @@ SECRETS_FROM_FILE = (
 )
 
 
-def _load_secrets_from_files() -> None:
+def _secrets_from_files() -> dict[str, str]:
     """Liest Geheimnisse aus Dateien, wenn FOO_FILE statt FOO gesetzt ist.
 
     Podman und Docker koennen ein Geheimnis als Datei in den Container haengen
     (`podman secret`, `docker secret`). Das ist besser als eine
-    Umgebungsvariable: die steht in `podman inspect`, in der Prozessumgebung und
-    damit in jedem Kindprozess. Eine gesetzte Umgebungsvariable hat Vorrang,
-    damit bestehende Installationen unveraendert weiterlaufen.
+    Umgebungsvariable: die steht in `podman inspect`, im Journal eines
+    fehlgeschlagenen Starts und in der Umgebung jedes Prozesses im Container.
+
+    Die Werte werden absichtlich zurueckgegeben und nicht nach `os.environ`
+    geschrieben: dort stuenden sie in `/proc/<pid>/environ` und wuerden an jeden
+    Kindprozess vererbt, womit der Vorteil der Datei wieder weg waere.
+
+    Aufgerufen wird die Funktion, bevor die `.env` gelesen wird. Ein Name, der
+    zu dem Zeitpunkt schon in der Umgebung steht, kommt deshalb gar nicht erst
+    vor: eine echte Umgebungsvariable gewinnt, damit bestehende Installationen
+    unveraendert weiterlaufen.
     """
+    secrets: dict[str, str] = {}
     for name in SECRETS_FROM_FILE:
         path = os.environ.get(f"{name}_FILE", "").strip()
         if not path or os.environ.get(name):
@@ -44,10 +54,9 @@ def _load_secrets_from_files() -> None:
             raise ImproperlyConfigured(f"{name}_FILE ist nicht lesbar: {exc}") from exc
         if not value:
             raise ImproperlyConfigured(f"{name}_FILE ist leer: {path}")
-        os.environ[name] = value
+        secrets[name] = value
+    return secrets
 
-
-_load_secrets_from_files()
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
@@ -68,6 +77,11 @@ env = environ.Env(
     OIDC_ADMIN_GROUPS_CLAIM=(str, ""),
     OIDC_ADMIN_GROUP_SUFFIX=(str, ""),
 )
+# Alles, was django-environ liest, kommt aus dieser Kette: erst die Dateien,
+# dann die Prozessumgebung (in die gleich noch die .env einsortiert wird).
+# Die Reihenfolge stimmt trotzdem, weil _secrets_from_files() Namen auslaesst,
+# die schon als Umgebungsvariable gesetzt sind.
+env.ENVIRON = ChainMap(_secrets_from_files(), os.environ)
 environ.Env.read_env(BASE_DIR / ".env")
 
 DEBUG = env("DJANGO_DEBUG")

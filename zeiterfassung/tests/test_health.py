@@ -20,10 +20,13 @@ def test_readyz_antwortet_wenn_die_datenbank_erreichbar_ist(client):
     assert response.status_code == 200
 
 
-def test_readyz_meldet_503_wenn_die_datenbank_fehlt(client):
+def test_readyz_meldet_503_wenn_die_abfrage_scheitert(client):
+    """Geprueft wird die Abfrage selbst, nicht nur das Oeffnen der Verbindung:
+    mit CONN_MAX_AGE haelt Django die Verbindung offen, und eine abgerissene
+    faellt erst auf, wenn etwas darueber laeuft."""
     with patch(
-        "django.db.backends.base.base.BaseDatabaseWrapper.ensure_connection",
-        side_effect=OperationalError("keine Verbindung"),
+        "django.db.backends.base.base.BaseDatabaseWrapper.cursor",
+        side_effect=OperationalError("Verbindung abgerissen"),
     ):
         response = client.get("/readyz")
 

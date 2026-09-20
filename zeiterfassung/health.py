@@ -7,6 +7,7 @@ Django wuerde eine solche Anfrage normalerweise mit 400 ablehnen, weil
 eine Middleware die beiden Pfade, bevor irgendetwas den Host prueft.
 """
 
+import contextlib
 import logging
 
 from django.db import connections
@@ -47,11 +48,20 @@ def _plain(text, status=200):
 
 
 def _readiness():
+    connection = connections["default"]
     try:
-        connections["default"].ensure_connection()
+        # Eine echte Abfrage, nicht nur ensure_connection(): mit CONN_MAX_AGE
+        # haelt Django die Verbindung offen, und eine laengst abgerissene
+        # Verbindung faellt erst auf, wenn tatsaechlich etwas ueber sie laeuft.
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
     except Exception as exc:
         # Jeder Fehler an dieser Stelle heisst: nicht bereit. Die Ursache
         # gehoert ins Protokoll, nicht in die Antwort.
         logger.warning("Readiness-Pruefung fehlgeschlagen: %s", exc)
+        # Die kaputte Verbindung wegwerfen, sonst versucht es die naechste
+        # Anfrage wieder mit derselben.
+        with contextlib.suppress(Exception):
+            connection.close()
         return _plain("database unavailable", status=503)
     return _plain("ok")
