@@ -1,0 +1,9 @@
+# Benanntes Volume fuer die Datenbank. Bewusst kein Bind-Mount auf ein
+# Hostverzeichnis: rootless laeuft PostgreSQL unter einer abgebildeten UID aus
+# dem Subuid-Bereich, ein Hostverzeichnis muesste dafuer erst passend
+# umgeschrieben werden (podman unshare chown), und unter SELinux braeuchte es
+# zusaetzlich die Option :Z. Ein benanntes Volume erledigt beides von selbst.
+[Unit]
+Description=Datenbankdaten der Zeiterfassung
+
+[Volume]

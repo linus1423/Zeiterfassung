@@ -1,0 +1,37 @@
+# Vergessene Stempelungen beenden. Unter Compose laeuft dafuer ein Dienst mit
+# einer Schleife aus "sleep"; unter systemd macht das der zugehoerige Timer
+# (zeiterfassung-scheduler.timer). Vorteile: der Lauf steht im Journal, er
+# laesst sich mit "systemctl start zeiterfassung-scheduler" von Hand ausloesen,
+# ein ausgefallener Lauf wird nach einem Neustart nachgeholt (Persistent=true),
+# und zwischen zwei Laeufen laeuft kein Container.
+#
+# Absichtlich ohne [Install]: gestartet wird die Unit nur vom Timer.
+[Unit]
+Description=Vergessene Stempelungen der Zeiterfassung beenden
+Requires=zeiterfassung-db.service
+After=zeiterfassung-db.service zeiterfassung-web.service
+
+[Container]
+ContainerName=zeiterfassung-scheduler
+Image=localhost/zeiterfassung:latest
+Network=zeiterfassung.network
+
+EnvironmentFile=%h/.config/zeiterfassung/zeiterfassung.env
+Environment=DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key
+Environment=DATABASE_URL_FILE=/run/secrets/database-url
+Secret=zeiterfassung-django-secret-key,type=mount,target=django-secret-key
+Secret=zeiterfassung-database-url,type=mount,target=database-url
+
+ReadOnly=true
+Tmpfs=/tmp
+NoNewPrivileges=true
+DropCapability=ALL
+
+# Kein Webserver in diesem Container, also auch nichts anzufragen. Ohne diese
+# Zeile wuerde der Healthcheck aus dem Image greifen und immer fehlschlagen.
+HealthCmd=none
+
+Exec=python manage.py close_stale_entries
+
+[Service]
+Type=oneshot

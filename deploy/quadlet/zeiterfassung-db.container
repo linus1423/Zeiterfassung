@@ -1,0 +1,29 @@
+[Unit]
+Description=PostgreSQL der Zeiterfassung
+
+[Container]
+ContainerName=zeiterfassung-db
+Image=docker.io/library/postgres:16
+Network=zeiterfassung.network
+Volume=zeiterfassung-pgdata.volume:/var/lib/postgresql/data
+
+Environment=POSTGRES_DB=zeiterfassung
+Environment=POSTGRES_USER=zeiterfassung
+# Das Passwort kommt als Datei, nicht als Umgebungsvariable: eine Variable
+# steht in "podman inspect" und in der Umgebung jedes Kindprozesses.
+Environment=POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+Secret=zeiterfassung-db-password,type=mount,target=db-password
+
+# Kein PublishPort: die Datenbank ist nur im Netz der Zeiterfassung erreichbar.
+HealthCmd=pg_isready -U zeiterfassung -d zeiterfassung
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
