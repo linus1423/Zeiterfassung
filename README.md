@@ -137,26 +137,26 @@ HTTPS erkennt.
 
 ### Podman mit Quadlet
 
-Derselbe Aufbau laeuft rootless unter systemd. Die Unit-Dateien liegen in
+Derselbe Aufbau läuft rootless unter systemd. Die Unit-Dateien liegen in
 `deploy/quadlet/`, die Anleitung in
 [docs/podman-quadlet.md](docs/podman-quadlet.md). Beide Wege benutzen dasselbe
 Image und denselben Einstiegspunkt.
 
-### Zustand pruefen
+### Zustand prüfen
 
 | Pfad | Bedeutung |
 |---|---|
 | `/healthz` | der Prozess antwortet; das fragt der Healthcheck des Containers |
-| `/readyz` | zusaetzlich: die Datenbank ist erreichbar; das fragt ein Loadbalancer |
+| `/readyz` | zusätzlich: die Datenbank ist erreichbar; das fragt ein Loadbalancer |
 
 Beide Pfade brauchen keine Anmeldung und antworten als reiner Text. Wer sie
-nicht von aussen erreichbar haben will, blockt sie im Reverse Proxy.
+nicht von außen erreichbar haben will, blockt sie im Reverse Proxy.
 
 ### Geheimnisse als Datei
 
 `DJANGO_SECRET_KEY`, `DATABASE_URL`, `DJANGO_EMAIL_HOST_PASSWORD`,
-`KEYCLOAK_CLIENT_SECRET` und `ENTRA_CLIENT_SECRET` duerfen statt als
-Umgebungsvariable auch als Datei uebergeben werden, indem `FOO_FILE` auf den
+`KEYCLOAK_CLIENT_SECRET` und `ENTRA_CLIENT_SECRET` dürfen statt als
+Umgebungsvariable auch als Datei übergeben werden, indem `FOO_FILE` auf den
 Pfad zeigt:
 
 ```

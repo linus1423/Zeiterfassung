@@ -1,17 +1,17 @@
-# Diese Datei gehoert NICHT in das Quadlet-Verzeichnis, sondern zu den
-# gewoehnlichen systemd-Units:
+# Diese Datei gehört NICHT in das Quadlet-Verzeichnis, sondern zu den
+# gewöhnlichen systemd-Units:
 #   rootless: ~/.config/systemd/user/
 #   als root: /etc/systemd/system/
 # Quadlet erzeugt aus zeiterfassung-scheduler.container die Unit
 # zeiterfassung-scheduler.service, die dieser Timer startet.
 [Unit]
-Description=Vergessene Stempelungen stuendlich beenden
+Description=Vergessene Stempelungen stündlich beenden
 
 [Timer]
 OnCalendar=hourly
 # Nicht alle Installationen zur vollen Stunde gleichzeitig.
 RandomizedDelaySec=5m
-# Einen Lauf nachholen, der waehrend einer Auszeit des Servers ausgefallen ist.
+# Einen Lauf nachholen, der während einer Auszeit des Servers ausgefallen ist.
 Persistent=true
 Unit=zeiterfassung-scheduler.service
 

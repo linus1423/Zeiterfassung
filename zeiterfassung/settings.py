@@ -13,8 +13,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Geheimnisse, die statt als Umgebungsvariable auch als Datei uebergeben werden
-# duerfen: zu FOO gehoert dann FOO_FILE mit dem Pfad zur Datei.
+# Geheimnisse, die statt als Umgebungsvariable auch als Datei übergeben werden
+# dürfen: zu FOO gehört dann FOO_FILE mit dem Pfad zur Datei.
 SECRETS_FROM_FILE = (
     "DJANGO_SECRET_KEY",
     "DATABASE_URL",
@@ -27,19 +27,19 @@ SECRETS_FROM_FILE = (
 def _secrets_from_files() -> dict[str, str]:
     """Liest Geheimnisse aus Dateien, wenn FOO_FILE statt FOO gesetzt ist.
 
-    Podman und Docker koennen ein Geheimnis als Datei in den Container haengen
+    Podman und Docker können ein Geheimnis als Datei in den Container hängen
     (`podman secret`, `docker secret`). Das ist besser als eine
     Umgebungsvariable: die steht in `podman inspect`, im Journal eines
     fehlgeschlagenen Starts und in der Umgebung jedes Prozesses im Container.
 
-    Die Werte werden absichtlich zurueckgegeben und nicht nach `os.environ`
-    geschrieben: dort stuenden sie in `/proc/<pid>/environ` und wuerden an jeden
-    Kindprozess vererbt, womit der Vorteil der Datei wieder weg waere.
+    Die Werte werden absichtlich zurückgegeben und nicht nach `os.environ`
+    geschrieben: dort stünden sie in `/proc/<pid>/environ` und würden an jeden
+    Kindprozess vererbt, womit der Vorteil der Datei wieder weg wäre.
 
     Aufgerufen wird die Funktion, bevor die `.env` gelesen wird. Ein Name, der
     zu dem Zeitpunkt schon in der Umgebung steht, kommt deshalb gar nicht erst
     vor: eine echte Umgebungsvariable gewinnt, damit bestehende Installationen
-    unveraendert weiterlaufen.
+    unverändert weiterlaufen.
     """
     secrets: dict[str, str] = {}
     for name in SECRETS_FROM_FILE:
@@ -47,8 +47,8 @@ def _secrets_from_files() -> dict[str, str]:
         if not path or os.environ.get(name):
             continue
         try:
-            # Ein abschliessender Zeilenumbruch ist in solchen Dateien ueblich
-            # und gehoert nicht zum Wert.
+            # Ein abschließender Zeilenumbruch ist in solchen Dateien üblich
+            # und gehört nicht zum Wert.
             value = Path(path).read_text(encoding="utf-8").strip()
         except OSError as exc:
             raise ImproperlyConfigured(f"{name}_FILE ist nicht lesbar: {exc}") from exc
@@ -79,7 +79,7 @@ env = environ.Env(
 )
 # Alles, was django-environ liest, kommt aus dieser Kette: erst die Dateien,
 # dann die Prozessumgebung (in die gleich noch die .env einsortiert wird).
-# Die Reihenfolge stimmt trotzdem, weil _secrets_from_files() Namen auslaesst,
+# Die Reihenfolge stimmt trotzdem, weil _secrets_from_files() Namen auslässt,
 # die schon als Umgebungsvariable gesetzt sind.
 env.ENVIRON = ChainMap(_secrets_from_files(), os.environ)
 environ.Env.read_env(BASE_DIR / ".env")
@@ -117,7 +117,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     # Muss vorne stehen: beantwortet /healthz und /readyz, bevor die
-    # Hostpruefung oder die HTTPS-Umleitung greifen (siehe health.py).
+    # Hostprüfung oder die HTTPS-Umleitung greifen (siehe health.py).
     "zeiterfassung.health.HealthCheckMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",

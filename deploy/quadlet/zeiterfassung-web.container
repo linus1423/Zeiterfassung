@@ -1,7 +1,7 @@
 [Unit]
 Description=Zeiterfassung (Web)
 # systemd kennt kein "depends_on: service_healthy": die Unit gilt als
-# gestartet, sobald der Container laeuft, nicht sobald PostgreSQL antwortet.
+# gestartet, sobald der Container läuft, nicht sobald PostgreSQL antwortet.
 # Die Reihenfolge stimmt trotzdem, weil der Einstiegspunkt im Container auf die
 # Datenbank wartet (DATABASE_WAIT_SECONDS) und erst dann migriert.
 Requires=zeiterfassung-db.service
@@ -12,12 +12,12 @@ ContainerName=zeiterfassung-web
 Image=localhost/zeiterfassung:latest
 Network=zeiterfassung.network
 
-# Nur an den lokalen Reverse Proxy. Rootless duerfen ohnehin keine Ports
+# Nur an den lokalen Reverse Proxy. Rootless dürfen ohnehin keine Ports
 # unter 1024 belegt werden, 8000 geht ohne Sonderrechte.
 PublishPort=127.0.0.1:8000:8000
 
-# Alles ausser den Geheimnissen. Pfad an die eigene Installation anpassen;
-# %h ist das Home des Benutzers, unter dem die Unit laeuft.
+# Alles außer den Geheimnissen. Pfad an die eigene Installation anpassen;
+# %h ist das Home des Benutzers, unter dem die Unit läuft.
 EnvironmentFile=%h/.config/zeiterfassung/zeiterfassung.env
 Environment=RUN_MIGRATIONS=true
 Environment=DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key
@@ -25,8 +25,8 @@ Environment=DATABASE_URL_FILE=/run/secrets/database-url
 Secret=zeiterfassung-django-secret-key,type=mount,target=django-secret-key
 Secret=zeiterfassung-database-url,type=mount,target=database-url
 
-# Der Anwendungscode aendert sich zur Laufzeit nicht; gunicorn braucht nur ein
-# beschreibbares /tmp, das Podman bei --read-only selbst als tmpfs einhaengt.
+# Der Anwendungscode ändert sich zur Laufzeit nicht; gunicorn braucht nur ein
+# beschreibbares /tmp, das Podman bei --read-only selbst als tmpfs einhängt.
 ReadOnly=true
 Tmpfs=/tmp
 NoNewPrivileges=true
