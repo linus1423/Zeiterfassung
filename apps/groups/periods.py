@@ -155,3 +155,33 @@ def recent_periods(group, count: int = 12, today: date | None = None) -> list[Pe
         period = period.previous()
         periods.append(period)
     return periods
+
+
+# Die Schnellschalter über Zeitlisten und Auswertungen. Die Schlüssel stehen
+# in der Adresszeile und bleiben deshalb ASCII.
+QUICK_RANGES: tuple[tuple[str, str], ...] = (
+    ("woche", "Diese Woche"),
+    ("vorwoche", "Vorige Woche"),
+    ("monat", "Dieser Zeitraum"),
+    ("vormonat", "Voriger Zeitraum"),
+)
+
+
+def quick_range(name: str, start_day: int, today: date) -> tuple[date, date] | None:
+    """Der Zeitraum hinter einem Schnellschalter, sonst None.
+
+    "monat" und "vormonat" meinen den Abrechnungszeitraum der Gruppe und
+    nicht den Kalendermonat (Issue 8).
+    """
+    if name == "woche":
+        monday = today - timedelta(days=today.weekday())
+        return monday, today
+    if name == "vorwoche":
+        monday = today - timedelta(days=today.weekday() + 7)
+        return monday, monday + timedelta(days=6)
+    if name == "monat":
+        return period_for(today, start_day).start, today
+    if name == "vormonat":
+        previous = period_for(today, start_day).previous()
+        return previous.start, previous.end
+    return None
