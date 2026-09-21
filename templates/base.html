@@ -25,6 +25,7 @@
         {% endif %}
         {% if nav.is_superuser %}
           <a href="{% url 'accounts:user_list' %}">Nutzer</a>
+          <a href="{% url 'tracking:import_entries' %}">Import</a>
         {% endif %}
         <span class="spacer"></span>
         <a href="{% url 'accounts:profile' %}">{{ user.full_name }}</a>
