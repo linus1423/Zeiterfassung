@@ -172,13 +172,14 @@ gehört an diese Stelle eine Warteschlange.
 
 ### Erinnerungen
 
-Benachrichtigt wird damit nur nachträglich. Daneben gibt es drei Hinweise,
+Benachrichtigt wird damit nur nachträglich. Daneben gibt es Hinweise,
 die Arbeit ersparen, bevor etwas schiefgeht:
 
 | Hinweis | Anlass | Empfänger |
 | --- | --- | --- |
 | Ausstempeln vergessen | länger als `OPEN_ENTRY_REMINDER_HOURS` eingestempelt | die Person selbst |
 | Antrag liegt offen | Antrag älter als `PENDING_CORRECTION_REMINDER_DAYS` | Admins der Gruppe |
+| Antrag bleibt liegen | Antrag älter als `PENDING_CORRECTION_ESCALATION_DAYS` | System-Admins |
 | Zeitraum noch offen | Zeitraum seit `PERIOD_CLOSING_REMINDER_DAYS` abgelaufen | Admins der Gruppe |
 
 Sie stehen im Tool unter **Hinweise**, mit einem Zähler in der Navigation.
@@ -191,6 +192,24 @@ bekommt ihn zu diesem Anlass nicht noch einmal.
 Die Schwelle fürs Ausstempeln gehört deutlich unter `MAX_OPEN_ENTRY_HOURS`,
 sonst kommt der Hinweis erst, wenn `close_stale_entries` den Eintrag schon
 gekappt hat.
+
+#### Eskalation an die System-Admins
+
+Über den eigenen Antrag entscheidet man nicht selbst. Hat eine Gruppe nur
+einen Admin und ist der im Urlaub — oder stellt er selbst den Antrag —, läge
+die ganze Gruppe bis zu seiner Rückkehr still. Deshalb meldet
+`remind_pending_corrections` nach `PENDING_CORRECTION_ESCALATION_DAYS` einen
+weiter liegengebliebenen Antrag zusätzlich den System-Admins, die ihn
+entscheiden dürfen. Ein Antrag, über den in der Gruppe überhaupt niemand
+entscheiden darf, wartet darauf nicht: er eskaliert schon mit der ersten
+Frist, denn dort gibt es niemanden, auf den zu warten wäre.
+
+Der Hinweis nennt Gruppe, Anzahl und den ältesten Antrag und sagt dazu, ob
+die Gruppe gerade gar keinen aktiven Admin hat. Je Gruppe entsteht ein
+Hinweis, aufgehängt am ältesten betroffenen Antrag; er verfällt mit dessen
+Entscheidung. Liegt dann noch etwas, meldet der nächste Lauf den neuen
+ältesten. Die zweite Frist gehört über die erste — steht sie darunter, warnt
+das Kommando und rechnet mit der ersten weiter.
 
 ## Betrieb
 

@@ -7,17 +7,20 @@ Aufgerufen werden sie vom Dienst `scheduler`, siehe README.
 
 from __future__ import annotations
 
+import logging
+from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.corrections.models import CorrectionRequest
 from apps.groups import closing
-from apps.groups.models import Group
+from apps.groups.models import Group, GroupMembership
 from apps.groups.periods import Period, period_for
 from apps.tracking.daysplit import entries_in_range
 from apps.tracking.models import TimeEntry
@@ -25,6 +28,8 @@ from apps.tracking.utils import day_bounds
 
 from . import notifications, services
 from .models import Reminder
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -102,10 +107,77 @@ def remind_open_entries(hours: int | None = None) -> Result:
 # --- 2. Liegengebliebene Anträge -------------------------------------------
 
 
-def remind_pending_corrections(days: int | None = None) -> Result:
-    """Erinnert die Admins an Anträge, die länger als die Frist offen liegen."""
+def escalation_deadline(days: int, escalation_days: int) -> int:
+    """Die zweite Frist, die nie unter der ersten liegen darf (Issue 58).
+
+    Eine Eskalation vor der ersten Erinnerung wäre sinnlos: die System-Admins
+    erführen von einem Antrag, den die Gruppe selbst noch gar nicht angemahnt
+    bekommen hat. Statt stillschweigend danach zu handeln, meldet der Lauf die
+    Fehlkonfiguration und rückt die zweite Frist auf die erste.
+    """
+    if escalation_days < days:
+        logger.warning(
+            "PENDING_CORRECTION_ESCALATION_DAYS (%s) liegt unter "
+            "PENDING_CORRECTION_REMINDER_DAYS (%s). Es gilt die erste Frist von %s Tagen.",
+            escalation_days,
+            days,
+            days,
+        )
+        return days
+    return escalation_days
+
+
+def _active_admins(group_ids) -> dict[int, list[GroupMembership]]:
+    """Die aktiven Admins je Gruppe, in einer Abfrage statt einer je Antrag."""
+    admins: dict[int, list[GroupMembership]] = defaultdict(list)
+    memberships = (
+        GroupMembership.objects.filter(
+            group_id__in=list(group_ids),
+            role=GroupMembership.Role.ADMIN,
+            user__is_active=True,
+        )
+        .select_related("user")
+        .order_by("user__last_name", "user__first_name")
+    )
+    for membership in memberships:
+        admins[membership.group_id].append(membership)
+    return admins
+
+
+def _deciders(correction: CorrectionRequest, admins: list[GroupMembership]) -> list:
+    """Wer in der Gruppe über diesen Antrag entscheiden könnte.
+
+    Über den eigenen Antrag entscheidet man nicht selbst, siehe
+    `apps.corrections.services.may_decide`. Bleibt niemand übrig, hilft nur
+    noch ein System-Admin.
+    """
+    return [membership for membership in admins if membership.user_id != correction.requested_by_id]
+
+
+def _waiting_days(now: datetime, correction: CorrectionRequest) -> int:
+    return (now - correction.created_at).days
+
+
+def remind_pending_corrections(
+    days: int | None = None, escalation_days: int | None = None
+) -> Result:
+    """Erinnert an Anträge, die länger als die Frist offen liegen.
+
+    Nach der ersten Frist gehen die Hinweise an die Admins der Gruppe, nach
+    der zweiten, längeren zusätzlich an die System-Admins (Issue 58). Sonst
+    liegt eine Gruppe, deren einziger Admin im Urlaub ist, bis zu seiner
+    Rückkehr still.
+    """
     days = days if days is not None else settings.PENDING_CORRECTION_REMINDER_DAYS
-    cutoff = timezone.now() - timedelta(days=days)
+    escalation_days = (
+        escalation_days
+        if escalation_days is not None
+        else settings.PENDING_CORRECTION_ESCALATION_DAYS
+    )
+    escalation_days = escalation_deadline(days, escalation_days)
+
+    now = timezone.now()
+    cutoff = now - timedelta(days=days)
     url = reverse("corrections:inbox")
 
     created = mailed = 0
@@ -114,14 +186,12 @@ def remind_pending_corrections(days: int | None = None) -> Result:
         .select_related("group", "requested_by")
         .order_by("created_at")
     )
-    for correction in pending:
-        if correction.created_at > cutoff:
-            continue
-        waiting = (timezone.now() - correction.created_at).days
-        for membership in correction.group.admins():
-            # Über den eigenen Antrag entscheidet man nicht selbst.
-            if membership.user_id == correction.requested_by_id:
-                continue
+    overdue = [correction for correction in pending if correction.created_at <= cutoff]
+    admins = _active_admins({correction.group_id for correction in overdue})
+
+    for correction in overdue:
+        waiting = _waiting_days(now, correction)
+        for membership in _deciders(correction, admins[correction.group_id]):
             reminder = services.raise_reminder(
                 Reminder.Kind.PENDING_CORRECTION,
                 membership.user,
@@ -143,10 +213,118 @@ def remind_pending_corrections(days: int | None = None) -> Result:
                     {"correction": correction, "waiting": waiting},
                 )
 
+    escalated = _escalate_to_system_admins(overdue, admins, now, escalation_days, url)
+
     resolved = services.resolve_except(
         Reminder.Kind.PENDING_CORRECTION,
         [services.correction_key(correction.pk) for correction in pending],
     )
+    return Result(
+        created=created + escalated.created,
+        resolved=resolved + escalated.resolved,
+        mailed=mailed + escalated.mailed,
+    )
+
+
+def _stuck_reason(correction: CorrectionRequest, admins: list[GroupMembership], days: int) -> str:
+    """Warum dieser Antrag in seiner Gruppe nicht entschieden wird."""
+    if not admins:
+        return "Die Gruppe hat zurzeit keinen aktiven Admin."
+    if not _deciders(correction, admins):
+        return (
+            "Der Antragsteller ist der einzige aktive Admin der Gruppe und darf "
+            "über den eigenen Antrag nicht entscheiden."
+        )
+    return f"Die Frist von {days} Tagen ist überschritten."
+
+
+def _escalation_message(
+    corrections: list[CorrectionRequest],
+    admins: list[GroupMembership],
+    now: datetime,
+    days: int,
+) -> str:
+    """Der Text der Eskalation: Gruppe, Anzahl, ältester Antrag und Grund."""
+    oldest = corrections[0]
+    since = timezone.localtime(oldest.created_at)
+    count = len(corrections)
+    zahl = "1 Korrekturantrag wartet" if count == 1 else f"{count} Korrekturanträge warten"
+    return (
+        f"In der Gruppe {oldest.group.name} {zahl} auf eine Entscheidung, die dort "
+        f"nicht fällt. Der älteste stammt von {oldest.requested_by.full_name} und "
+        f"liegt seit {_waiting_days(now, oldest)} Tagen offen (seit {since:%d.%m.%Y}). "
+        f"{_stuck_reason(oldest, admins, days)}"
+    )
+
+
+def _escalate_to_system_admins(
+    overdue: list[CorrectionRequest],
+    admins: dict[int, list[GroupMembership]],
+    now: datetime,
+    escalation_days: int,
+    url: str,
+) -> Result:
+    """Meldet den System-Admins, was in einer Gruppe niemand entscheidet (Issue 58).
+
+    Eskaliert wird ein Antrag, der die zweite Frist überschritten hat, und
+    ohne weitere Wartezeit einer, über den in der Gruppe niemand entscheiden
+    darf: auf die zweite Frist zu warten hieße dort, auf jemanden zu warten,
+    den es nicht gibt.
+
+    Je Gruppe entsteht ein Hinweis, und zwar am ältesten betroffenen Antrag.
+    Damit eskaliert derselbe Antrag höchstens einmal. Ist er entschieden,
+    verfällt der Hinweis mit ihm; liegt dann noch etwas, meldet der nächste
+    Lauf den neuen ältesten mit aktuellen Zahlen.
+    """
+    escalation_cutoff = now - timedelta(days=escalation_days)
+    stuck: dict[int, list[CorrectionRequest]] = defaultdict(list)
+    for correction in overdue:
+        if correction.created_at <= escalation_cutoff or not _deciders(
+            correction, admins[correction.group_id]
+        ):
+            stuck[correction.group_id].append(correction)
+
+    if not stuck:
+        return Result(resolved=services.resolve_except(Reminder.Kind.CORRECTION_ESCALATION, []))
+
+    system_admins = list(get_user_model().objects.filter(is_superuser=True, is_active=True))
+    created = mailed = 0
+    keys = []
+    for corrections in stuck.values():
+        oldest = corrections[0]
+        keys.append(services.escalation_key(oldest.pk))
+        group_admins = admins[oldest.group_id]
+        message = _escalation_message(corrections, group_admins, now, escalation_days)
+        # Wer den Antrag als Admin der Gruppe ohnehin schon angemahnt bekommen
+        # hat, braucht dieselbe Sache nicht ein zweites Mal.
+        decider_ids = {membership.user_id for membership in _deciders(oldest, group_admins)}
+        for recipient in system_admins:
+            if recipient.pk in decider_ids:
+                continue
+            reminder = services.raise_reminder(
+                Reminder.Kind.CORRECTION_ESCALATION,
+                recipient,
+                services.escalation_key(oldest.pk),
+                message=message,
+                url=url,
+                group=oldest.group,
+            )
+            if reminder is not None:
+                created += 1
+                mailed += _deliver(
+                    reminder,
+                    f"Zeiterfassung: Anträge der Gruppe {oldest.group.name} bleiben liegen",
+                    "reminders/mail/eskalation_antraege.txt",
+                    {
+                        "correction": oldest,
+                        "group": oldest.group,
+                        "count": len(corrections),
+                        "waiting": _waiting_days(now, oldest),
+                        "reason": _stuck_reason(oldest, group_admins, escalation_days),
+                    },
+                )
+
+    resolved = services.resolve_except(Reminder.Kind.CORRECTION_ESCALATION, keys)
     return Result(created=created, resolved=resolved, mailed=mailed)
 
 
