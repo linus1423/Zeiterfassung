@@ -23,6 +23,11 @@ def correction_key(correction_id: int) -> str:
     return f"correction:{correction_id}"
 
 
+def escalation_key(correction_id: int) -> str:
+    """Anlass der Eskalation: der älteste Antrag, der in seiner Gruppe feststeckt."""
+    return f"escalation:{correction_id}"
+
+
 def period_key(group_id: int, period_start: date) -> str:
     return f"period:{group_id}:{period_start.isoformat()}"
 
@@ -91,8 +96,14 @@ def resolve_entry(entry_id: int) -> int:
 
 
 def resolve_correction(correction_id: int) -> int:
-    """Ein entschiedener oder zurückgezogener Antrag liegt nicht mehr offen."""
-    return resolve_occasion(Reminder.Kind.PENDING_CORRECTION, correction_key(correction_id))
+    """Ein entschiedener oder zurückgezogener Antrag liegt nicht mehr offen.
+
+    Das gilt auch für die Eskalation an die System-Admins (Issue 58): sie
+    hängt an demselben Antrag und verfällt zusammen mit ihm.
+    """
+    closed = resolve_occasion(Reminder.Kind.PENDING_CORRECTION, correction_key(correction_id))
+    closed += resolve_occasion(Reminder.Kind.CORRECTION_ESCALATION, escalation_key(correction_id))
+    return closed
 
 
 def resolve_period(group_id: int, period_start: date) -> int:
