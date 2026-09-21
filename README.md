@@ -31,7 +31,8 @@ python manage.py runserver
 
 Ohne konfigurierten Identity-Provider gibt es auf der Anmeldeseite keinen Knopf.
 Der System-Admin meldet sich dann unter `/admin/` mit Passwort an und richtet die
-Anmeldung ein. Gruppen legt er danach unter Gruppen > Neue Gruppe an, Mitglieder
+Anmeldung ein; wer statt dessen in die Anwendung selbst muss, schaltet den
+[Notfallzugang](#notfallzugang-für-system-admins) ein. Gruppen legt er danach unter Gruppen > Neue Gruppe an, Mitglieder
 kommen dazu, sobald sie sich einmal angemeldet haben.
 
 ## Anmeldung einrichten
@@ -67,6 +68,66 @@ Konten entstehen beim ersten Login. Meldet sich derselbe Mensch einmal über
 Keycloak und einmal über Entra an, werden die Konten über die E-Mail-Adresse
 zusammengeführt (`OIDC_LINK_BY_EMAIL`). Das setzt voraus, dass beide Provider
 verifizierte Adressen liefern.
+
+### Notfallzugang für System-Admins
+
+Fällt der Identity-Provider aus oder ist er falsch konfiguriert, kommt sonst
+niemand mehr in die Anwendung, auch kein System-Admin. Für diesen Fall gibt es
+eine lokale Anmeldung mit Passwort, ausschließlich für Konten mit der
+System-Admin-Rolle (`is_superuser`).
+
+**Im Normalbetrieb bleibt er ausgeschaltet.** Ausgeschaltet gibt es die URL
+nicht: kein Formular, kein Endpunkt, nichts, was sich abklopfen ließe.
+
+```
+EMERGENCY_LOGIN_ENABLED=false   # Vorgabe; nur im Notfall auf true
+EMERGENCY_LOGIN_MAX_ATTEMPTS=5  # Fehlversuche je Benutzername und je Absender
+EMERGENCY_LOGIN_LOCKOUT_MINUTES=15
+```
+
+Ist er eingeschaltet, steht auf der Anmeldeseite unter den Provider-Knöpfen ein
+Hinweis und darunter der Weg zu `/konto/notfall-anmeldung/`.
+
+Ein Passwort muss ein Mensch bewusst setzen: Konten aus dem Identity-Provider
+haben keins, gegen ein solches Konto passt keine Eingabe. Am saubersten ist ein
+eigenes Notfallkonto, das nicht aus dem Provider stammt:
+
+```
+python manage.py createsuperuser
+```
+
+Einem bestehenden System-Admin ein Passwort geben geht auch:
+
+```
+python manage.py changepassword <benutzername>
+```
+
+Im Container entsprechend, zum Beispiel
+`docker compose exec web python manage.py createsuperuser`. Der Benutzername
+eines über den Provider angelegten Kontos wird automatisch vergeben; er steht
+unter `/admin/accounts/user/` im Konto im Feld "Benutzername". Ist der Notfall
+vorbei, gehört `EMERGENCY_LOGIN_ENABLED` wieder auf `false`; ein eigens
+angelegtes Notfallkonto lässt sich zusätzlich unter `/admin/` auf inaktiv
+setzen.
+
+Was der Zugang nicht aufweicht: geprüft wird nur gegen Djangos ModelBackend,
+das die Adminoberfläche ohnehin braucht; ein Konto ohne `is_superuser` kommt
+auch mit richtigem Passwort nicht hinein; jeder Fehlschlag liefert dieselbe
+Meldung, verrät also nicht, ob es den Benutzernamen gibt. Jede Anmeldung und
+jeder Fehlversuch steht mit Benutzername und Absenderadresse im Protokoll,
+niemals das Passwort. Nach `EMERGENCY_LOGIN_MAX_ATTEMPTS` Fehlversuchen ist für
+`EMERGENCY_LOGIN_LOCKOUT_MINUTES` Minuten gesperrt.
+
+Zwei Dinge, die man wissen sollte:
+
+- Die Zähler liegen im Django-Cache. Ohne konfigurierten `CACHES` ist das ein
+  Cache je Prozess, die Grenze gilt dann je Arbeitsprozess. Wer es genauer
+  braucht, richtet einen gemeinsamen Cache ein (Redis, Memcached, Datenbank).
+- Die Django-Adminoberfläche unter `/admin/` nimmt unabhängig von diesem
+  Schalter Benutzername und Passwort an; das ist Djangos eigene Anmeldung und
+  war schon immer so. Der Notfallzugang macht diesen Weg nicht auf, sondern
+  ergänzt einen, der protokolliert und begrenzt ist. Wer auch `/admin/`
+  zumachen will, sperrt es im Reverse Proxy aus.
 
 ### Gruppen aus dem Identity-Provider
 
@@ -273,9 +334,27 @@ python manage.py close_stale_entries          # vergessene Stempelungen beenden
 python manage.py remind_open_entries          # ans Ausstempeln erinnern
 python manage.py remind_pending_corrections   # an offene Anträge erinnern
 python manage.py remind_period_closing        # an den Abschluss erinnern
+python manage.py send_scheduled_exports       # geplante Exporte verschicken
 ```
 
 Jedes Kommando ist unschädlich, wenn es nichts zu tun gibt.
+
+### Geplante Exporte
+
+Zu einer gespeicherten Export-Vorlage lässt sich unter "Auswertung" ➜
+"Geplante Exporte" ein Zeitplan hinterlegen, etwa "am 3. jedes Monats für den
+letzten abgeschlossenen Abrechnungszeitraum". Der Zeitraum ergibt sich beim
+Lauf aus dem Abrechnungszyklus, nicht als festes Datum. Verschickt wird die
+Datei als Excel oder CSV an eine oder mehrere Adressen; jeder Versand steht
+im Protokoll.
+
+`send_scheduled_exports` führt jede Fälligkeit höchstens einmal aus, auch
+wenn das Kommando mehrfach oder gleichzeitig startet. Ausgewertet wird mit
+den Leserechten der Person, die den Plan angelegt hat; fallen die weg, wird
+der Plan deaktiviert statt verschickt. Ohne `EXPORT_EMAILS_ENABLED` geht
+nichts hinaus: der fällige Lauf wird als Fehler protokolliert und beim
+nächsten Durchgang erneut versucht. `EXPORT_MAX_ATTACHMENT_MB` und
+`EXPORT_MAX_ROWS` begrenzen die Größe des Anhangs.
 
 Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht

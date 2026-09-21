@@ -74,6 +74,9 @@ env = environ.Env(
     PENDING_CORRECTION_REMINDER_DAYS=(int, 3),
     PENDING_CORRECTION_ESCALATION_DAYS=(int, 14),
     PERIOD_CLOSING_REMINDER_DAYS=(int, 3),
+    EXPORT_EMAILS_ENABLED=(bool, False),
+    EXPORT_MAX_ATTACHMENT_MB=(int, 10),
+    EXPORT_MAX_ROWS=(int, 50000),
     DJANGO_EMAIL_PORT=(int, 587),
     DJANGO_EMAIL_USE_TLS=(bool, True),
     DJANGO_EMAIL_TIMEOUT=(int, 10),
@@ -82,6 +85,9 @@ env = environ.Env(
     OIDC_GROUP_SYNC_MODE=(str, "add"),
     OIDC_ADMIN_GROUPS_CLAIM=(str, ""),
     OIDC_ADMIN_GROUP_SUFFIX=(str, ""),
+    EMERGENCY_LOGIN_ENABLED=(bool, False),
+    EMERGENCY_LOGIN_MAX_ATTEMPTS=(int, 5),
+    EMERGENCY_LOGIN_LOCKOUT_MINUTES=(int, 15),
 )
 # Alles, was django-environ liest, kommt aus dieser Kette: erst die Dateien,
 # dann die Prozessumgebung (in die gleich noch die .env einsortiert wird).
@@ -218,7 +224,10 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-if env("DJANGO_BEHIND_PROXY"):
+# Wird auch beim Notfallzugang gebraucht: nur hinter einem eigenen Proxy
+# darf X-Forwarded-For überhaupt geglaubt werden.
+BEHIND_PROXY = env("DJANGO_BEHIND_PROXY")
+if BEHIND_PROXY:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
 
@@ -293,6 +302,20 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# --- Notfallzugang für System-Admins (Issue 51) ----------------------------
+# Die einzige Ausnahme von "Anmeldung nur über OIDC". Vorgabe ist aus: dann
+# wird in apps/accounts/urls.py nicht einmal eine URL registriert, es gibt
+# also weder Formular noch Endpunkt. Einschalten nur, solange der
+# Identity-Provider nicht erreichbar oder noch nicht eingerichtet ist.
+EMERGENCY_LOGIN_ENABLED = env("EMERGENCY_LOGIN_ENABLED")
+# Fehlversuche je Benutzername und je Absenderadresse, danach gesperrt.
+EMERGENCY_LOGIN_MAX_ATTEMPTS = env("EMERGENCY_LOGIN_MAX_ATTEMPTS")
+EMERGENCY_LOGIN_LOCKOUT_MINUTES = env("EMERGENCY_LOGIN_LOCKOUT_MINUTES")
+if EMERGENCY_LOGIN_MAX_ATTEMPTS < 1 or EMERGENCY_LOGIN_LOCKOUT_MINUTES < 1:
+    raise ImproperlyConfigured(
+        "EMERGENCY_LOGIN_MAX_ATTEMPTS und EMERGENCY_LOGIN_LOCKOUT_MINUTES müssen mindestens 1 sein."
+    )
+
 # --- Gruppen aus dem Identity-Provider (Issue 4) ---------------------------
 # Standardmäßig aus: die Mitgliedschaften werden im Tool gepflegt. Wer die
 # Gruppen aus dem Token übernehmen will, schaltet das hier ein.
@@ -358,6 +381,13 @@ PENDING_CORRECTION_REMINDER_DAYS = env("PENDING_CORRECTION_REMINDER_DAYS")
 PENDING_CORRECTION_ESCALATION_DAYS = env("PENDING_CORRECTION_ESCALATION_DAYS")
 # Frist nach Ende eines Zeitraums, nach der an den Abschluss erinnert wird.
 PERIOD_CLOSING_REMINDER_DAYS = env("PERIOD_CLOSING_REMINDER_DAYS")
+# Geplante Exporte (Issue 55): ohne eingeschalteten Mailversand geht nichts
+# hinaus, der fällige Lauf wird als Fehler protokolliert und später erneut
+# versucht. Die beiden Grenzen halten den Anhang mailbar: ein Jahresexport
+# einer großen Gruppe wird sonst schnell zu groß für jeden Mailserver.
+EXPORT_EMAILS_ENABLED = env("EXPORT_EMAILS_ENABLED")
+EXPORT_MAX_ATTACHMENT_MB = env("EXPORT_MAX_ATTACHMENT_MB")
+EXPORT_MAX_ROWS = env("EXPORT_MAX_ROWS")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

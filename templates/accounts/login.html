@@ -18,5 +18,17 @@
       sich in der Zwischenzeit über die Adminoberfläche anmelden.
     </p>
   {% endif %}
+  {% if notfallzugang %}
+    <hr>
+    <p class="help">
+      <strong>Notfallzugang für System-Admins</strong><br>
+      Die normale Anmeldung läuft über den Identity-Provider. Nur wenn der
+      ausgefallen oder noch nicht eingerichtet ist, meldet sich ein System-Admin
+      hier mit Benutzername und Passwort an.
+    </p>
+    <div class="actions">
+      <a href="{% url 'accounts:emergency_login' %}">Notfallzugang mit Passwort</a>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
