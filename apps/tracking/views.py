@@ -1,14 +1,18 @@
 from datetime import date, timedelta
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Prefetch
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
+from apps.groups import confirmation
+from apps.groups.models import Group
 from apps.groups.periods import member_start_day, period_for, quick_range
 
 from . import services
@@ -261,3 +265,61 @@ def my_entries(request):
         "activity": activity,
     }
     return render(request, "tracking/my_entries.html", context)
+
+
+def _chosen_group(groups, raw):
+    """Die gewählte eigene Gruppe, sonst die erste. Fremde Werte laufen ins Leere."""
+    if raw and str(raw).isdigit():
+        chosen = next((group for group in groups if group.pk == int(raw)), None)
+        if chosen is not None:
+            return chosen
+    return groups[0]
+
+
+def _chosen_period(periods, raw):
+    """Der gewählte Zeitraum aus der Auswahl, sonst der zuletzt abgelaufene."""
+    chosen = next((period for period in periods if period.key == raw), None)
+    return chosen if chosen is not None else periods[0]
+
+
+@login_required
+def confirm_period(request):
+    """Den eigenen Abrechnungszeitraum ansehen und bestätigen (Issue 50).
+
+    Gezeigt werden nur die eigenen Zeiten, und bestätigt wird ausschließlich
+    für sich selbst in einer Gruppe, in der man Mitglied ist.
+    """
+    groups = list(Group.objects.filter(pk__in=request.user.member_group_ids()).order_by("name"))
+    if not groups:
+        return render(request, "tracking/period_confirm.html", {"groups": []})
+
+    selection = request.POST if request.method == "POST" else request.GET
+    group = _chosen_group(groups, selection.get("gruppe"))
+    periods = confirmation.choosable_periods(group)
+    period = _chosen_period(periods, selection.get("zeitraum", ""))
+
+    if request.method == "POST":
+        try:
+            confirmation.confirm(request.user, group, period)
+            messages.success(request, f"{period.label} in {group.name} ist bestätigt.")
+        except confirmation.ConfirmationError as exc:
+            messages.error(request, str(exc))
+        query = urlencode({"gruppe": group.pk, "zeitraum": period.key})
+        return redirect(f"{reverse('tracking:confirm_period')}?{query}")
+
+    entries = confirmation.entries_with_breaks(request.user, group, period)
+    lock = confirmation.lock_for_period(group, period)
+    context = {
+        "groups": groups,
+        "group": group,
+        "periods": periods,
+        "period": period,
+        "by_day": confirmation.day_totals(entries, period),
+        "total": confirmation.total_work(entries, period),
+        "entry_count": len(entries),
+        "incomplete_count": sum(1 for entry in entries if entry.is_incomplete),
+        "open_requests": confirmation.open_request_count(request.user, group, period),
+        "state": confirmation.state_for(request.user, group, period),
+        "lock": lock,
+    }
+    return render(request, "tracking/period_confirm.html", context)

@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 
 from .periods import MAX_MONTH_START_DAY, Period, group_period
@@ -328,3 +331,89 @@ class GroupChangeRequest(models.Model):
     def decision_note(self) -> str:
         """Die Bemerkung zur letzten Entscheidung, für die Anzeige."""
         return self.target_note or self.source_note
+
+
+class PeriodConfirmation(models.Model):
+    """Bestätigung des eigenen Abrechnungszeitraums durch das Mitglied (Issue 50).
+
+    Bisher erfuhr ein Mitarbeitender vom Abschluss seines Zeitraums erst
+    dadurch, dass er keinen Korrekturantrag mehr stellen konnte. Hier sagt er
+    vorher selbst, dass seine Tage stimmen. Der Abschluss durch den Admin
+    bleibt davon unberührt: die Bestätigung ist ein Hinweis, keine Sperre.
+
+    Wann eine Bestätigung verfällt:
+    Bestätigt wird nicht der Zeitraum als solcher, sondern der Stand der
+    eigenen Zeiten, den die Person gesehen hat. Dieser Stand steht als zwei
+    Zahlen in der Zeile: wie viele Zeiteinträge den Zeitraum berühren
+    (entry_count) und wann davon zuletzt einer gespeichert wurde
+    (last_change_at, aus TimeEntry.updated_at). Weicht später eines von
+    beiden ab, ist die Bestätigung verfallen, und die Person bestätigt neu.
+    So greift die Regel von allein: eine genehmigte Korrektur und eine
+    Änderung durch den Admin speichern den Eintrag und heben damit
+    last_change_at, ein Nachtrag und eine Löschung verändern die Anzahl.
+    Keine andere Stelle im Code muss daran denken, eine Bestätigung zu
+    entwerten, und im Zweifel verfällt sie eher zu oft als zu selten.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Nutzer",
+        on_delete=models.CASCADE,
+        related_name="period_confirmations",
+    )
+    group = models.ForeignKey(
+        Group, verbose_name="Gruppe", on_delete=models.CASCADE, related_name="period_confirmations"
+    )
+    period_start = models.DateField("Beginn des Zeitraums")
+    period_end = models.DateField("Ende des Zeitraums")
+    confirmed_at = models.DateTimeField("Bestätigt am", default=timezone.now)
+    entry_count = models.PositiveIntegerField(
+        "Bestätigte Anzahl Zeiteinträge",
+        default=0,
+        help_text="Teil des bestätigten Stands: weicht die Anzahl später ab, "
+        "ist die Bestätigung verfallen.",
+    )
+    last_change_at = models.DateTimeField(
+        "Jüngste Änderung im Zeitraum",
+        null=True,
+        blank=True,
+        help_text="Teil des bestätigten Stands: wird danach noch eine Zeit "
+        "geändert, ist die Bestätigung verfallen.",
+    )
+    total_minutes = models.PositiveIntegerField(
+        "Bestätigte Summe in Minuten",
+        default=0,
+        help_text="Die Summe, die beim Bestätigen auf dem Bildschirm stand.",
+    )
+
+    class Meta:
+        verbose_name = "Bestätigung des Zeitraums"
+        verbose_name_plural = "Bestätigungen des Zeitraums"
+        ordering = ["-period_start", "user__last_name", "user__first_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "group", "period_start"],
+                name="unique_period_confirmation_per_user",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(period_end__gte=models.F("period_start")),
+                name="period_confirmation_end_after_start",
+            ),
+        ]
+        indexes = [models.Index(fields=["group", "period_start"])]
+
+    def __str__(self) -> str:
+        return f"{self.user} bestätigt {self.period_start:%d.%m.%Y} bis {self.period_end:%d.%m.%Y}"
+
+    @property
+    def period(self) -> Period:
+        return Period(
+            start=self.period_start,
+            end=self.period_end,
+            start_day=self.period_start.day,
+        )
+
+    @property
+    def total(self) -> timedelta:
+        """Die bestätigte Summe als Zeitspanne, für die Anzeige."""
+        return timedelta(minutes=self.total_minutes)
