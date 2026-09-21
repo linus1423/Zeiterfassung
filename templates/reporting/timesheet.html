@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="no-print">
+  <h1>{{ title }}</h1>
+  <form method="get" class="card filter">
+    {{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Zeitraum anzeigen</button>
+    </div>
+    <p class="help">Zum Ausdrucken das Druckmenü des Browsers benutzen (Strg+P).</p>
+  </form>
+</div>
+
+{% for sheet in sheets %}
+  {% include "reporting/_sheet.html" %}
+{% empty %}
+  <p class="no-print">Für diesen Zeitraum gibt es niemanden mit Nachweis.</p>
+{% endfor %}
+{% endblock %}

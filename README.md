@@ -102,6 +102,24 @@ für diesen Zeitraum ab, auch bereits gestellte werden nicht mehr genehmigt.
 Ein exportierter Monat bleibt so, wie er exportiert wurde. Wieder öffnen kann
 den Abschluss nur ein System-Admin.
 
+## Arbeitszeitnachweis
+
+Zum Unterschreiben gibt es ein Blatt je Person und Zeitraum: eine Zeile pro
+Tag mit Datum, Wochentag, Beginn, Ende, Pause und Arbeitszeit, darunter die
+Summe und Platz für Datum und Unterschrift. Tage ohne Erfassung bleiben leer,
+damit Lücken auffallen. Im Kopf stehen Name, Personalnummer, Gruppe und ob der
+Zeitraum schon abgeschlossen ist, damit ein unterschriebenes Blatt später nicht
+mehr abweicht.
+
+Mitarbeitende finden den Nachweis unter "Meine Zeiten", Gruppen-Admins unter
+Gruppe > Nachweise für alle Mitglieder auf einmal; die Buchhaltung sieht ihn
+für jede Gruppe. Gedruckt wird aus dem Browser: ein eigenes Druck-Stylesheet
+blendet Navigation und Knöpfe aus und beginnt für jede Person eine neue Seite.
+Eine PDF-Ausgabe gibt es bewusst nicht, das spart eine Abhängigkeit.
+
+Laufende Einträge zählen auf dem Blatt nicht mit und werden darunter vermerkt;
+automatisch beendete Tage sind als unvollständig gekennzeichnet.
+
 ## Benachrichtigungen
 
 Ohne Mailserver zeigt die Navigation Zähler: offene Anträge für Admins,

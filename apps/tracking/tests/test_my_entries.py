@@ -1,34 +1,45 @@
 """Eigene Zeiten: Filter, Wochensummen und Download (Issue 28)."""
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.groups.models import Activity, Group, GroupMembership
+from apps.groups.periods import member_start_day
 from apps.tracking.models import TimeEntry
-from apps.tracking.views import _billing_start_day, _quick_range
+from apps.tracking.views import _quick_range
 
 
 @pytest.fixture
 def entries(member, group, activity):
-    """Zwei Einträge in dieser Woche, einer davon auf einer zweiten Tätigkeit."""
+    """Zwei Einträge in dieser Woche, einer davon auf einer zweiten Tätigkeit.
+
+    Mit fester Tageszeit und am Montag dieser Woche verankert: "jetzt minus
+    ein paar Stunden" liefe je nach Uhrzeit des Testlaufs über Mitternacht
+    oder sogar in die Vorwoche und zählte dann nur anteilig (Issue 32).
+    """
     other = Activity.objects.create(group=group, name="Lackieren")
-    now = timezone.now()
+    today = timezone.localdate()
+    monday = today - timedelta(days=today.weekday())
+
+    def at(day, hour):
+        return timezone.make_aware(datetime.combine(day, time(hour, 0)))
+
     first = TimeEntry.objects.create(
         user=member,
         group=group,
         activity=activity,
-        start=now - timedelta(days=1, hours=8),
-        end=now - timedelta(days=1, hours=4),
+        start=at(monday, 8),
+        end=at(monday, 12),
     )
     second = TimeEntry.objects.create(
         user=member,
         group=group,
         activity=other,
-        start=now - timedelta(hours=3),
-        end=now - timedelta(hours=1),
+        start=at(today, 13),
+        end=at(today, 15),
     )
     return first, second
 
@@ -115,7 +126,7 @@ def test_default_period_follows_the_billing_cycle(member, group):
     group.month_start_day = 15
     group.save(update_fields=["month_start_day"])
 
-    assert _billing_start_day(member) == 15
+    assert member_start_day(member) == 15
 
 
 def test_default_period_is_the_calendar_month_with_mixed_cycles(member, make_user, group):
@@ -124,7 +135,7 @@ def test_default_period_is_the_calendar_month_with_mixed_cycles(member, make_use
     group.month_start_day = 15
     group.save(update_fields=["month_start_day"])
 
-    assert _billing_start_day(member) == 1
+    assert member_start_day(member) == 1
 
 
 def test_quick_range_month_uses_the_cycle():
