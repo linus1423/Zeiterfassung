@@ -15,11 +15,14 @@ def profil(group_admin):
 
 
 @pytest.fixture
-def geteiltes_profil(accountant):
+def geteiltes_profil(accountant, group):
+    """Vorlage einer Person, die Buchhalterin und Gruppen-Admin zugleich ist."""
+    GroupMembership.objects.create(user=accountant, group=group, role=GroupMembership.Role.ADMIN)
     return ExportProfile.objects.create(
         name="Alle Gruppen",
         owner=accountant,
-        is_shared=True,
+        share_with_group_admins=True,
+        share_with_accounting=True,
         columns=["full_name", "hours"],
         filters={},
     )

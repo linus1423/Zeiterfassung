@@ -26,8 +26,15 @@ class ExportProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="export_profiles",
     )
-    is_shared = models.BooleanField(
-        "Geteilt", default=False, help_text="Auch für andere Nutzer der Buchhaltung sichtbar."
+    share_with_group_admins = models.BooleanField(
+        "Mit den Admins meiner Gruppen teilen",
+        default=False,
+        help_text="Sichtbar für alle Admins der Gruppen, die der Besitzer selbst verwaltet.",
+    )
+    share_with_accounting = models.BooleanField(
+        "Mit der Buchhaltung teilen",
+        default=False,
+        help_text="Sichtbar für alle Nutzer mit der Rolle Buchhaltung.",
     )
     columns = models.JSONField("Spalten", default=list)
     grouping = models.CharField(
@@ -47,6 +54,16 @@ class ExportProfile(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def sharing_label(self) -> str:
+        """Mit wem die Vorlage geteilt ist, für die Anzeige im Verzeichnis."""
+        shared_with = []
+        if self.share_with_group_admins:
+            shared_with.append("Gruppen-Admins")
+        if self.share_with_accounting:
+            shared_with.append("Buchhaltung")
+        return ", ".join(shared_with)
 
 
 class ExportScheduleQuerySet(models.QuerySet):

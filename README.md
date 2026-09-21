@@ -455,7 +455,12 @@ python manage.py makemigrations --check --dry-run
 ```
 
 Dieselben Schritte laufen in GitHub Actions bei jedem Push
-(`.github/workflows/ci.yml`).
+(`.github/workflows/ci.yml`). Ein zweiter Auftrag baut dort das Image und
+benutzt es einmal wirklich: er startet es gegen ein frisches PostgreSQL,
+wartet auf `/readyz`, sichert die Datenbank und spielt sie zurück. Damit ist
+belegt, dass `pg_dump` und `psql` im Image liegen und der Weg hin und zurück
+funktioniert. Anschließend werden `docker-compose.yml` und die Quadlet-Units
+aus `deploy/quadlet/` geprüft.
 
 ## Aufbau
 

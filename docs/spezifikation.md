@@ -192,7 +192,8 @@ setzt dessen `source` auf `correction`. Der Antrag bleibt als Beleg erhalten.
 |---|---|---|
 | `name` | Text | z. B. "Monatsabrechnung Lohnbüro" |
 | `owner` | FK User | wem die Vorlage gehört |
-| `is_shared` | bool | auch für andere Buchhaltungsnutzer sichtbar |
+| `share_with_group_admins` | bool | sichtbar für die Admins der Gruppen, die der Besitzer selbst verwaltet |
+| `share_with_accounting` | bool | sichtbar für alle Nutzer mit der Rolle Buchhaltung |
 | `columns` | JSON | Liste der Spalten in der gewünschten Reihenfolge |
 | `grouping` | Auswahl | `entry` (eine Zeile je Zeiteintrag), `user_day`, `user_month`, `activity` |
 | `filters` | JSON | Vorbelegung für Zeitraum, Gruppen, Nutzer, Tätigkeiten |
@@ -791,9 +792,151 @@ bleibt bei der Abschluss-Seite der Gruppe (Rückfrage 22). Der Block
 "Abgeschlossene Zeiträume" in der Auswertung verweist jetzt auf diese Übersicht,
 statt dieselbe Frage halb zu beantworten.
 
+## 15. Umgesetzte Erweiterungen (21.09.2026)
+
+Diese Punkte kamen aus einer zweiten Vorschlagsrunde und lagen als Issues 49
+bis 58 im Repository. Sie beantworten nebenbei die Rückfragen 7 und 12.
+
+**Arbeitszeitgesetz über den ganzen Tag** (Issue 49, Rückfrage 7). Der Hinweis
+auf die gesetzlichen Pausen verglich bisher jeden Eintrag für sich. Wer an
+einem Tag dreimal ein- und ausstempelt, arbeitet aber neun Stunden am Stück,
+ohne dass ein einzelner Eintrag die Schwelle reißt. Gerechnet wird jetzt über
+den ganzen Tag einer Person (`apps/tracking/arbzg.py`): 30 Minuten Pause ab
+sechs, 45 ab neun Stunden, dazu die Höchstarbeitszeit von zehn Stunden am Tag
+und die Ruhezeit von elf Stunden zwischen zwei Arbeitstagen. Ein Gruppen-Admin
+sieht die Treffer seiner Gruppe unter „Auffälligkeiten"
+(`gruppen/<id>/auffaelligkeiten/`).
+
+Gewarnt wird weiterhin nur, abgezogen wird nie etwas: automatischer Abzug ist
+arbeitsrechtlich heikel und bleibt es. Die Schalter dafür sind
+`STATUTORY_BREAK_WARNINGS` und `STATUTORY_LIMIT_WARNINGS`.
+
+**Mitarbeitende bestätigen ihren Abrechnungszeitraum** (Issue 50). Bisher
+schloss der Gruppen-Admin den Zeitraum ab, und die betroffene Person erfuhr
+davon nur daran, dass danach kein Antrag mehr möglich war. Unter
+`zeitraum-bestaetigen/` sieht jeder seine eigenen Tage des Zeitraums mit
+Tages- und Gesamtsumme, dazu Hinweise auf unvollständige Einträge und eigene
+offene Anträge, und bestätigt mit einem Knopf (Modell `PeriodConfirmation`,
+Fachlogik in `apps/groups/confirmation.py`, Protokollaktion
+`period_confirmed`).
+
+Auf der Abschluss-Seite steht daneben, wer noch nicht bestätigt hat. Der
+Abschluss bleibt trotzdem möglich: es ist ein Hinweis, keine Sperre, damit ein
+einzelner Urlauber den Monatslauf nicht blockiert. Bestätigt wird je Gruppe,
+erst nach Ablauf des Zeitraums und nicht mehr nach dem Abschluss. Gespeichert
+wird der Stand, den die Person gesehen hat (Anzahl ihrer Einträge und das
+jüngste `updated_at`); weicht später eines davon ab, gilt die Bestätigung als
+verfallen. Damit greifen genehmigte Korrektur, Änderung durch den Admin,
+Nachtrag und Löschung von allein.
+
+**Notfallzugang für System-Admins** (Issue 51, Rückfrage 12). `SOCIALACCOUNT_ONLY`
+führt jeden Weg in die Anwendung über Keycloak oder Entra ID; fällt der
+Identity-Provider aus, kommt niemand mehr hinein und kann es auch nicht von
+innen reparieren. Es gibt jetzt einen lokalen Anmeldeweg mit Passwort unter
+`konto/notfall-anmeldung/`, ausschließlich für System-Admins, über
+`EMERGENCY_LOGIN_ENABLED` zu schalten und in der Vorgabe **aus**. Ist er aus,
+wird das URL-Muster gar nicht erst registriert: keine Adresse, kein Formular,
+kein Hinweis auf der Anmeldeseite.
+
+Geprüft wird direkt gegen `ModelBackend`, damit kein anderes Backend
+einspringt; danach wird `is_superuser` erzwungen, und die Sitzung entsteht erst
+nach beiden Prüfungen. Der Protokolleintrag wird vor der Anmeldung geschrieben,
+damit es keine Sitzung ohne Eintrag geben kann (`emergency_login`,
+`emergency_login_failed`, mit Benutzername, Absenderadresse und Grund, nie dem
+Passwort). Gegen Durchprobieren zählt Djangos Cache je Benutzername und je
+Absender die Fehlversuche und sperrt danach; während der Sperre wird weder
+gehasht noch weitergezählt, damit niemand einem System-Admin den Zugang
+dauerhaft zuhalten kann. Djangos eigene Adminanmeldung unter `/admin/` bleibt
+davon unberührt, das war schon vorher so.
+
+**Sicherung und Rückspielen** (Issue 53). In der Anleitung stand ein einzelner
+`pg_dump`-Aufruf; wie man eine Sicherung wieder einspielt, stand nirgends. Es
+gibt jetzt `backup_database` und `restore_database` (`apps/audit/backup.py`).
+Gesichert wird mit Zeitstempel im Namen, mit Meldung von Pfad, Größe und Dauer
+und mit Aufräumen nach Anzahl und Alter, wobei die neueste Sicherung nie
+verschwindet. Zurückgespielt wird ohne Angabe die neueste, nach einer Rückfrage,
+die `--noinput` für Timer übergeht.
+
+Unter PostgreSQL läuft das über `pg_dump` und `psql` mit `ON_ERROR_STOP` und
+`--single-transaction`, unter SQLite über `VACUUM INTO`. Das Datenbankpasswort
+steht nie in der Kommandozeile und nie in der Umgebung, sondern in einer
+kurzlebigen `PGPASSFILE`; Fehlertexte der Werkzeuge werden vor der Ausgabe
+geschwärzt. Geschrieben wird zuerst in eine unvollständig benannte Datei und
+dann umbenannt, ein abgebrochener Lauf hinterlässt also nichts, was wie eine
+gültige Sicherung aussieht. Gesichert wird nur die Datenbank; die
+Konfiguration gehört getrennt gesichert.
+
+Das Image bringt dafür `postgresql-client` mit, dessen Hauptversion mindestens
+so hoch ist wie die der Datenbank. Debian bookworm liefert nur Version 15, und
+`pg_dump` verweigert einen neueren Server, deshalb kommt das Paket aus dem
+PGDG-Repo.
+
+**Zeiten aus CSV importieren** (Issue 54). Bei der Einführung kommt fast immer
+eine Liste aus dem Altsystem mit. Ein System-Admin lädt sie unter
+`zeiten-import/` hoch (`apps/tracking/csv_import.py`, Modell
+`EntryImport`); dort gibt es auch eine Beispieldatei mit Kopfzeile. Das
+Hochladen prüft nur und zeigt Zeilenzahl, erkannte Nutzer und Gruppen sowie
+jeden Fehler mit Zeilennummer. Geschrieben wird erst im zweiten Schritt, und
+nur dann, wenn keine einzige Zeile fehlerhaft ist. Alles wird als
+`source = import` angelegt und steht im Protokoll (`entries_imported`).
+Dasselbe geht von der Kommandozeile mit `import_time_entries`.
+
+Erwartet wird deutsches CSV (Semikolon, UTF-8) mit den Spalten
+`Personalnummer` oder `E-Mail`, `Gruppe`, `Tätigkeit`, `Datum`, `Beginn`,
+`Ende`, `Pausen` und `Notiz`.
+
+**Exporte nach Zeitplan** (Issue 55). Export-Vorlagen gab es, den Dienst
+`scheduler` gab es, aber nichts verband beides. Zu einer gespeicherten Vorlage
+lässt sich unter `auswertung/plaene/` ein Zeitplan hinterlegen: ein Tag im
+Monat, ein Zeitraum relativ zum Lauf, Format und Empfänger (Modelle
+`ExportSchedule` und `ExportRun`, Kommando `send_scheduled_exports`). Die Liste
+zeigt je Plan den letzten Lauf mit Zeilenzahl, Größe und Ergebnis.
+
+Gegen Doppelversand gibt es zu jeder Fälligkeit genau eine `ExportRun`-Zeile;
+die Eindeutigkeitsbedingung über Plan und Fälligkeitstag ist der Riegel. Das
+kommt ohne Sperren aus und verhält sich auf SQLite wie auf PostgreSQL gleich.
+Ausgewertet wird mit den Rechten dessen, der den Plan angelegt hat, nicht denen
+des Vorlagenbesitzers: sonst könnte sich ein Gruppen-Admin über eine geteilte
+Vorlage der Buchhaltung fremde Zeiten schicken lassen. Verliert der Ersteller
+seine Rechte, wird der Plan inaktiv. Ein nicht erreichbarer Mailserver gilt als
+vorübergehender Fehler und wird erneut versucht, ein dauerhaftes Hindernis
+(Rechte weg, kein Empfänger, Anhang zu groß) nicht.
+
+**Auswertungsseite mit Diagramm** (Issue 56). Die Auswertung führte bisher immer
+über eine Datei. Unter `auswertung/` stehen die Summen und die Verteilung jetzt
+direkt auf der Seite, mit Schnellschaltern für die üblichen Zeiträume
+(`apps/reporting/summary.py`, Diagramm als SVG in `apps/reporting/charts.py`,
+ohne JavaScript). Die Zahlen kommen aus derselben Verdichtung wie der Export,
+damit Ansicht und Datei nie auseinanderlaufen; der Weg zum Export nimmt die
+gewählten Filter mit.
+
+**Verdichtung nach Kostenstelle** (Issue 57). Zusätzlich zu Gruppe, Person und
+Tätigkeit lässt sich nach der Kostenstelle der Gruppe verdichten und danach
+filtern. Das ist die Gliederung, nach der eine Buchhaltung Stunden
+weiterreicht.
+
+**Eskalation liegengebliebener Anträge** (Issue 58). Erinnerungen an offene
+Korrekturanträge gingen an die Admins der Gruppe. Ist dort niemand erreichbar
+— im Urlaub, ausgeschieden, oder die Gruppe hat gar keinen aktiven Admin mehr —
+blieb der Antrag liegen, ohne dass es jemand merkte. Nach einer Frist
+(`PENDING_CORRECTION_ESCALATION_DAYS`) gehen solche Anträge an die System-Admins, mit
+dem Grund, warum sie hängen (`apps/reminders/jobs.py`).
+
+**Das Image in der CI** (ohne Issue, nach Rückfrage im Betrieb). Die CI prüfte
+nur den Python-Teil. Ob sich das Image bauen lässt und ob die Werkzeuge darin
+liegen, die `backup_database` braucht, fiel erst im Betrieb auf. Ein zweiter
+Auftrag baut das Image jetzt, startet es gegen ein frisches PostgreSQL, wartet
+auf `/readyz`, sichert die Datenbank und spielt sie zurück; danach werden
+`docker-compose.yml` und die Quadlet-Units geprüft.
+
+**Bewusst nicht umgesetzt.** Ein lesender Token-Zugang für andere Systeme
+(Rückfrage 19 bleibt damit beantwortet: keine API), ein Sammelantrag über
+mehrere Tage, das Runden von Zeiten und die englische Oberfläche über
+Djangos Übersetzungsmechanismus (Rückfrage 20 bleibt offen).
+
 ---
 
-## 15. Gruppenwechsel (Issue 37)
+## 16. Gruppenwechsel (Issue 37)
 
 Wer die Abteilung wechselt, beantragt das im Tool. Der Antrag braucht zwei
 Zustimmungen, nacheinander:
