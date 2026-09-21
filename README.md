@@ -143,6 +143,29 @@ Eine PDF-Ausgabe gibt es bewusst nicht, das spart eine Abhängigkeit.
 Laufende Einträge zählen auf dem Blatt nicht mit und werden darunter vermerkt;
 automatisch beendete Tage sind als unvollständig gekennzeichnet.
 
+## Arbeitszeitgesetz
+
+Geprüft wird der Tag als Ganzes und über alle Einträge einer Person zusammen:
+zweimal vier Stunden sind acht Stunden Arbeitszeit und brauchen dieselbe Pause
+wie ein Eintrag über acht Stunden. Eine Nachtschicht zählt anteilig zu beiden
+Tagen, und die Zeitumstellung wird mitgerechnet.
+
+| Regel | Grenze |
+| --- | --- |
+| Pause (§ 4 ArbZG) | ab 6 h Arbeitszeit 30 Minuten, ab 9 h 45 Minuten |
+| Höchstarbeitszeit (§ 3 ArbZG) | 10 h am Tag |
+| Ruhezeit (§ 5 ArbZG) | 11 h zwischen Feierabend und nächstem Beginn |
+
+Beim Ausstempeln erscheint ein Hinweis, wenn eine der Regeln verletzt ist.
+Gruppen-Admins sehen unter Gruppe > **Auffälligkeiten** alle Fälle ihrer Gruppe
+in einem wählbaren Zeitraum, mit Person, Tag, Regel und Wert; die Buchhaltung
+liest dort mit. Es wird ausschließlich gewarnt und niemals etwas abgezogen oder
+gekappt: was gestempelt wurde, bleibt stehen, entscheiden müssen Menschen.
+
+Abschaltbar ist das mit `STATUTORY_BREAK_WARNINGS=false` für die Pause und
+`STATUTORY_LIMIT_WARNINGS=false` für Höchstarbeitszeit und Ruhezeit. Die
+Grenzwerte selbst stehen in `apps/tracking/arbzg.py`.
+
 ## Benachrichtigungen
 
 Ohne Mailserver zeigt die Navigation Zähler: offene Anträge für Admins,
@@ -165,13 +188,14 @@ gehört an diese Stelle eine Warteschlange.
 
 ### Erinnerungen
 
-Benachrichtigt wird damit nur nachträglich. Daneben gibt es drei Hinweise,
+Benachrichtigt wird damit nur nachträglich. Daneben gibt es Hinweise,
 die Arbeit ersparen, bevor etwas schiefgeht:
 
 | Hinweis | Anlass | Empfänger |
 | --- | --- | --- |
 | Ausstempeln vergessen | länger als `OPEN_ENTRY_REMINDER_HOURS` eingestempelt | die Person selbst |
 | Antrag liegt offen | Antrag älter als `PENDING_CORRECTION_REMINDER_DAYS` | Admins der Gruppe |
+| Antrag bleibt liegen | Antrag älter als `PENDING_CORRECTION_ESCALATION_DAYS` | System-Admins |
 | Zeitraum noch offen | Zeitraum seit `PERIOD_CLOSING_REMINDER_DAYS` abgelaufen | Admins der Gruppe |
 
 Sie stehen im Tool unter **Hinweise**, mit einem Zähler in der Navigation.
@@ -184,6 +208,24 @@ bekommt ihn zu diesem Anlass nicht noch einmal.
 Die Schwelle fürs Ausstempeln gehört deutlich unter `MAX_OPEN_ENTRY_HOURS`,
 sonst kommt der Hinweis erst, wenn `close_stale_entries` den Eintrag schon
 gekappt hat.
+
+#### Eskalation an die System-Admins
+
+Über den eigenen Antrag entscheidet man nicht selbst. Hat eine Gruppe nur
+einen Admin und ist der im Urlaub — oder stellt er selbst den Antrag —, läge
+die ganze Gruppe bis zu seiner Rückkehr still. Deshalb meldet
+`remind_pending_corrections` nach `PENDING_CORRECTION_ESCALATION_DAYS` einen
+weiter liegengebliebenen Antrag zusätzlich den System-Admins, die ihn
+entscheiden dürfen. Ein Antrag, über den in der Gruppe überhaupt niemand
+entscheiden darf, wartet darauf nicht: er eskaliert schon mit der ersten
+Frist, denn dort gibt es niemanden, auf den zu warten wäre.
+
+Der Hinweis nennt Gruppe, Anzahl und den ältesten Antrag und sagt dazu, ob
+die Gruppe gerade gar keinen aktiven Admin hat. Je Gruppe entsteht ein
+Hinweis, aufgehängt am ältesten betroffenen Antrag; er verfällt mit dessen
+Entscheidung. Liegt dann noch etwas, meldet der nächste Lauf den neuen
+ältesten. Die zweite Frist gehört über die erste — steht sie darunter, warnt
+das Kommando und rechnet mit der ersten weiter.
 
 ## Betrieb
 
@@ -255,6 +297,33 @@ Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht
 den Hinweis auf der Stempeluhr und kann eine Korrektur beantragen.
 
+### Zeiten aus CSV importieren
+
+Bei der Einführung kommt fast immer eine Liste aus dem Altsystem mit. Ein
+System-Admin lädt sie unter „Import“ hoch; dort gibt es auch eine
+Beispieldatei mit Kopfzeile. Das Hochladen prüft nur und zeigt Zeilenzahl,
+erkannte Nutzer und Gruppen sowie jeden Fehler mit Zeilennummer. Geschrieben
+wird erst im zweiten Schritt, und nur dann, wenn keine einzige Zeile
+fehlerhaft ist. Alles wird als `source=import` angelegt und steht im
+Protokoll.
+
+Dasselbe von der Kommandozeile aus:
+
+```bash
+python manage.py import_time_entries zeiten.csv                 # prüft nur
+python manage.py import_time_entries zeiten.csv --uebernehmen \
+    --akteur system@example.com                                 # schreibt
+```
+
+Erwartet wird deutsches CSV (Semikolon, UTF-8). Spalten: `Personalnummer`
+oder `E-Mail`, `Gruppe`, `Tätigkeit`, `Datum`, `Beginn`, `Ende`, `Pausen`,
+`Notiz`; Pflicht sind `Gruppe`, `Beginn`, `Ende` und eine Spalte zur Person.
+Beginn und Ende dürfen `TT.MM.JJJJ HH:MM` heißen oder nur `HH:MM`, wenn es
+eine Spalte `Datum` gibt; ein Ende vor dem Beginn zählt dann als Folgetag.
+`Pausen` ist entweder eine Dauer (`30` oder `0:30`, sie wird mittig in die
+Arbeitszeit gelegt) oder ein Zeitraum wie `11:30-12:00`, mehrere durch Komma
+getrennt.
+
 ### Aufbewahrung
 
 Arbeitszeitdaten sind personenbezogen und werden nicht unbegrenzt aufbewahrt.
@@ -289,7 +358,7 @@ Dieselben Schritte laufen in GitHub Actions bei jedem Push
 zeiterfassung/      Einstellungen, URLs, WSGI, Health-Endpunkte
 apps/accounts/      Nutzermodell, OIDC-Anbindung
 apps/groups/        Gruppen, Mitgliedschaften, Tätigkeiten, Zeiträume, Rechteprüfung
-apps/tracking/      Zeiteinträge, Pausen, Stempel-Logik
+apps/tracking/      Zeiteinträge, Pausen, Stempel-Logik, CSV-Import
 apps/corrections/   Korrekturanträge und deren Ablauf
 apps/reporting/     Auswertung, Spaltenauswahl, Export nach Excel und CSV
 apps/audit/         unveränderliches Protokoll aller Änderungen

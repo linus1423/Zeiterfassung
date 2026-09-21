@@ -1,0 +1,14 @@
+Hallo {{ reminder.recipient.full_name }},
+
+{{ reminder.message }}
+
+Gruppe: {{ group.name }}
+Offene Anträge: {{ count }}
+Ältester Antrag: von {{ correction.requested_by.full_name }}, seit {{ waiting }} Tagen
+Begründung des Antrags: {{ correction.reason }}
+
+{{ reason }}
+
+Entscheiden: {{ link }}
+
+Diese Nachricht kommt von der Zeiterfassung, eine Antwort darauf liest niemand.

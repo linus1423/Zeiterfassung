@@ -13,7 +13,11 @@ class ExportProfile(models.Model):
         ENTRY = "entry", "Je Zeiteintrag"
         USER_DAY = "user_day", "Je Nutzer und Tag"
         USER_MONTH = "user_month", "Je Nutzer und Monat"
+        USER = "user", "Je Nutzer"
+        GROUP = "group", "Je Gruppe"
         ACTIVITY = "activity", "Je Tätigkeit"
+        COST_CENTER = "cost_center", "Je Kostenstelle"
+        COST_CENTER_MONTH = "cost_center_month", "Je Kostenstelle und Abrechnungszeitraum"
 
     name = models.CharField("Name", max_length=120)
     owner = models.ForeignKey(
@@ -27,7 +31,7 @@ class ExportProfile(models.Model):
     )
     columns = models.JSONField("Spalten", default=list)
     grouping = models.CharField(
-        "Verdichtung", max_length=16, choices=Grouping.choices, default=Grouping.ENTRY
+        "Verdichtung", max_length=24, choices=Grouping.choices, default=Grouping.ENTRY
     )
     filters = models.JSONField("Filter", default=dict, blank=True)
     created_at = models.DateTimeField("Angelegt am", auto_now_add=True)

@@ -10,6 +10,12 @@ from django.shortcuts import get_object_or_404
 from .models import Group
 
 
+def require_system_admin(user, message: str = "Nur System-Admins dürfen das.") -> None:
+    """System-Admin ist, wer `is_superuser` ist. Sonst 403."""
+    if not user.is_superuser:
+        raise PermissionDenied(message)
+
+
 def require_group_admin(user, group_id) -> Group:
     """Gibt die Gruppe zurück, wenn der Nutzer dort Admin ist, sonst 403."""
     group = get_object_or_404(Group, pk=group_id)

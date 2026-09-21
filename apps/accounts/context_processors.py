@@ -32,9 +32,8 @@ def navigation(request):
             "new_decisions": new_decisions,
             # Hinweise, die Arbeit ersparen, bevor etwas schiefgeht (Issue 34).
             "reminders": reminder_services.open_count(user),
-            # Gruppenwechsel laufen über zwei Zustimmungen (Issue 37): der
-            # Zähler zeigt, was gerade an einem selbst hängt.
-            "pending_group_changes": change_requests.pending_decision_count(user, admin_group_ids),
-            "new_group_changes": change_requests.new_decision_count(user),
+            # Gruppenwechsel laufen über zwei Zustimmungen (Issue 37): die
+            # Zähler zeigen, was gerade an einem selbst hängt.
+            **change_requests.navigation_counts(user, admin_group_ids),
         }
     }

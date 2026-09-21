@@ -179,3 +179,13 @@ form.switch select { max-width: 20rem; }
   .sheet-table tr { page-break-inside: avoid; }
   a { text-decoration: none; color: inherit; }
 }
+
+/* Balkendiagramm der Auswertungsseite (Issue 56).
+   Das SVG wird auf dem Server erzeugt, hier steht nur sein Aussehen. */
+.diagramm { overflow-x: auto; margin-bottom: 1rem; }
+svg.balken { width: 100%; height: auto; min-width: 520px; display: block; }
+svg.balken .achse { stroke: var(--line); stroke-width: 1; }
+svg.balken .balken-flaeche { fill: var(--accent); }
+svg.balken text { font-family: inherit; font-size: 13px; fill: var(--ink); }
+svg.balken .beschriftung { fill: var(--muted); }
+svg.balken .wert { font-variant-numeric: tabular-nums; }

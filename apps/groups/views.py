@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -9,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.audit.models import AuditLog, log
-from apps.tracking import entry_editing
+from apps.tracking import arbzg, entry_editing
 from apps.tracking.daysplit import entries_in_range, parts_in_range
 from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
@@ -131,6 +132,41 @@ def group_detail(request, group_id):
         "period_closed": closing.is_closed(group, end_day),
     }
     return render(request, "groups/group_detail.html", context)
+
+
+@login_required
+def anomalies(request, group_id):
+    """Auffälligkeiten nach dem Arbeitszeitgesetz je Gruppe (Issue 49).
+
+    Lesen darf das ein Admin der Gruppe, die Buchhaltung und der System-Admin;
+    geändert wird hier nichts. Gerechnet wird über den ganzen Tag, nicht über
+    den einzelnen Eintrag.
+    """
+    group = require_group_read(request.user, group_id)
+
+    today = timezone.localdate()
+    period = group.current_period(today)
+    form = PeriodForm(request.GET or {"start": period.start, "end": today})
+    start_day, end_day = period.start, today
+    if form.is_valid():
+        start_day, end_day = form.cleaned_data["start"], form.cleaned_data["end"]
+
+    found = arbzg.check(TimeEntry.objects.filter(group=group), start_day, end_day)
+    # Neueste zuerst, innerhalb eines Tages nach Person.
+    rows = sorted(found, key=lambda item: (-item.day.toordinal(), str(item.user), item.rule))
+
+    context = {
+        "group": group,
+        "form": form,
+        "rows": rows,
+        "start_day": start_day,
+        "end_day": end_day,
+        "people": len({row.user.pk for row in rows}),
+        "checks_enabled": bool(
+            settings.STATUTORY_BREAK_WARNINGS or settings.STATUTORY_LIMIT_WARNINGS
+        ),
+    }
+    return render(request, "groups/anomalies.html", context)
 
 
 def _entry_form_page(request, group, entry):

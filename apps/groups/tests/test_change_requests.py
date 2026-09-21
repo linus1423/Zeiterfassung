@@ -236,14 +236,28 @@ def test_jeder_schritt_steht_im_protokoll(change, group_admin, other_admin):
 
 
 def test_zaehler_fuer_die_navigation(change, member, group_admin, other_admin):
-    assert change_requests.pending_decision_count(group_admin) == 1
-    assert change_requests.pending_decision_count(other_admin) == 0
+    def offen(user):
+        return change_requests.navigation_counts(user)["pending_group_changes"]
+
+    def neu(user):
+        return change_requests.navigation_counts(user)["new_group_changes"]
+
+    assert offen(group_admin) == 1
+    assert offen(other_admin) == 0
 
     change_requests.decide(change, group_admin, approve=True)
-    assert change_requests.pending_decision_count(group_admin) == 0
-    assert change_requests.pending_decision_count(other_admin) == 1
+    assert offen(group_admin) == 0
+    assert offen(other_admin) == 1
 
     change_requests.decide(change, other_admin, approve=True)
-    assert change_requests.new_decision_count(member) == 1
+    assert neu(member) == 1
     change_requests.mark_decisions_seen(member)
-    assert change_requests.new_decision_count(member) == 0
+    assert neu(member) == 0
+
+
+def test_die_navigation_braucht_eine_abfrage(change, group_admin, django_assert_num_queries):
+    """Die Navigation steht auf jeder Seite, beide Zähler teilen sich eine Abfrage."""
+    group_ids = group_admin.administrated_group_ids()
+
+    with django_assert_num_queries(1):
+        change_requests.navigation_counts(group_admin, group_ids)

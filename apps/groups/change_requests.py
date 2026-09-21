@@ -21,7 +21,7 @@ Was bewusst so entschieden ist:
 from __future__ import annotations
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
@@ -265,9 +265,9 @@ def withdraw(request_obj: GroupChangeRequest, user) -> GroupChangeRequest:
     return locked
 
 
-def _unseen_decisions(user) -> QuerySet[GroupChangeRequest]:
+def _unseen_decisions_q(user) -> Q:
     """Eigene Anträge, deren Entscheidung der Nutzer noch nicht gesehen hat."""
-    return GroupChangeRequest.objects.filter(
+    return Q(
         user=user,
         status__in=(GroupChangeRequest.Status.APPROVED, GroupChangeRequest.Status.REJECTED),
         decision_seen_at__isnull=True,
@@ -276,13 +276,29 @@ def _unseen_decisions(user) -> QuerySet[GroupChangeRequest]:
 
 def mark_decisions_seen(user) -> None:
     """Entschiedene eigene Anträge als gesehen markieren (Zähler in der Navigation)."""
-    _unseen_decisions(user).update(decision_seen_at=timezone.now())
+    GroupChangeRequest.objects.filter(_unseen_decisions_q(user)).update(
+        decision_seen_at=timezone.now()
+    )
 
 
-def new_decision_count(user) -> int:
-    return _unseen_decisions(user).count()
+def navigation_counts(user, group_ids: list[int] | None = None) -> dict[str, int]:
+    """Beide Zähler der Navigation in einer Abfrage.
 
+    Die Navigation steht auf jeder Seite, deshalb zählt hier jede Abfrage.
+    Beide Zahlen stecken in derselben Tabelle und lassen sich zusammen holen.
+    """
+    if group_ids is None:
+        group_ids = user.administrated_group_ids()
 
-def pending_decision_count(user, group_ids: list[int] | None = None) -> int:
-    """Wechsel, die auf eine Entscheidung dieses Nutzers warten."""
-    return decidable_requests(user, group_ids).count()
+    pending = Q(status=GroupChangeRequest.Status.PENDING_SOURCE, from_group_id__in=group_ids) | Q(
+        status=GroupChangeRequest.Status.PENDING_TARGET, to_group_id__in=group_ids
+    )
+    if not user.is_superuser:
+        pending &= ~Q(user=user)
+    if not group_ids:
+        pending = Q(pk__in=[])
+
+    return GroupChangeRequest.objects.aggregate(
+        pending_group_changes=Count("pk", filter=pending),
+        new_group_changes=Count("pk", filter=_unseen_decisions_q(user)),
+    )

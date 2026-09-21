@@ -9,7 +9,7 @@ Server, nie aus dem Browser.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
@@ -18,8 +18,10 @@ from django.utils import timezone
 from apps.audit.models import AuditLog, log
 from apps.reminders import services as reminders
 
+from . import arbzg
 from .entries import is_overlap_violation
 from .models import BreakEntry, TimeEntry
+from .utils import local_day_range
 
 
 class ClockError(Exception):
@@ -242,14 +244,25 @@ def close_stale_entries(max_hours: int | None = None) -> int:
     return closed
 
 
-def statutory_break_warning(worked: timedelta, paused: timedelta) -> str:
-    """Hinweis auf gesetzliche Pausen. Es wird nur gewarnt, nie abgezogen."""
-    if not settings.STATUTORY_BREAK_WARNINGS:
-        return ""
-    hours = worked.total_seconds() / 3600
-    minutes_paused = paused.total_seconds() / 60
-    if hours > 9 and minutes_paused < 45:
-        return "Ab neun Stunden Arbeitszeit sind 45 Minuten Pause vorgeschrieben."
-    if hours > 6 and minutes_paused < 30:
-        return "Ab sechs Stunden Arbeitszeit sind 30 Minuten Pause vorgeschrieben."
-    return ""
+def statutory_warnings(user, first_day: date, last_day: date) -> list[str]:
+    """Hinweise auf verletzte Arbeitszeitregeln in einem Zeitraum.
+
+    Es wird nur gewarnt, nie etwas abgezogen: das ist arbeitsrechtlich
+    Absicht (Rückfrage 7, Issue 49).
+    """
+    return [
+        violation.message
+        for violation in arbzg.check(TimeEntry.objects.filter(user=user), first_day, last_day)
+    ]
+
+
+def warnings_for_entry(entry: TimeEntry) -> list[str]:
+    """Die Hinweise zu den Tagen, die ein Eintrag berührt.
+
+    Eine Nachtschicht berührt zwei Tage; geprüft werden beide, denn die
+    Tagessumme des Vortages ändert sich beim Ausstempeln mit.
+    """
+    days = local_day_range(entry.start, entry.end)
+    if days is None:
+        return []
+    return statutory_warnings(entry.user, *days)

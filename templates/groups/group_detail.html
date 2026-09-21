@@ -7,6 +7,7 @@
   <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
   · <a href="{% url 'audit:group' group.pk %}">Protokoll</a>
   · <a href="{% url 'reporting:group_timesheets' group.pk %}">Nachweise</a>
+  · <a href="{% url 'groups:anomalies' group.pk %}">Auffälligkeiten</a>
   {% if is_admin %}
     · <a href="{% url 'groups:activities' group.pk %}">Tätigkeiten verwalten</a>
     · <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
