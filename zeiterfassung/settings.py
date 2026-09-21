@@ -72,6 +72,9 @@ env = environ.Env(
     OPEN_ENTRY_REMINDER_HOURS=(int, 10),
     PENDING_CORRECTION_REMINDER_DAYS=(int, 3),
     PERIOD_CLOSING_REMINDER_DAYS=(int, 3),
+    EXPORT_EMAILS_ENABLED=(bool, False),
+    EXPORT_MAX_ATTACHMENT_MB=(int, 10),
+    EXPORT_MAX_ROWS=(int, 50000),
     DJANGO_EMAIL_PORT=(int, 587),
     DJANGO_EMAIL_USE_TLS=(bool, True),
     DJANGO_EMAIL_TIMEOUT=(int, 10),
@@ -347,6 +350,13 @@ OPEN_ENTRY_REMINDER_HOURS = env("OPEN_ENTRY_REMINDER_HOURS")
 PENDING_CORRECTION_REMINDER_DAYS = env("PENDING_CORRECTION_REMINDER_DAYS")
 # Frist nach Ende eines Zeitraums, nach der an den Abschluss erinnert wird.
 PERIOD_CLOSING_REMINDER_DAYS = env("PERIOD_CLOSING_REMINDER_DAYS")
+# Geplante Exporte (Issue 55): ohne eingeschalteten Mailversand geht nichts
+# hinaus, der fällige Lauf wird als Fehler protokolliert und später erneut
+# versucht. Die beiden Grenzen halten den Anhang mailbar: ein Jahresexport
+# einer großen Gruppe wird sonst schnell zu groß für jeden Mailserver.
+EXPORT_EMAILS_ENABLED = env("EXPORT_EMAILS_ENABLED")
+EXPORT_MAX_ATTACHMENT_MB = env("EXPORT_MAX_ATTACHMENT_MB")
+EXPORT_MAX_ROWS = env("EXPORT_MAX_ROWS")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

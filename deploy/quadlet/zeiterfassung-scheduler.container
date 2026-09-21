@@ -34,7 +34,7 @@ HealthCmd=none
 
 # Mit Semikolon verkettet: ein fehlgeschlagenes Kommando hält die übrigen
 # nicht auf, der Fehler steht im Journal.
-Exec=sh -c "python manage.py close_stale_entries; python manage.py remind_open_entries; python manage.py remind_pending_corrections; python manage.py remind_period_closing"
+Exec=sh -c "python manage.py close_stale_entries; python manage.py remind_open_entries; python manage.py remind_pending_corrections; python manage.py remind_period_closing; python manage.py send_scheduled_exports"
 
 [Service]
 Type=oneshot

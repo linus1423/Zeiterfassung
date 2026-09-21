@@ -8,6 +8,8 @@ urlpatterns = [
     path("", views.export_view, name="export"),
     path("vorlage/<int:profile_id>/", views.export_view, name="export_profile"),
     path("vorlage/<int:profile_id>/loeschen/", views.profile_delete, name="profile_delete"),
+    path("plaene/", views.schedule_list, name="schedules"),
+    path("plaene/<int:schedule_id>/loeschen/", views.schedule_delete, name="schedule_delete"),
     path("nachweis/<int:user_id>/", views.timesheet_view, name="timesheet"),
     path("nachweis/gruppe/<int:group_id>/", views.group_timesheets, name="group_timesheets"),
 ]
