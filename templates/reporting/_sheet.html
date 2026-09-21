@@ -1,0 +1,69 @@
+{% load zeit %}
+<section class="sheet">
+  <header class="sheet-head">
+    <h2>Arbeitszeitnachweis</h2>
+    <dl>
+      <dt>Name</dt><dd>{{ sheet.user.full_name }}</dd>
+      <dt>Personalnummer</dt><dd>{{ sheet.user.personnel_number|default:"—" }}</dd>
+      <dt>Gruppe</dt>
+      <dd>{% for group in sheet.groups %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd>
+      <dt>Zeitraum</dt>
+      <dd>{{ sheet.first_day|date:"d.m.Y" }} bis {{ sheet.last_day|date:"d.m.Y" }}</dd>
+    </dl>
+    <p class="status">
+      {% if sheet.closed %}
+        Der Zeitraum ist abgeschlossen.
+      {% else %}
+        Der Zeitraum ist noch nicht abgeschlossen, die Zeiten können sich noch ändern.
+      {% endif %}
+    </p>
+  </header>
+
+  <table class="sheet-table">
+    <thead>
+      <tr>
+        <th>Datum</th><th>Tag</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in sheet.rows %}
+        <tr{% if row.is_empty %} class="empty"{% endif %}>
+          <td>{{ row.day|date:"d.m.Y" }}</td>
+          <td>{{ row.weekday }}</td>
+          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.start|date:"H:i" }}{% endif %}</td>
+          <td>
+            {% if row.is_empty %}&nbsp;{% else %}{{ row.end|date:"H:i" }}
+              {% if row.is_incomplete %}<span class="badge">unvollständig</span>{% endif %}
+            {% endif %}
+          </td>
+          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.pause|dauer }}{% endif %}</td>
+          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.work|dauer }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="5">Summe, {{ sheet.days_worked }} Tag{{ sheet.days_worked|pluralize:"e" }}</th>
+        <th>{{ sheet.total|dauer }}</th>
+      </tr>
+    </tfoot>
+  </table>
+
+  {% if sheet.open_entries or sheet.has_incomplete %}
+    <p class="help">
+      {% if sheet.open_entries %}
+        Im Zeitraum {{ sheet.open_entries }} laufende{{ sheet.open_entries|pluralize:"r," }}
+        Eintrag ohne Ende; er zählt hier nicht mit.
+      {% endif %}
+      {% if sheet.has_incomplete %}
+        Als unvollständig markierte Tage wurden automatisch beendet und sollten
+        vor der Unterschrift geprüft werden.
+      {% endif %}
+    </p>
+  {% endif %}
+
+  <div class="signatures">
+    <div><span class="line"></span>Datum, Unterschrift Mitarbeiter/in</div>
+    <div><span class="line"></span>Datum, Unterschrift Vorgesetzte/r</div>
+  </div>
+</section>

@@ -9,7 +9,7 @@ wieder öffnen nur ein System-Admin.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, timedelta
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -66,6 +66,27 @@ def blocking_lock(group: Group, ranges: Iterable[tuple[date, date] | None]) -> P
         if lock is not None:
             return lock
     return None
+
+
+def range_closed(group: Group, first: date, last: date) -> bool:
+    """Ist jeder Tag von first bis last durch einen Abschluss gesperrt?
+
+    Für den Nachweis reicht "irgendein Abschluss berührt den Zeitraum" nicht:
+    unterschrieben wird ein Blatt nur, wenn der ganze Zeitraum feststeht.
+    """
+    spans = sorted(
+        PeriodLock.objects.filter(
+            group=group, period_end__gte=first, period_start__lte=last
+        ).values_list("period_start", "period_end")
+    )
+    cursor = first
+    for start, end in spans:
+        if start > cursor:
+            return False
+        cursor = max(cursor, end + timedelta(days=1))
+        if cursor > last:
+            return True
+    return cursor > last
 
 
 def lock_exists(group: Group, period: Period) -> bool:

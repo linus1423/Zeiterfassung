@@ -131,6 +131,22 @@ def group_period(group, day: date | None = None) -> Period:
     return period_for(day, getattr(group, "month_start_day", 1))
 
 
+def member_start_day(user) -> int:
+    """Der Zyklusbeginn der Gruppen eines Nutzers, sonst der Kalendermonat.
+
+    Gehört jemand zu Gruppen mit unterschiedlichen Zyklen, gibt es keinen
+    richtigen Vorgabewert; dann bleibt es beim Kalendermonat.
+    """
+    from .models import Group
+
+    start_days = set(
+        Group.objects.filter(pk__in=user.member_group_ids()).values_list(
+            "month_start_day", flat=True
+        )
+    )
+    return start_days.pop() if len(start_days) == 1 else 1
+
+
 def recent_periods(group, count: int = 12, today: date | None = None) -> list[Period]:
     """Die letzten Zeiträume einer Gruppe, der aktuelle zuerst."""
     period = group_period(group, today)

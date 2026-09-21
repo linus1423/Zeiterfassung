@@ -25,6 +25,7 @@
 
 <div class="card">
   <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}{% if activity %} · {{ activity.name }}{% endif %}</h2>
+  <p><a href="{% url 'reporting:timesheet' user.pk %}?start={{ start_day|date:"Y-m-d" }}&amp;end={{ end_day|date:"Y-m-d" }}">Arbeitszeitnachweis zum Ausdrucken</a></p>
   <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden)</p>
   {% if entries %}
     <div class="table-scroll">

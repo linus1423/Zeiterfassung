@@ -141,3 +141,39 @@ table.breaks input { width: 100%; }
 form.switch { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.75rem; }
 form.switch .actions { margin-top: 0.25rem; }
 form.switch select { max-width: 20rem; }
+
+/* Arbeitszeitnachweis zum Ausdrucken (Issue 35) */
+.sheet { margin-bottom: 2rem; }
+.sheet-head dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1rem 1rem;
+  margin: 0 0 0.5rem;
+}
+.sheet-head dt { color: var(--muted); }
+.sheet-head dd { margin: 0; }
+.sheet-table { width: 100%; border-collapse: collapse; }
+.sheet-table th, .sheet-table td { border: 1px solid var(--line); padding: 0.2rem 0.4rem; }
+.sheet-table tr.empty td { height: 1.4rem; }
+.sheet-table td:nth-child(n+3), .sheet-table tfoot th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.signatures { display: flex; gap: 3rem; margin-top: 2.5rem; color: var(--muted); }
+.signatures .line {
+  display: block;
+  width: 16rem;
+  border-top: 1px solid var(--line);
+  margin-bottom: 0.2rem;
+}
+
+@media print {
+  /* Auf Papier gehören weder Navigation noch Knöpfe hin. */
+  header.site, .no-print, .messages { display: none !important; }
+  main { margin: 0; max-width: none; }
+  .sheet { page-break-after: always; }
+  .sheet:last-child { page-break-after: auto; }
+  .sheet-table { page-break-inside: auto; }
+  .sheet-table tr { page-break-inside: avoid; }
+  a { text-decoration: none; color: inherit; }
+}

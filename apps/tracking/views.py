@@ -9,8 +9,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from apps.groups.models import Group
-from apps.groups.periods import period_for
+from apps.groups.periods import member_start_day, period_for
 
 from . import services
 from .daysplit import entries_in_range, parts_in_range
@@ -150,20 +149,6 @@ def clock_out_view(request):
     return redirect("tracking:clock")
 
 
-def _billing_start_day(user) -> int:
-    """Der Zyklusbeginn der Gruppen des Nutzers, sonst der Kalendermonat.
-
-    Gehört jemand zu Gruppen mit unterschiedlichen Zyklen, gibt es keinen
-    richtigen Vorgabewert; dann bleibt es beim Kalendermonat.
-    """
-    start_days = set(
-        Group.objects.filter(pk__in=user.member_group_ids()).values_list(
-            "month_start_day", flat=True
-        )
-    )
-    return start_days.pop() if len(start_days) == 1 else 1
-
-
 def _quick_range(name: str, start_day: int, today: date) -> tuple[date, date] | None:
     """Die Zeiträume hinter den Schnellschaltern über der Liste."""
     if name == "woche":
@@ -234,7 +219,7 @@ def _my_export_response(entries, start_day: date, end_day: date, export: str):
 def my_entries(request):
     """Eigene Zeiten in einem wählbaren Zeitraum, mit Tages- und Wochensummen."""
     today = timezone.localdate()
-    start_day_of_cycle = _billing_start_day(request.user)
+    start_day_of_cycle = member_start_day(request.user)
     default_start = period_for(today, start_day_of_cycle).start
 
     quick = request.GET.get("bereich", "")

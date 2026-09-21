@@ -744,3 +744,28 @@ ausblendet, bekommt ihn zu diesem Anlass nicht wieder.
 Die drei Kommandos `remind_open_entries`, `remind_pending_corrections` und
 `remind_period_closing` laufen zusammen mit `close_stale_entries` im Dienst
 `scheduler` beziehungsweise im systemd-Timer.
+
+**Arbeitszeitnachweis zum Ausdrucken** (Issue 35). Neben den Tabellen für die
+Buchhaltung gibt es jetzt den üblichen Nachweis: ein Blatt je Person und
+Zeitraum mit einer Zeile pro Tag (Datum, Wochentag, Beginn, Ende, Pause,
+Arbeitszeit), der Summe des Zeitraums, Name, Personalnummer und Gruppe im Kopf
+und Platz für Datum und Unterschrift am Fuß. Tage ohne Erfassung bleiben leer.
+
+Beginn und Ende sind der erste und der letzte Zeitpunkt des Tages; als Pause
+zählt alles dazwischen, was keine Arbeitszeit ist, also die erfassten Pausen
+und die Lücken zwischen mehreren Einträgen eines Tages. So geht jede Zeile auf.
+Gerechnet wird über die Tagesanteile aus `apps/tracking/daysplit.py`, eine
+Nachtschicht zählt also auf beiden Tagen anteilig (Issue 32). Laufende Einträge
+bleiben außen vor und werden unter der Tabelle vermerkt, automatisch beendete
+Tage sind gekennzeichnet.
+
+Der Kopf weist aus, ob der Zeitraum abgeschlossen ist. Dafür muss jede
+beteiligte Gruppe den ganzen Zeitraum gesperrt haben, nicht nur einen Teil
+davon (`closing.range_closed`).
+
+Sehen darf den Nachweis die Person selbst, jeder Admin einer Gruppe, in der sie
+Mitglied ist, und die Buchhaltung. Unter Gruppe > Nachweise entsteht ein Blatt
+je Mitglied, gezählt werden dort nur die Zeiten dieser Gruppe. Ausgegeben wird
+im Browser mit einem eigenen Druck-Stylesheet, das Navigation und Knöpfe
+ausblendet und je Person eine Seite beginnt; PDF bleibt wie in Rückfrage 21
+zurückgestellt.

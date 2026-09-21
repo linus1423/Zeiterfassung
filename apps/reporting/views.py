@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -11,9 +12,11 @@ from django.views.decorators.http import require_POST
 from apps.audit.models import AuditLog, log
 from apps.groups.closing import ClosedPeriods
 from apps.groups.models import PeriodLock
-from apps.groups.permissions import readable_groups
+from apps.groups.periods import member_start_day, period_for
+from apps.groups.permissions import readable_groups, require_group_read
+from apps.tracking.forms import PeriodForm
 
-from . import services
+from . import services, timesheet
 from .columns import resolve
 from .forms import CSV_DIALECTS, ExportForm, ProfileSaveForm
 from .models import ExportProfile
@@ -193,3 +196,62 @@ def profile_delete(request, profile_id):
     profile.delete()
     messages.success(request, "Vorlage gelöscht.")
     return redirect("reporting:export")
+
+
+def _sheet_range(request, start_day_of_cycle: int):
+    """Zeitraum des Nachweises: aus dem Formular, sonst der laufende Zyklus."""
+    today = timezone.localdate()
+    period = period_for(today, start_day_of_cycle)
+    form = PeriodForm(request.GET or {"start": period.start, "end": period.end})
+    if form.is_valid():
+        first, last = form.cleaned_data["start"], form.cleaned_data["end"]
+        if (last - first).days >= timesheet.MAX_DAYS:
+            form.add_error("end", "Ein Nachweis umfasst höchstens ein Jahr.")
+        else:
+            return form, first, last
+    return form, period.start, period.end
+
+
+@login_required
+def timesheet_view(request, user_id):
+    """Arbeitszeitnachweis einer Person zum Ausdrucken (Issue 35)."""
+    person = get_object_or_404(get_user_model(), pk=user_id)
+    if not timesheet.may_see(request.user, person):
+        raise PermissionDenied("Kein Zugriff auf diesen Nachweis.")
+
+    form, first_day, last_day = _sheet_range(request, member_start_day(person))
+    return render(
+        request,
+        "reporting/timesheet.html",
+        {
+            "form": form,
+            "sheets": [
+                timesheet.build(
+                    person, first_day, last_day, timesheet.visible_groups(request.user, person)
+                )
+            ],
+            "first_day": first_day,
+            "last_day": last_day,
+            "title": f"Arbeitszeitnachweis {person.full_name}",
+        },
+    )
+
+
+@login_required
+def group_timesheets(request, group_id):
+    """Ein Nachweis je Mitglied einer Gruppe, alle auf einmal zum Drucken."""
+    group = require_group_read(request.user, group_id)
+
+    form, first_day, last_day = _sheet_range(request, group.month_start_day)
+    return render(
+        request,
+        "reporting/timesheet.html",
+        {
+            "form": form,
+            "sheets": timesheet.build_for_group(group, first_day, last_day),
+            "first_day": first_day,
+            "last_day": last_day,
+            "group": group,
+            "title": f"Arbeitszeitnachweise {group.name}",
+        },
+    )
