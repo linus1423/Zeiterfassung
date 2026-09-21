@@ -146,6 +146,12 @@ podman exec -it zeiterfassung-web python manage.py createsuperuser
 Danach wie im [README](../README.md) beschrieben unter `/admin/` anmelden und
 die Anmeldung über Keycloak oder Entra ID einrichten.
 
+### 7. Sicherung einrichten
+
+Wie die nächtliche Sicherung eingerichtet wird und wie der Weg zurück
+aussieht, steht unten unter [Sicherung und
+Rückspielen](#sicherung-und-rückspielen).
+
 ## Punkte, die rootless eine Rolle spielen
 
 **Benutzer im Container.** Das Image legt Benutzer und Gruppe `app` mit UID und
@@ -224,13 +230,6 @@ systemctl --user restart zeiterfassung-web.service
 
 Die Migrationen laufen beim Start des Webcontainers.
 
-**Sicherung**
-
-```bash
-podman exec zeiterfassung-db pg_dump -U zeiterfassung zeiterfassung \
-    | gzip > zeiterfassung-$(date +%F).sql.gz
-```
-
 **Geheimnis wechseln.** Podman-Secrets lassen sich nicht ändern, nur ersetzen:
 
 ```bash
@@ -242,6 +241,165 @@ systemctl --user start zeiterfassung-web.service
 
 Ein neuer `DJANGO_SECRET_KEY` macht alle Sitzungen ungültig, alle Nutzer
 müssen sich neu anmelden.
+
+## Sicherung und Rückspielen
+
+Arbeitszeitdaten müssen aufbewahrt werden, und eine Sicherung, die noch nie
+zurückgespielt wurde, ist keine. Deshalb steht hier der vollständige Weg hin
+und zurück.
+
+Beide Richtungen sind Management-Kommandos und laufen für PostgreSQL wie für
+SQLite:
+
+```bash
+python manage.py backup_database      # sichern
+python manage.py restore_database     # zurückspielen, fragt vorher nach
+```
+
+`backup_database` schreibt nach `BACKUP_DIR` eine Datei mit Zeitstempel im
+Namen (`zeiterfassung-20260921-023000.sql.gz` unter PostgreSQL,
+`…-023000.sqlite3` unter SQLite), meldet Pfad, Größe und Dauer und räumt
+danach alte Sicherungen weg. Geht etwas schief, endet es mit einem
+Rückgabewert ungleich null — ein Timer oder Cronjob merkt den Ausfall also.
+
+| Einstellung | Bedeutung |
+|---|---|
+| `BACKUP_DIR` | Zielverzeichnis, wird mit Rechten 0700 angelegt |
+| `BACKUP_KEEP` | so viele Sicherungen bleiben liegen, 0 heißt unbegrenzt |
+| `BACKUP_KEEP_DAYS` | zusätzliche Altersgrenze in Tagen, 0 schaltet sie ab |
+| `BACKUP_PG_DUMP`, `BACKUP_PSQL` | nur nötig, wenn die Werkzeuge nicht im `PATH` stehen |
+
+Beide Grenzen gelten nebeneinander, und die jeweils neueste Sicherung wird nie
+entfernt: eine zu knapp eingestellte Altersgrenze soll nicht den letzten Stand
+wegräumen. Aufgeräumt werden ausschließlich Dateien im Zielverzeichnis, deren
+Name zum Schema passt; alles andere bleibt liegen.
+
+Die Dateien gehören nur dem Benutzer (0600). Sie enthalten sämtliche
+personenbezogenen Daten der Zeiterfassung und sind entsprechend zu behandeln.
+
+**Was die Sicherung nicht enthält.** Nur die Datenbank. Die Konfiguration ist
+getrennt zu sichern, sonst steht man mit einem Dump da, den man nicht
+einspielen kann:
+
+* `~/.config/zeiterfassung/zeiterfassung.env`
+* die Podman-Secrets (`zeiterfassung-django-secret-key`,
+  `zeiterfassung-database-url`, `zeiterfassung-db-password`) — sie lassen sich
+  nicht auslesen, sie gehören in den Passwortspeicher
+* die Unit-Dateien, falls sie von denen im Repository abweichen
+
+Der `DJANGO_SECRET_KEY` gehört dazu: mit einem anderen Schlüssel sind nach dem
+Rückspielen alle Sitzungen ungültig.
+
+### Verzeichnis und Timer einrichten
+
+Gesichert wird in ein Verzeichnis auf dem Host, damit die Sicherung einen
+verlorenen Container überlebt. Rootless muss es dem Benutzer aus dem Container
+gehören:
+
+```bash
+mkdir -p ~/zeiterfassung-sicherungen
+podman unshare chown 10001:10001 ~/zeiterfassung-sicherungen
+chmod 700 ~/zeiterfassung-sicherungen
+
+install -Dm644 -t ~/.config/containers/systemd/ \
+    deploy/quadlet/zeiterfassung-backup.container
+install -Dm644 -t ~/.config/systemd/user/ \
+    deploy/quadlet/zeiterfassung-backup.timer
+
+systemctl --user daemon-reload
+systemctl --user enable --now zeiterfassung-backup.timer
+```
+
+Der Timer läuft nachts um halb drei und holt einen ausgefallenen Lauf nach.
+Von Hand auslösen und nachsehen:
+
+```bash
+systemctl --user start zeiterfassung-backup.service
+journalctl --user -u zeiterfassung-backup --since today
+ls -l ~/zeiterfassung-sicherungen
+```
+
+Das Verzeichnis liegt weiterhin auf demselben Server wie die Datenbank. Eine
+Sicherung, die denselben Plattenschaden abbekommt, hilft nicht: von dort aus
+gehört sie regelmäßig weg, etwa mit `rsync` oder `restic` auf einen anderen
+Rechner.
+
+### Zurückspielen
+
+```bash
+systemctl --user stop zeiterfassung-web.service zeiterfassung-scheduler.timer
+
+podman run --rm -it \
+    --network zeiterfassung.network \
+    --env-file ~/.config/zeiterfassung/zeiterfassung.env \
+    --env DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key \
+    --env DATABASE_URL_FILE=/run/secrets/database-url \
+    --env BACKUP_DIR=/sicherungen \
+    --secret zeiterfassung-django-secret-key,type=mount,target=django-secret-key \
+    --secret zeiterfassung-database-url,type=mount,target=database-url \
+    --volume ~/zeiterfassung-sicherungen:/sicherungen:Z \
+    localhost/zeiterfassung:latest \
+    python manage.py restore_database
+
+systemctl --user start zeiterfassung-web.service zeiterfassung-scheduler.timer
+```
+
+Ohne `--file` wird die neueste Sicherung im Verzeichnis genommen; mit
+`--file /sicherungen/zeiterfassung-20260921-023000.sql.gz` eine bestimmte.
+Vor dem Überschreiben zeigt das Kommando Datei, Größe und Ziel und will ein
+`ja` hören. Für ein Skript gibt es `--noinput`, dann läuft es ohne Rückfrage
+durch — das ist der Schalter, mit dem man sich den Datenbestand still
+überschreibt, also mit Bedacht.
+
+Den Webdienst vorher anzuhalten ist wichtig: unter PostgreSQL wird der Dump in
+einer einzigen Transaktion eingespielt (`ON_ERROR_STOP`,
+`--single-transaction`), und was währenddessen noch gestempelt wird, ist
+danach weg.
+
+Stammt die Sicherung aus einer älteren Version, fehlen anschließend die
+neueren Migrationen. Der Webcontainer wendet sie beim nächsten Start selbst
+an; von Hand geht es mit `podman exec zeiterfassung-web python manage.py
+migrate`.
+
+### Einmal ausprobieren
+
+Eine Sicherung, deren Rückspielen noch nie jemand versucht hat, ist eine
+Vermutung. Der Durchgang dauert ein paar Minuten:
+
+1. `systemctl --user start zeiterfassung-backup.service` und nachsehen, dass
+   eine Datei mit plausibler Größe entstanden ist.
+2. Im Tool etwas erfassen, das man wiedererkennt — eine Stempelung mit einer
+   auffälligen Uhrzeit.
+3. Die Sicherung von Schritt 1 zurückspielen.
+4. Nachsehen, dass die Stempelung aus Schritt 2 wieder weg ist. Dann hat das
+   Rückspielen wirklich funktioniert und nicht nur der Befehl.
+
+Wer das nicht im Betrieb machen will, macht es auf einem zweiten Rechner mit
+einer Kopie der Sicherung. Dann taugt der Durchgang gleich als Probe für den
+Ernstfall, in dem der erste Rechner nicht mehr da ist.
+
+### Ohne Podman
+
+Dieselben Kommandos laufen unter Compose und in einer gewöhnlichen
+Installation:
+
+```bash
+docker compose exec web python manage.py backup_database
+python manage.py backup_database --dir /srv/sicherungen --keep 30
+python manage.py restore_database --file /srv/sicherungen/zeiterfassung-20260921-023000.sql.gz
+```
+
+`pg_dump` und `psql` müssen dort vorhanden sein, wo das Kommando läuft, und
+mindestens so neu sein wie der Server. Das Image bringt sie mit (Bauargument
+`POSTGRES_CLIENT_VERSION`, Vorgabe 16). In der Entwicklung mit SQLite werden
+keine externen Werkzeuge gebraucht: dort wird mit `VACUUM INTO` gesichert, was
+auch dann einen stimmigen Stand ergibt, wenn nebenbei geschrieben wird.
+
+Das Passwort der Datenbank steht bei keinem der beiden Kommandos in der
+Kommandozeile und damit nicht in der Prozessliste: es wird `pg_dump` und
+`psql` über eine kurzlebige Datei mit Rechten 0600 gereicht (`PGPASSFILE`).
+Auch in der Ausgabe taucht es nicht auf; eine Fehlermeldung der Werkzeuge wird
+vorher geschwärzt.
 
 ## Statt rootless als root
 

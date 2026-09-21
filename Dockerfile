@@ -5,9 +5,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+# libpq5 braucht psycopg. pg_dump und psql brauchen "manage.py
+# backup_database" und "manage.py restore_database" (siehe
+# docs/podman-quadlet.md). Sie kommen aus dem PGDG-Repo, weil Debian bookworm
+# nur Version 15 mitbringt und pg_dump einen neueren Server ablehnt;
+# POSTGRES_CLIENT_VERSION muss deshalb mindestens so hoch sein wie die
+# Version der Datenbank (Vorgabe hier wie dort: 16).
+ARG POSTGRES_CLIENT_VERSION=16
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libpq5 ca-certificates gnupg; \
+    python -c "import sys, urllib.request; sys.stdout.buffer.write(urllib.request.urlopen('https://www.postgresql.org/media/keys/ACCC4CF8.asc').read())" > /tmp/pgdg.asc; \
+    gpg --dearmor -o /usr/share/keyrings/pgdg.gpg < /tmp/pgdg.asc; \
+    rm /tmp/pgdg.asc; \
+    . /etc/os-release; \
+    echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends "postgresql-client-${POSTGRES_CLIENT_VERSION}"; \
+    apt-get purge -y gnupg; \
+    rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

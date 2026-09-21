@@ -1,0 +1,42 @@
+# Sicherung der Datenbank (Issue 53). Gestartet wird die Unit nur vom
+# zugehörigen Timer, deshalb absichtlich ohne [Install].
+#
+# Geschrieben wird nach /sicherungen; das ist ein Verzeichnis auf dem Host,
+# damit die Sicherung einen verlorenen Container überlebt und sich von dort
+# an einen anderen Ort kopieren lässt. Anlegen und freigeben:
+#
+#   mkdir -p ~/zeiterfassung-sicherungen
+#   podman unshare chown 10001:10001 ~/zeiterfassung-sicherungen
+[Unit]
+Description=Sicherung der Zeiterfassung
+Requires=zeiterfassung-db.service
+After=zeiterfassung-db.service
+
+[Container]
+ContainerName=zeiterfassung-backup
+Image=localhost/zeiterfassung:latest
+Network=zeiterfassung.network
+
+EnvironmentFile=%h/.config/zeiterfassung/zeiterfassung.env
+Environment=DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key
+Environment=DATABASE_URL_FILE=/run/secrets/database-url
+Environment=BACKUP_DIR=/sicherungen
+Secret=zeiterfassung-django-secret-key,type=mount,target=django-secret-key
+Secret=zeiterfassung-database-url,type=mount,target=database-url
+
+# Das einzige Verzeichnis, in das dieser Container schreiben darf.
+Volume=%h/zeiterfassung-sicherungen:/sicherungen:Z
+
+ReadOnly=true
+# pg_dump legt sein Passwort in einer kurzlebigen Datei unter /tmp ab.
+Tmpfs=/tmp
+NoNewPrivileges=true
+DropCapability=ALL
+
+# Kein Webserver in diesem Container, also auch nichts anzufragen.
+HealthCmd=none
+
+Exec=python manage.py backup_database
+
+[Service]
+Type=oneshot

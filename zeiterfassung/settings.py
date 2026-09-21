@@ -67,6 +67,8 @@ env = environ.Env(
     MAX_OPEN_ENTRY_HOURS=(int, 16),
     STATUTORY_BREAK_WARNINGS=(bool, True),
     DATA_RETENTION_MONTHS=(int, 24),
+    BACKUP_KEEP=(int, 14),
+    BACKUP_KEEP_DAYS=(int, 0),
     CORRECTION_EMAILS_ENABLED=(bool, False),
     REMINDER_EMAILS_ENABLED=(bool, False),
     OPEN_ENTRY_REMINDER_HOURS=(int, 10),
@@ -347,6 +349,20 @@ OPEN_ENTRY_REMINDER_HOURS = env("OPEN_ENTRY_REMINDER_HOURS")
 PENDING_CORRECTION_REMINDER_DAYS = env("PENDING_CORRECTION_REMINDER_DAYS")
 # Frist nach Ende eines Zeitraums, nach der an den Abschluss erinnert wird.
 PERIOD_CLOSING_REMINDER_DAYS = env("PERIOD_CLOSING_REMINDER_DAYS")
+
+# --- Sicherung der Datenbank (Issue 53) ------------------------------------
+# Wohin "manage.py backup_database" schreibt. Im Container gehört das auf ein
+# eingehängtes Verzeichnis, sonst liegt die Sicherung im Container und ist
+# beim nächsten Neubau weg.
+BACKUP_DIR = Path(env("BACKUP_DIR", default=str(BASE_DIR / "backups")))
+# So viele Sicherungen bleiben liegen, 0 bedeutet unbegrenzt.
+BACKUP_KEEP = env("BACKUP_KEEP")
+# Zusätzliche Altersgrenze in Tagen, 0 schaltet sie ab. Die jeweils neueste
+# Sicherung wird nie entfernt, auch wenn sie älter ist.
+BACKUP_KEEP_DAYS = env("BACKUP_KEEP_DAYS")
+# Pfad oder Name der PostgreSQL-Werkzeuge, falls sie nicht im PATH stehen.
+BACKUP_PG_DUMP = env("BACKUP_PG_DUMP", default="pg_dump")
+BACKUP_PSQL = env("BACKUP_PSQL", default="psql")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

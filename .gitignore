@@ -219,3 +219,6 @@ __marimo__/
 
 # Projekt: gesammelte statische Dateien
 staticfiles/
+
+# Projekt: Sicherungen der Datenbank
+backups/
