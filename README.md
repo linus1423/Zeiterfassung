@@ -239,6 +239,33 @@ Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht
 den Hinweis auf der Stempeluhr und kann eine Korrektur beantragen.
 
+### Zeiten aus CSV importieren
+
+Bei der Einführung kommt fast immer eine Liste aus dem Altsystem mit. Ein
+System-Admin lädt sie unter „Import“ hoch; dort gibt es auch eine
+Beispieldatei mit Kopfzeile. Das Hochladen prüft nur und zeigt Zeilenzahl,
+erkannte Nutzer und Gruppen sowie jeden Fehler mit Zeilennummer. Geschrieben
+wird erst im zweiten Schritt, und nur dann, wenn keine einzige Zeile
+fehlerhaft ist. Alles wird als `source=import` angelegt und steht im
+Protokoll.
+
+Dasselbe von der Kommandozeile aus:
+
+```bash
+python manage.py import_time_entries zeiten.csv                 # prüft nur
+python manage.py import_time_entries zeiten.csv --uebernehmen \
+    --akteur system@example.com                                 # schreibt
+```
+
+Erwartet wird deutsches CSV (Semikolon, UTF-8). Spalten: `Personalnummer`
+oder `E-Mail`, `Gruppe`, `Tätigkeit`, `Datum`, `Beginn`, `Ende`, `Pausen`,
+`Notiz`; Pflicht sind `Gruppe`, `Beginn`, `Ende` und eine Spalte zur Person.
+Beginn und Ende dürfen `TT.MM.JJJJ HH:MM` heißen oder nur `HH:MM`, wenn es
+eine Spalte `Datum` gibt; ein Ende vor dem Beginn zählt dann als Folgetag.
+`Pausen` ist entweder eine Dauer (`30` oder `0:30`, sie wird mittig in die
+Arbeitszeit gelegt) oder ein Zeitraum wie `11:30-12:00`, mehrere durch Komma
+getrennt.
+
 ### Aufbewahrung
 
 Arbeitszeitdaten sind personenbezogen und werden nicht unbegrenzt aufbewahrt.
@@ -273,7 +300,7 @@ Dieselben Schritte laufen in GitHub Actions bei jedem Push
 zeiterfassung/      Einstellungen, URLs, WSGI, Health-Endpunkte
 apps/accounts/      Nutzermodell, OIDC-Anbindung
 apps/groups/        Gruppen, Mitgliedschaften, Tätigkeiten, Zeiträume, Rechteprüfung
-apps/tracking/      Zeiteinträge, Pausen, Stempel-Logik
+apps/tracking/      Zeiteinträge, Pausen, Stempel-Logik, CSV-Import
 apps/corrections/   Korrekturanträge und deren Ablauf
 apps/reporting/     Auswertung, Spaltenauswahl, Export nach Excel und CSV
 apps/audit/         unveränderliches Protokoll aller Änderungen
