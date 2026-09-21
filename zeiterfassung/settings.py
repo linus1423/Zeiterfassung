@@ -66,6 +66,7 @@ env = environ.Env(
     DJANGO_BEHIND_PROXY=(bool, False),
     MAX_OPEN_ENTRY_HOURS=(int, 16),
     STATUTORY_BREAK_WARNINGS=(bool, True),
+    STATUTORY_LIMIT_WARNINGS=(bool, True),
     DATA_RETENTION_MONTHS=(int, 24),
     CORRECTION_EMAILS_ENABLED=(bool, False),
     REMINDER_EMAILS_ENABLED=(bool, False),
@@ -336,7 +337,12 @@ EMAIL_TIMEOUT = env("DJANGO_EMAIL_TIMEOUT")
 # als unvollständig markiert (Kapitel 4 der Spezifikation).
 MAX_OPEN_ENTRY_HOURS = env("MAX_OPEN_ENTRY_HOURS")
 # Hinweis auf gesetzliche Pausen, ohne automatischen Abzug (Rückfrage 7).
+# Gerechnet wird über den ganzen Tag, nicht über den einzelnen Eintrag.
 STATUTORY_BREAK_WARNINGS = env("STATUTORY_BREAK_WARNINGS")
+# Hinweis auf Höchstarbeitszeit (zehn Stunden am Tag, § 3 ArbZG) und Ruhezeit
+# (elf Stunden zwischen zwei Arbeitstagen, § 5 ArbZG), ebenfalls ohne Abzug
+# (Issue 49). Die Grenzwerte selbst stehen in apps/tracking/arbzg.py.
+STATUTORY_LIMIT_WARNINGS = env("STATUTORY_LIMIT_WARNINGS")
 # Aufbewahrungsfrist für personenbezogene Zeitdaten in Monaten (Issue 6).
 # Zwei Jahre entsprechen der üblichen Frist für Arbeitszeitnachweise.
 DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
