@@ -14,6 +14,7 @@
       {% if user.is_authenticated %}
         <a href="{% url 'tracking:clock' %}">Stempeluhr</a>
         <a href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
+        <a href="{% url 'tracking:confirm_period' %}">Zeitraum bestätigen</a>
         <a href="{% url 'corrections:mine' %}">Korrekturen{% if nav.new_decisions %} <span class="badge count">{{ nav.new_decisions }}</span>{% endif %}</a>
         {% if nav.reminders %}<a href="{% url 'reminders:list' %}">Hinweise <span class="badge count">{{ nav.reminders }}</span></a>{% endif %}
         {% if nav.is_group_admin or nav.is_accounting %}

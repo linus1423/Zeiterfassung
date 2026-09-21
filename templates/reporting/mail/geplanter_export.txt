@@ -1,0 +1,13 @@
+Guten Tag,
+
+anbei der geplante Export „{{ profile.name }}“ für {{ label }}.
+
+Zeitraum: {{ first_day|date:"d.m.Y" }} bis {{ last_day|date:"d.m.Y" }}
+Zeilen: {{ row_count }}
+Datei: {{ filename }}
+Verdichtung: {{ profile.get_grouping_display }}
+
+Der Export läuft nach dem Zeitplan, den {{ schedule.created_by.full_name }} in der
+Zeiterfassung hinterlegt hat: am {{ schedule.day_of_month }}. jedes Monats.
+
+Diese Nachricht kommt von der Zeiterfassung, eine Antwort darauf liest niemand.
