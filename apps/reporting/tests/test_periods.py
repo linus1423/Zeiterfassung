@@ -3,11 +3,9 @@
 from datetime import date, timedelta
 
 import pytest
-from django.urls import reverse
 from django.utils import timezone
 
 from apps.groups import closing
-from apps.groups.models import GroupMembership
 from apps.reporting import services
 from apps.reporting.columns import resolve
 from apps.tracking.models import TimeEntry
@@ -105,38 +103,3 @@ def test_the_period_columns_are_exportable(cycle_group, member):
     assert values[1] == "15.09.2026 bis 14.10.2026"
     assert values[2] == "15.09.2026"
     assert values[4] == "8,00"
-
-
-def test_the_export_page_lists_the_closed_periods(client, group, group_admin, accountant):
-    period = group.current_period().previous()
-    closing.close_period(group, period, group_admin)
-    client.force_login(accountant)
-
-    response = client.get(reverse("reporting:export"))
-    content = response.content.decode()
-
-    assert "Abgeschlossene Zeiträume" in content
-    assert period.start.strftime("%d.%m.%Y") in content
-
-
-def test_the_export_page_says_when_nothing_is_closed(client, accountant):
-    client.force_login(accountant)
-
-    response = client.get(reverse("reporting:export"))
-
-    assert "Bisher ist kein Zeitraum abgeschlossen." in response.content.decode()
-
-
-def test_an_admin_of_one_group_sees_only_that_close(client, group, other_group, make_user):
-    admin = make_user("werkstattadmin@example.com")
-    GroupMembership.objects.create(user=admin, group=group, role=GroupMembership.Role.ADMIN)
-    other_admin = make_user("bueroadmin@example.com")
-    GroupMembership.objects.create(
-        user=other_admin, group=other_group, role=GroupMembership.Role.ADMIN
-    )
-    closing.close_period(other_group, other_group.current_period().previous(), other_admin)
-    client.force_login(admin)
-
-    response = client.get(reverse("reporting:export"))
-
-    assert "Bisher ist kein Zeitraum abgeschlossen." in response.content.decode()

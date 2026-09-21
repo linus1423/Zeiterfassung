@@ -770,6 +770,27 @@ im Browser mit einem eigenen Druck-Stylesheet, das Navigation und Knöpfe
 ausblendet und je Person eine Seite beginnt; PDF bleibt wie in Rückfrage 21
 zurückgestellt.
 
+**Abschluss-Übersicht über alle Gruppen** (Issue 36). Die Auswertung zeigte je
+Gruppe den letzten Abschluss. Das beantwortet aber nicht die Frage, die den
+Monatslauf steuert: welche Gruppe hat den abgelaufenen Zeitraum noch nicht
+abgeschlossen, und woran hängt es dort. Unter Gruppen > Abschlüsse aller
+Gruppen steht jetzt eine Zeile je Gruppe mit dem zuletzt abgeschlossenen
+Zeitraum, dem ältesten abgelaufenen Zeitraum ohne Abschluss, der Zahl der
+offenen Korrekturanträge und der unvollständigen Einträge in genau diesem
+Zeitraum und dem Weg zur Abschluss-Seite der Gruppe.
+
+Gesucht wird je Gruppe nach ihrem eigenen Zyklus (`month_start_day`), beginnend
+beim ersten Tag mit einer erfassten Zeit; höchstens 120 Zeiträume zurück, damit
+ein versehentlich weit zurückliegender Eintrag die Suche nicht endlos macht.
+Die Zahlen entstehen für alle Gruppen zusammen in wenigen Abfragen
+(`apps/groups/overview.py`) und nicht je Gruppe einzeln.
+
+Sichtbar ist die Übersicht für Gruppen-Admins mit ihren Gruppen sowie für die
+Buchhaltung und System-Admins mit allen; abschließen darf sie dort niemand, das
+bleibt bei der Abschluss-Seite der Gruppe (Rückfrage 22). Der Block
+"Abgeschlossene Zeiträume" in der Auswertung verweist jetzt auf diese Übersicht,
+statt dieselbe Frage halb zu beantworten.
+
 ---
 
 ## 15. Gruppenwechsel (Issue 37)

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Abschlüsse{% endblock %}
+{% block content %}
+<h1>Abschlüsse</h1>
+<p>
+  {% if open_count %}
+    {{ open_count }} von {{ rows|length }} Gruppen haben einen abgelaufenen Zeitraum
+    noch nicht abgeschlossen.
+  {% else %}
+    Alle abgelaufenen Zeiträume sind abgeschlossen.
+  {% endif %}
+</p>
+<div class="card">
+  {% if rows %}
+    <div class="table-scroll">
+      <table>
+        <tr>
+          <th>Gruppe</th>
+          <th>Zuletzt abgeschlossen</th>
+          <th>Offen seit</th>
+          <th class="num">Anträge</th>
+          <th class="num">Unvollständig</th>
+          <th></th>
+        </tr>
+        {% for row in rows %}
+          <tr>
+            <td><a href="{% url 'groups:detail' row.group.pk %}">{{ row.group.name }}</a></td>
+            <td>
+              {% if row.last_lock %}
+                {{ row.last_lock.period.label }}
+                <span class="help">am {{ row.last_lock.closed_at|date:"d.m.Y" }}</span>
+              {% else %}
+                <span class="muted">noch keiner</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.pending %}
+                <span class="badge pending">{{ row.pending.label }}</span>
+              {% else %}
+                <span class="muted">nichts offen</span>
+              {% endif %}
+            </td>
+            <td class="num">{% if row.pending %}{{ row.open_requests }}{% else %}–{% endif %}</td>
+            <td class="num">
+              {% if row.pending %}{{ row.incomplete_entries }}{% else %}–{% endif %}
+            </td>
+            <td><a href="{% url 'groups:periods' row.group.pk %}">Abschluss</a></td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p class="help">
+      "Offen seit" ist der älteste abgelaufene Abrechnungszeitraum ohne Abschluss, je
+      Gruppe nach ihrem eigenen Zyklus. Die beiden Zahlen dahinter zählen die offenen
+      Korrekturanträge und die unvollständigen Einträge in genau diesem Zeitraum: das
+      ist die Arbeit, die vor dem Abschluss noch ansteht. Abschließen darf ein Admin
+      der Gruppe, die Buchhaltung liest nur mit.
+    </p>
+  {% else %}
+    <p class="muted">Es gibt keine Gruppe, deren Abschluss du sehen darfst.</p>
+  {% endif %}
+</div>
+{% endblock %}

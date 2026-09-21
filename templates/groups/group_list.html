@@ -2,6 +2,7 @@
 {% block title %}Gruppen{% endblock %}
 {% block content %}
 <h1>Gruppen</h1>
+<p><a href="{% url 'groups:closing_overview' %}">Abschlüsse aller Gruppen</a></p>
 {% if nav.is_superuser %}
 <p><a class="button primary" href="{% url 'groups:create' %}">Neue Gruppe</a></p>
 {% endif %}

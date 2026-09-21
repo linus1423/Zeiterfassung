@@ -7,6 +7,7 @@ app_name = "groups"
 urlpatterns = [
     path("", views.group_list, name="list"),
     path("neu/", views.group_create, name="create"),
+    path("abschluesse/", views.closing_overview, name="closing_overview"),
     path("wechsel/", views.change_list, name="change_list"),
     path("wechsel/eingang/", views.change_inbox, name="change_inbox"),
     path("wechsel/<int:change_id>/", views.change_decide, name="change_decide"),
