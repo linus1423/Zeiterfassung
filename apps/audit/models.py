@@ -34,6 +34,8 @@ class AuditLog(models.Model):
         GROUP_CHANGE_REJECTED = "group_change_rejected", "Gruppenwechsel abgelehnt"
         GROUP_CHANGE_WITHDRAWN = "group_change_withdrawn", "Gruppenwechsel zurückgezogen"
         NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
+        EMERGENCY_LOGIN = "emergency_login", "Notfallzugang genutzt"
+        EMERGENCY_LOGIN_FAILED = "emergency_login_failed", "Notfallzugang gescheitert"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
