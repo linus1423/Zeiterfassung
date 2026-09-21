@@ -66,6 +66,7 @@ env = environ.Env(
     DJANGO_BEHIND_PROXY=(bool, False),
     MAX_OPEN_ENTRY_HOURS=(int, 16),
     STATUTORY_BREAK_WARNINGS=(bool, True),
+    STATUTORY_LIMIT_WARNINGS=(bool, True),
     DATA_RETENTION_MONTHS=(int, 24),
     BACKUP_KEEP=(int, 14),
     BACKUP_KEEP_DAYS=(int, 0),
@@ -73,6 +74,7 @@ env = environ.Env(
     REMINDER_EMAILS_ENABLED=(bool, False),
     OPEN_ENTRY_REMINDER_HOURS=(int, 10),
     PENDING_CORRECTION_REMINDER_DAYS=(int, 3),
+    PENDING_CORRECTION_ESCALATION_DAYS=(int, 14),
     PERIOD_CLOSING_REMINDER_DAYS=(int, 3),
     DJANGO_EMAIL_PORT=(int, 587),
     DJANGO_EMAIL_USE_TLS=(bool, True),
@@ -338,7 +340,12 @@ EMAIL_TIMEOUT = env("DJANGO_EMAIL_TIMEOUT")
 # als unvollständig markiert (Kapitel 4 der Spezifikation).
 MAX_OPEN_ENTRY_HOURS = env("MAX_OPEN_ENTRY_HOURS")
 # Hinweis auf gesetzliche Pausen, ohne automatischen Abzug (Rückfrage 7).
+# Gerechnet wird über den ganzen Tag, nicht über den einzelnen Eintrag.
 STATUTORY_BREAK_WARNINGS = env("STATUTORY_BREAK_WARNINGS")
+# Hinweis auf Höchstarbeitszeit (zehn Stunden am Tag, § 3 ArbZG) und Ruhezeit
+# (elf Stunden zwischen zwei Arbeitstagen, § 5 ArbZG), ebenfalls ohne Abzug
+# (Issue 49). Die Grenzwerte selbst stehen in apps/tracking/arbzg.py.
+STATUTORY_LIMIT_WARNINGS = env("STATUTORY_LIMIT_WARNINGS")
 # Aufbewahrungsfrist für personenbezogene Zeitdaten in Monaten (Issue 6).
 # Zwei Jahre entsprechen der üblichen Frist für Arbeitszeitnachweise.
 DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
@@ -347,6 +354,10 @@ DATA_RETENTION_MONTHS = env("DATA_RETENTION_MONTHS")
 OPEN_ENTRY_REMINDER_HOURS = env("OPEN_ENTRY_REMINDER_HOURS")
 # Frist, nach der ein offener Korrekturantrag die Admins erinnert.
 PENDING_CORRECTION_REMINDER_DAYS = env("PENDING_CORRECTION_REMINDER_DAYS")
+# Zweite, längere Frist: danach erfahren zusätzlich die System-Admins von dem
+# liegengebliebenen Antrag (Issue 58). Gehört deutlich über die erste Frist,
+# sonst eskaliert ein Antrag, den die Gruppe noch gar nicht gesehen hat.
+PENDING_CORRECTION_ESCALATION_DAYS = env("PENDING_CORRECTION_ESCALATION_DAYS")
 # Frist nach Ende eines Zeitraums, nach der an den Abschluss erinnert wird.
 PERIOD_CLOSING_REMINDER_DAYS = env("PERIOD_CLOSING_REMINDER_DAYS")
 

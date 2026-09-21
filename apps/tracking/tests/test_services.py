@@ -112,18 +112,6 @@ def test_close_stale_entries_keeps_fresh_entries(member, group, activity):
     assert TimeEntry.objects.open().filter(user=member).exists()
 
 
-@pytest.mark.parametrize(
-    ("worked_hours", "break_minutes", "expected"),
-    [(5, 0, False), (7, 10, True), (7, 35, False), (10, 40, True), (10, 50, False)],
-)
-def test_statutory_break_warning(worked_hours, break_minutes, expected):
-    warning = services.statutory_break_warning(
-        timedelta(hours=worked_hours), timedelta(minutes=break_minutes)
-    )
-
-    assert bool(warning) is expected
-
-
 def test_close_stale_entries_keeps_a_running_break_inside_the_entry(member, group, activity):
     start = timezone.now() - timedelta(hours=20)
     entry = TimeEntry.objects.create(user=member, group=group, activity=activity, start=start)

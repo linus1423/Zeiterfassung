@@ -7,9 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.groups.models import Activity, Group, GroupMembership
-from apps.groups.periods import member_start_day
+from apps.groups.periods import member_start_day, quick_range
 from apps.tracking.models import TimeEntry
-from apps.tracking.views import _quick_range
 
 
 @pytest.fixture
@@ -141,7 +140,7 @@ def test_default_period_is_the_calendar_month_with_mixed_cycles(member, make_use
 def test_quick_range_month_uses_the_cycle():
     from datetime import date
 
-    start, end = _quick_range("monat", 15, date(2026, 9, 20))
+    start, end = quick_range("monat", 15, date(2026, 9, 20))
 
     assert start == date(2026, 9, 15)
     assert end == date(2026, 9, 20)

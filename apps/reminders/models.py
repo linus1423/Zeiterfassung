@@ -31,6 +31,7 @@ class Reminder(models.Model):
         OPEN_ENTRY = "open_entry", "Ausstempeln vergessen"
         PENDING_CORRECTION = "pending_correction", "Antrag liegt offen"
         PERIOD_CLOSING = "period_closing", "Zeitraum noch nicht abgeschlossen"
+        CORRECTION_ESCALATION = "correction_escalation", "Antrag bleibt liegen"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

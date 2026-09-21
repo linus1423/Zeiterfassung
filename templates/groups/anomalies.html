@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Auffälligkeiten · {{ group.name }}{% endblock %}
+{% block content %}
+<h1>Auffälligkeiten</h1>
+<p>
+  <a href="{% url 'groups:detail' group.pk %}">{{ group.name }}</a>
+  · <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
+</p>
+<p class="help">
+  Verletzte Regeln des Arbeitszeitgesetzes vom {{ start_day|date:"d.m.Y" }} bis
+  {{ end_day|date:"d.m.Y" }}. Gerechnet wird über den ganzen Tag und über alle Einträge
+  einer Person zusammen, nicht über den einzelnen Eintrag.
+</p>
+
+<div class="card">
+  <form method="get" class="grid two">
+    {{ form.as_p }}
+    <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
+  </form>
+</div>
+
+<div class="card">
+  {% if rows %}
+    <p>{{ rows|length }} Auffälligkeiten bei {{ people }} Personen.</p>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Person</th><th>Tag</th><th>Regel</th><th>Wert</th></tr>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.user.full_name }}</td>
+            <td>{{ row.day|date:"d.m.Y" }}</td>
+            <td>{{ row.rule_label }}</td>
+            <td>{{ row.value_text }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% elif not checks_enabled %}
+    <p class="muted">Die Prüfung ist in dieser Installation abgeschaltet.</p>
+  {% else %}
+    <p class="muted">In diesem Zeitraum ist nichts aufgefallen.</p>
+  {% endif %}
+</div>
+
+<p class="help">
+  Geprüft werden die Pause (ab sechs Stunden Arbeitszeit 30 Minuten, ab neun Stunden 45
+  Minuten, § 4 ArbZG), die Höchstarbeitszeit von zehn Stunden am Tag (§ 3 ArbZG) und die
+  Ruhezeit von elf Stunden zwischen Feierabend und dem nächsten Beginn (§ 5 ArbZG).
+  Abgezogen oder gekappt wird nichts: die Liste ist ein Hinweis, entscheiden müssen
+  Menschen. Gezählt werden nur die Zeiten dieser Gruppe; wer am selben Tag auch in einer
+  anderen Gruppe gearbeitet hat, kommt dort in einer eigenen Liste vor.
+</p>
+{% endblock %}
