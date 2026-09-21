@@ -1,0 +1,20 @@
+# Diese Datei gehört NICHT in das Quadlet-Verzeichnis, sondern zu den
+# gewöhnlichen systemd-Units:
+#   rootless: ~/.config/systemd/user/
+#   als root: /etc/systemd/system/
+# Quadlet erzeugt aus zeiterfassung-backup.container die Unit
+# zeiterfassung-backup.service, die dieser Timer startet.
+[Unit]
+Description=Die Zeiterfassung nächtlich sichern
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+# Nicht alle Installationen zur selben Minute.
+RandomizedDelaySec=10m
+# Eine Sicherung nachholen, die während einer Auszeit des Servers ausgefallen
+# ist. Sonst fehlt genau der Tag, an dem der Server Ärger gemacht hat.
+Persistent=true
+Unit=zeiterfassung-backup.service
+
+[Install]
+WantedBy=timers.target

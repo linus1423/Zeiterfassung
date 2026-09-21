@@ -220,5 +220,8 @@ __marimo__/
 # Projekt: gesammelte statische Dateien
 staticfiles/
 
+# Projekt: Sicherungen der Datenbank
+backups/
+
 # Arbeitsverzeichnisse der Claude-Agenten (Scratch, gehört nicht ins Repository)
 .claude/

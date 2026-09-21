@@ -360,6 +360,32 @@ Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht
 den Hinweis auf der Stempeluhr und kann eine Korrektur beantragen.
 
+### Sicherung und Rückspielen
+
+```bash
+python manage.py backup_database      # sichern
+python manage.py restore_database     # zurückspielen, fragt vorher nach
+```
+
+`backup_database` schreibt nach `BACKUP_DIR` eine Datei mit Zeitstempel im
+Namen, meldet Pfad, Größe und Dauer und räumt ältere Sicherungen weg
+(`BACKUP_KEEP` nach Anzahl, `BACKUP_KEEP_DAYS` nach Alter; die neueste bleibt
+immer liegen). Bei einem Fehler endet es mit einem Rückgabewert ungleich null,
+damit ein Timer oder Cronjob den Ausfall meldet. Unter PostgreSQL läuft das
+über `pg_dump` und `psql`, unter SQLite über `VACUUM INTO`; das Passwort der
+Datenbank steht dabei weder in der Prozessliste noch in der Ausgabe.
+
+`restore_database` nimmt ohne `--file` die neueste Sicherung, zeigt vorher
+Datei, Größe und Ziel und will ein `ja` hören. `--noinput` übergeht die
+Rückfrage für Skripte.
+
+Gesichert wird nur die Datenbank. Die Konfiguration — `.env` beziehungsweise
+`zeiterfassung.env`, die Secrets und der `DJANGO_SECRET_KEY` — gehört getrennt
+gesichert, sonst nützt der beste Dump nichts. Den Weg hin und zurück,
+einschließlich Timer und einer Anleitung zum einmaligen Ausprobieren,
+beschreibt
+[docs/podman-quadlet.md](docs/podman-quadlet.md#sicherung-und-rückspielen).
+
 ### Zeiten aus CSV importieren
 
 Bei der Einführung kommt fast immer eine Liste aus dem Altsystem mit. Ein
