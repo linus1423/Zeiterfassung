@@ -37,7 +37,7 @@ def _visible_profiles(user):
 
 @login_required
 def export_view(request, profile_id=None):
-    """Auswertung mit Vorschau und Download als Excel oder CSV."""
+    """Export mit Vorschau und Download als Excel oder CSV."""
     _require_reporting_access(request.user)
 
     profile = None
@@ -59,14 +59,7 @@ def export_view(request, profile_id=None):
     columns = []
     if request.method == "POST" and form.is_valid():
         columns = resolve(form.ordered_columns())
-        entries = services.query_entries(
-            request.user,
-            start=form.cleaned_data["start"],
-            end=form.cleaned_data["end"],
-            group_ids=[group.pk for group in form.cleaned_data["groups"]],
-            user_ids=[user.pk for user in form.cleaned_data["users"]],
-            activity_ids=[activity.pk for activity in form.cleaned_data["activities"]],
-        )
+        entries = services.query_entries(request.user, **form.selection())
         closed = ClosedPeriods(readable_groups(request.user).values_list("pk", flat=True))
         rows = services.build_rows(
             entries,
@@ -152,12 +145,14 @@ def _save_profile(request, form):
         messages.error(request, "Bitte einen Namen für die Vorlage angeben.")
         return redirect("reporting:export")
 
+    selection = form.selection()
     filters = {
-        "start": form.cleaned_data["start"].isoformat(),
-        "end": form.cleaned_data["end"].isoformat(),
-        "groups": [group.pk for group in form.cleaned_data["groups"]],
-        "users": [user.pk for user in form.cleaned_data["users"]],
-        "activities": [activity.pk for activity in form.cleaned_data["activities"]],
+        "start": selection["start"].isoformat(),
+        "end": selection["end"].isoformat(),
+        "groups": selection["group_ids"],
+        "users": selection["user_ids"],
+        "activities": selection["activity_ids"],
+        "cost_centers": selection["cost_centers"],
         "csv_dialect": form.cleaned_data.get("csv_dialect") or "de",
     }
     ExportProfile.objects.update_or_create(

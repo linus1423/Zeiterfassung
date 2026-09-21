@@ -12,6 +12,7 @@ from collections import OrderedDict
 from collections.abc import Iterable, Iterator
 from datetime import date, time
 
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.groups.closing import ClosedPeriods
@@ -31,6 +32,35 @@ MONTHS = MONTH_NAMES
 # werden sie in beiden Formaten entschärft.
 _RISKY_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
+# Gruppen ohne hinterlegte Kostenstelle werden nicht verschwiegen, sondern
+# bekommen eine eigene Zeile. Der Filterwert bleibt ASCII, weil er in der
+# Adresszeile und in gespeicherten Vorlagen steht.
+NO_COST_CENTER = "__ohne__"
+NO_COST_CENTER_LABEL = "ohne Kostenstelle"
+
+
+def cost_center_choices(groups) -> list[tuple[str, str]]:
+    """Die Kostenstellen der übergebenen Gruppen als Auswahl für ein Formular.
+
+    Gibt es Gruppen ohne Kostenstelle, kommt die Sammelzeile dazu; sonst
+    fehlte im Filter genau das, was sich sonst niemandem zuordnen lässt.
+    """
+    values = set(groups.values_list("cost_center", flat=True))
+    choices = [(value, value) for value in sorted(value for value in values if value)]
+    if "" in values:
+        choices.append((NO_COST_CENTER, NO_COST_CENTER_LABEL))
+    return choices
+
+
+def cost_center_filter(cost_centers: Iterable[str]) -> Q:
+    """Bedingung für den Kostenstellenfilter, samt Gruppen ohne Kostenstelle."""
+    wanted = list(cost_centers)
+    named = [value for value in wanted if value != NO_COST_CENTER]
+    condition = Q(group__cost_center__in=named) if named else Q(pk__in=[])
+    if NO_COST_CENTER in wanted:
+        condition |= Q(group__cost_center="")
+    return condition
+
 
 def query_entries(
     user,
@@ -40,6 +70,7 @@ def query_entries(
     group_ids: Iterable[int] | None = None,
     user_ids: Iterable[int] | None = None,
     activity_ids: Iterable[int] | None = None,
+    cost_centers: Iterable[str] | None = None,
 ):
     """Abgeschlossene Einträge im Zeitraum, begrenzt auf das, was der Nutzer lesen darf.
 
@@ -59,6 +90,8 @@ def query_entries(
         queryset = queryset.filter(user_id__in=list(user_ids))
     if activity_ids:
         queryset = queryset.filter(activity_id__in=list(activity_ids))
+    if cost_centers:
+        queryset = queryset.filter(cost_center_filter(cost_centers))
     return queryset
 
 
@@ -102,72 +135,89 @@ def _base_row(part: DayPart, closed: ClosedPeriods | None = None) -> dict:
     }
 
 
-def build_rows(
+# Felder, die zum Abrechnungszeitraum gehören und bei einer Verdichtung nach
+# Zeitraum unverändert übernommen werden können.
+_PERIOD_FIELDS = ("month", "year", "period_label", "period_start", "period_end")
+
+_PERSON_FIELDS = ("personnel_number", "last_name", "first_name", "full_name", "email")
+
+# Je Verdichtung: woraus der Schlüssel besteht und welche Felder der ersten
+# Zeile eines Topfes erhalten bleiben. Alles andere wäre in der verdichteten
+# Zeile nur der zufällige Wert des ersten Eintrags.
+_AGGREGATIONS: dict[str, tuple] = {
+    "user_day": (
+        lambda row: (row["email"], row["date"]),
+        (
+            *_PERSON_FIELDS,
+            "group",
+            "cost_center",
+            "date",
+            "weekday",
+            "week",
+            *_PERIOD_FIELDS,
+            "period_closed",
+        ),
+    ),
+    # Der Schlüssel ist der Abrechnungszeitraum, nicht der Kalendermonat:
+    # Gruppen mit eigenem Zyklus bleiben so getrennt (Issue 8).
+    "user_month": (
+        lambda row: (row["email"], row["period_start"], row["period_end"]),
+        (*_PERSON_FIELDS, *_PERIOD_FIELDS, "period_closed"),
+    ),
+    "user": (lambda row: (row["email"],), _PERSON_FIELDS),
+    "group": (lambda row: (row["group"],), ("group", "cost_center")),
+    "activity": (lambda row: (row["group"], row["activity"]), ("group", "cost_center", "activity")),
+    # Eine Kostenstelle kann an mehreren Gruppen hängen, deshalb bleibt der
+    # Gruppenname hier weg (Issue 57).
+    "cost_center": (lambda row: (row["cost_center"],), ("cost_center",)),
+    "cost_center_month": (
+        lambda row: (row["cost_center"], row["period_start"], row["period_end"]),
+        ("cost_center", *_PERIOD_FIELDS),
+    ),
+}
+
+# Verdichtungen, in denen eine Gruppe ohne Kostenstelle eine eigene, benannte
+# Zeile bekommt statt einer leeren.
+_COST_CENTER_AGGREGATIONS = ("cost_center", "cost_center_month")
+
+
+def base_rows(
     entries: Iterable[TimeEntry],
-    grouping: str,
     closed: ClosedPeriods | None = None,
     *,
     first_day: date | None = None,
     last_day: date | None = None,
 ) -> list[dict]:
-    """Baut die Exportzeilen in der gewünschten Verdichtung.
+    """Eine Zeile je Tagesanteil, noch ohne Verdichtung.
 
     Ein Eintrag über Mitternacht ergibt je berührtem Tag eine Zeile und zählt
     damit an beiden Tagen (Issue 32). Mit first_day und last_day bleibt nur
     der Anteil übrig, der im ausgewerteten Zeitraum liegt.
     """
-    rows = [_base_row(part, closed) for part in parts_in_range(entries, first_day, last_day)]
+    return [_base_row(part, closed) for part in parts_in_range(entries, first_day, last_day)]
+
+
+def aggregate(rows: list[dict], grouping: str) -> list[dict]:
+    """Verdichtet fertige Zeilen. "entry" heißt: gar nicht verdichten.
+
+    Ansicht und Export rechnen über diese eine Funktion, damit ihre Summen
+    nicht auseinanderlaufen können.
+    """
     if grouping == "entry":
         return rows
+    if grouping not in _AGGREGATIONS:
+        raise ValueError(f"Unbekannte Verdichtung: {grouping}")
+    key_of, keep = _AGGREGATIONS[grouping]
+    name_empty_cost_center = grouping in _COST_CENTER_AGGREGATIONS
 
     buckets: OrderedDict[tuple, dict] = OrderedDict()
     for row in rows:
-        if grouping == "user_day":
-            key = (row["email"], row["date"])
-            keep = (
-                "personnel_number",
-                "last_name",
-                "first_name",
-                "full_name",
-                "email",
-                "group",
-                "cost_center",
-                "date",
-                "weekday",
-                "week",
-                "month",
-                "year",
-                "period_label",
-                "period_start",
-                "period_end",
-                "period_closed",
-            )
-        elif grouping == "user_month":
-            # Der Schlüssel ist der Abrechnungszeitraum, nicht der Kalendermonat:
-            # Gruppen mit eigenem Zyklus bleiben so getrennt (Issue 8).
-            key = (row["email"], row["period_start"], row["period_end"])
-            keep = (
-                "personnel_number",
-                "last_name",
-                "first_name",
-                "full_name",
-                "email",
-                "month",
-                "year",
-                "period_label",
-                "period_start",
-                "period_end",
-                "period_closed",
-            )
-        elif grouping == "activity":
-            key = (row["group"], row["activity"])
-            keep = ("group", "cost_center", "activity")
-        else:
-            raise ValueError(f"Unbekannte Verdichtung: {grouping}")
-
+        key = key_of(row)
         bucket = buckets.get(key)
         if bucket is None:
             bucket = {field: row.get(field, "") for field in keep}
+            if name_empty_cost_center and not bucket.get("cost_center"):
+                bucket["cost_center"] = NO_COST_CENTER_LABEL
             bucket.update({"break_seconds": 0.0, "work_seconds": 0.0, "entry_count": 0})
             buckets[key] = bucket
         bucket["break_seconds"] += row["break_seconds"]
@@ -177,11 +227,25 @@ def build_rows(
     return list(buckets.values())
 
 
-def _hours(seconds: float) -> float:
+def build_rows(
+    entries: Iterable[TimeEntry],
+    grouping: str,
+    closed: ClosedPeriods | None = None,
+    *,
+    first_day: date | None = None,
+    last_day: date | None = None,
+) -> list[dict]:
+    """Baut die Exportzeilen in der gewünschten Verdichtung."""
+    return aggregate(base_rows(entries, closed, first_day=first_day, last_day=last_day), grouping)
+
+
+def to_hours(seconds: float) -> float:
+    """Dezimalstunden, auf zwei Stellen gerundet."""
     return round(seconds / 3600, 2)
 
 
-def _hhmm(seconds: float) -> str:
+def to_hhmm(seconds: float) -> str:
+    """Dauer als hh:mm, auf volle Minuten gerundet."""
     total_minutes = int(round(seconds / 60))
     return f"{total_minutes // 60}:{total_minutes % 60:02d}"
 
@@ -189,11 +253,11 @@ def _hhmm(seconds: float) -> str:
 def cell_value(row: dict, column: Column):
     """Rohwert einer Zelle, noch ohne Formatierung für ein bestimmtes Format."""
     if column.key == "hours":
-        return _hours(row.get("work_seconds", 0.0))
+        return to_hours(row.get("work_seconds", 0.0))
     if column.key == "hhmm":
-        return _hhmm(row.get("work_seconds", 0.0))
+        return to_hhmm(row.get("work_seconds", 0.0))
     if column.key == "break_hhmm":
-        return _hhmm(row.get("break_seconds", 0.0))
+        return to_hhmm(row.get("break_seconds", 0.0))
     return row.get(column.key, "")
 
 
@@ -206,11 +270,11 @@ def total_row(rows: list[dict], columns: list[Column]) -> list:
     values = []
     for index, column in enumerate(columns):
         if column.key == "hours":
-            values.append(_hours(work))
+            values.append(to_hours(work))
         elif column.key == "hhmm":
-            values.append(_hhmm(work))
+            values.append(to_hhmm(work))
         elif column.key == "break_hhmm":
-            values.append(_hhmm(pause))
+            values.append(to_hhmm(pause))
         elif column.key == "entry_count":
             values.append(count)
         elif index == 0:
