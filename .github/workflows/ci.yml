@@ -38,3 +38,114 @@ jobs:
 
       - name: Tests
         run: pytest
+
+
+  # Das Image bauen und einmal wirklich benutzen. Ohne diesen Schritt fiele
+  # erst im Betrieb auf, wenn das Dockerfile kaputt ist oder ein Werkzeug
+  # fehlt, das ein Kommando braucht: backup_database und restore_database
+  # gehen über pg_dump und psql, die im Image liegen müssen (Issue 53).
+  image:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: nur-fuer-die-ci-keine-produktion
+      DJANGO_SECRET_KEY: nur-fuer-die-ci-keine-produktion
+      DATENBANK: postgres://zeiterfassung:nur-fuer-die-ci-keine-produktion@zeiterfassung-ci-db:5432/zeiterfassung
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bauen
+        run: docker build --tag zeiterfassung:ci .
+
+      - name: Werkzeuge im Image vorhanden
+        run: |
+          set -eux
+          # WAIT_FOR_DATABASE=false: hier wird nur nachgesehen, was im Image
+          # liegt, der Einstiegspunkt soll dafür auf nichts warten.
+          werkzeug() { docker run --rm --env WAIT_FOR_DATABASE=false zeiterfassung:ci "$@"; }
+          # Die Hauptversion von pg_dump muss mindestens so hoch sein wie die
+          # der Datenbank, sonst verweigert es den Dienst.
+          version=$(werkzeug pg_dump --version | grep -oE '[0-9]+' | head -1)
+          test "$version" -ge 16
+          werkzeug psql --version
+          werkzeug gunicorn --version
+
+      - name: Netz und Datenbank starten
+        run: |
+          set -eux
+          docker network create zeiterfassung-ci
+          docker run --detach --name zeiterfassung-ci-db --network zeiterfassung-ci \
+            --env POSTGRES_DB=zeiterfassung \
+            --env POSTGRES_USER=zeiterfassung \
+            --env "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" \
+            postgres:16
+
+      - name: Container startet, migriert und antwortet
+        run: |
+          set -eux
+          docker run --detach --name zeiterfassung-ci-web --network zeiterfassung-ci \
+            --publish 127.0.0.1:8000:8000 \
+            --env DJANGO_DEBUG=false \
+            --env "DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}" \
+            --env DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost \
+            --env "DATABASE_URL=${DATENBANK}" \
+            --env RUN_MIGRATIONS=true \
+            zeiterfassung:ci
+          # /readyz statt /healthz: erst damit ist belegt, dass der Container
+          # die Datenbank auch wirklich erreicht und migriert hat.
+          ./.github/warte-auf-readyz.sh zeiterfassung-ci-web
+
+      - name: Sichern und zurückspielen
+        run: |
+          set -eux
+          mkdir -p sicherungen
+          # Im Container läuft alles unter UID 10001, das Verzeichnis gehört
+          # hier dem Benutzer der CI.
+          chmod 777 sicherungen
+          lauf() {
+            docker run --rm --network zeiterfassung-ci \
+              --env DJANGO_DEBUG=false \
+              --env "DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}" \
+              --env "DATABASE_URL=${DATENBANK}" \
+              --env BACKUP_DIR=/sicherungen \
+              --volume "${PWD}/sicherungen:/sicherungen" \
+              zeiterfassung:ci "$@"
+          }
+          lauf python manage.py backup_database
+          test -n "$(ls sicherungen)"
+          # Wie in der Anleitung: vor dem Rückspielen hält der Webdienst an.
+          docker stop zeiterfassung-ci-web
+          lauf python manage.py restore_database --noinput
+          docker start zeiterfassung-ci-web
+          ./.github/warte-auf-readyz.sh zeiterfassung-ci-web
+
+      - name: Aufräumen
+        if: always()
+        run: |
+          docker rm --force zeiterfassung-ci-web zeiterfassung-ci-db || true
+          docker network rm zeiterfassung-ci || true
+
+      - name: docker-compose.yml prüfen
+        run: |
+          set -eux
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Quadlet-Units prüfen
+        run: |
+          set -eux
+          quadlet=/usr/libexec/podman/quadlet
+          if [ ! -x "$quadlet" ]; then
+            echo "Podman mit Quadlet fehlt auf dem Läufer, die Units bleiben ungeprüft." >&2
+            exit 1
+          fi
+          # Nur die Dateitypen, die Quadlet kennt; die .timer sind gewöhnliche
+          # systemd-Units und gehören nicht in dieses Verzeichnis.
+          mkdir -p units
+          cp deploy/quadlet/*.container deploy/quadlet/*.network deploy/quadlet/*.volume units/
+          QUADLET_UNIT_DIRS="${PWD}/units" "$quadlet" -dryrun -user | tee generiert.txt
+          # Aus jeder Datei muss auch eine Unit geworden sein.
+          for erwartet in zeiterfassung-web.service zeiterfassung-db.service \
+                          zeiterfassung-scheduler.service zeiterfassung-backup.service \
+                          zeiterfassung-network.service zeiterfassung-pgdata-volume.service; do
+            grep -q "$erwartet" generiert.txt
+          done
