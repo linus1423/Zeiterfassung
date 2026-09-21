@@ -141,8 +141,18 @@ class ExportForm(ScopeForm):
 
 
 class ProfileSaveForm(forms.Form):
+    """Name und Sichtbarkeit einer gespeicherten Vorlage.
+
+    Die beiden Haken sind getrennt, damit eine Person, die Buchhalterin und
+    Gruppen-Admin zugleich ist, selbst entscheidet, wer die Vorlage bekommt
+    (Issue 72).
+    """
+
     name = forms.CharField(label="Name der Vorlage", max_length=120)
-    is_shared = forms.BooleanField(label="Mit der Buchhaltung teilen", required=False)
+    share_with_group_admins = forms.BooleanField(
+        label="Mit den Admins meiner Gruppen teilen", required=False
+    )
+    share_with_accounting = forms.BooleanField(label="Mit der Buchhaltung teilen", required=False)
 
 
 MAX_RECIPIENTS = 10

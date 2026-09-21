@@ -240,7 +240,8 @@ def _save_profile(request, form):
         owner=request.user,
         name=profile_form.cleaned_data["name"],
         defaults={
-            "is_shared": profile_form.cleaned_data["is_shared"],
+            "share_with_group_admins": profile_form.cleaned_data["share_with_group_admins"],
+            "share_with_accounting": profile_form.cleaned_data["share_with_accounting"],
             "columns": form.ordered_columns(),
             "grouping": form.cleaned_data["grouping"],
             "filters": filters,

@@ -192,7 +192,8 @@ setzt dessen `source` auf `correction`. Der Antrag bleibt als Beleg erhalten.
 |---|---|---|
 | `name` | Text | z. B. "Monatsabrechnung Lohnbüro" |
 | `owner` | FK User | wem die Vorlage gehört |
-| `is_shared` | bool | auch für andere Buchhaltungsnutzer sichtbar |
+| `share_with_group_admins` | bool | sichtbar für die Admins der Gruppen, die der Besitzer selbst verwaltet |
+| `share_with_accounting` | bool | sichtbar für alle Nutzer mit der Rolle Buchhaltung |
 | `columns` | JSON | Liste der Spalten in der gewünschten Reihenfolge |
 | `grouping` | Auswahl | `entry` (eine Zeile je Zeiteintrag), `user_day`, `user_month`, `activity` |
 | `filters` | JSON | Vorbelegung für Zeitraum, Gruppen, Nutzer, Tätigkeiten |
