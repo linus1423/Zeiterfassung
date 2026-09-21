@@ -14,7 +14,7 @@ from apps.tracking.daysplit import entries_in_range, parts_in_range
 from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
 
-from . import closing
+from . import closing, overview
 from .forms import (
     ActivityForm,
     AdminEntryForm,
@@ -38,6 +38,24 @@ def group_list(request):
         for group in groups
     ]
     return render(request, "groups/group_list.html", {"rows": rows})
+
+
+@login_required
+def closing_overview(request):
+    """Wo steht der Abschluss in allen lesbaren Gruppen (Issue 36)?"""
+    if not (request.user.sees_all_groups or request.user.is_any_group_admin):
+        raise PermissionDenied("Kein Zugriff auf die Abschluss-Übersicht.")
+
+    groups = readable_groups(request.user).order_by("name")
+    rows = overview.closing_overview(groups)
+    return render(
+        request,
+        "groups/closing_overview.html",
+        {
+            "rows": rows,
+            "open_count": sum(1 for row in rows if not row.is_up_to_date),
+        },
+    )
 
 
 @login_required

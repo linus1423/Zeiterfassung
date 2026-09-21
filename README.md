@@ -102,6 +102,13 @@ für diesen Zeitraum ab, auch bereits gestellte werden nicht mehr genehmigt.
 Ein exportierter Monat bleibt so, wie er exportiert wurde. Wieder öffnen kann
 den Abschluss nur ein System-Admin.
 
+Wo der Abschluss insgesamt steht, zeigt Gruppen > Abschlüsse aller Gruppen: je
+Gruppe der letzte Abschluss, der älteste abgelaufene Zeitraum ohne Abschluss
+und die Zahl der offenen Korrekturanträge und unvollständigen Einträge in genau
+diesem Zeitraum. Das ist die Liste für den Monatslauf. Gruppen-Admins sehen dort
+ihre Gruppen, die Buchhaltung und System-Admins alle; verlinkt ist die Seite
+auch aus der Auswertung. Abschließen darf weiterhin nur ein Admin der Gruppe.
+
 ## Arbeitszeitnachweis
 
 Zum Unterschreiben gibt es ein Blatt je Person und Zeitraum: eine Zeile pro

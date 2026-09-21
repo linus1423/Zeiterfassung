@@ -84,23 +84,15 @@
 {% endif %}
 <div class="card">
   <h2>Abgeschlossene Zeiträume</h2>
-  {% if closed_periods %}
-    <table>
-      <tr><th>Gruppe</th><th>Letzter Abschluss</th><th>Abgeschlossen am</th></tr>
-      {% for lock in closed_periods %}
-        <tr>
-          <td>{{ lock.group.name }}</td>
-          <td>{{ lock.period_start|date:"d.m.Y" }} bis {{ lock.period_end|date:"d.m.Y" }}</td>
-          <td>{{ lock.closed_at|date:"d.m.Y" }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-    <p class="help">
-      Für abgeschlossene Zeiträume nimmt das System keine Korrekturen mehr an, die
-      Zahlen bleiben also wie exportiert. Die Spalte "Abgeschlossen" zeigt das je Zeile.
-    </p>
-  {% else %}
-    <p class="muted">Bisher ist kein Zeitraum abgeschlossen.</p>
-  {% endif %}
+  <p>
+    Wo der Abschluss steht, zeigt die
+    <a href="{% url 'groups:closing_overview' %}">Übersicht über alle Gruppen</a>: je
+    Gruppe der letzte Abschluss, der älteste abgelaufene Zeitraum ohne Abschluss und
+    was dort noch offen ist.
+  </p>
+  <p class="help">
+    Für abgeschlossene Zeiträume nimmt das System keine Korrekturen mehr an, die
+    Zahlen bleiben also wie exportiert. Die Spalte "Abgeschlossen" zeigt das je Zeile.
+  </p>
 </div>
 {% endblock %}
