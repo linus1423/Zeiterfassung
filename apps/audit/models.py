@@ -17,6 +17,7 @@ class AuditLog(models.Model):
         AUTO_CLOSE = "auto_close", "Automatisch beendet"
         ENTRY_UPDATED = "entry_updated", "Zeiteintrag geändert"
         ENTRY_DELETED = "entry_deleted", "Zeiteintrag gelöscht"
+        ENTRIES_IMPORTED = "entries_imported", "Zeiten importiert"
         CORRECTION_REQUESTED = "correction_requested", "Korrektur beantragt"
         CORRECTION_APPROVED = "correction_approved", "Korrektur genehmigt"
         CORRECTION_REJECTED = "correction_rejected", "Korrektur abgelehnt"

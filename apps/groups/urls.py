@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:group_id>/", views.group_detail, name="detail"),
     path("<int:group_id>/einstellungen/", views.group_settings, name="settings"),
     path("<int:group_id>/abschluss/", views.period_list, name="periods"),
+    path("<int:group_id>/auffaelligkeiten/", views.anomalies, name="anomalies"),
     path("<int:group_id>/zeiten/neu/", views.entry_create, name="entry_create"),
     path("<int:group_id>/zeiten/<int:entry_id>/", views.entry_edit, name="entry_edit"),
     path("<int:group_id>/taetigkeiten/", views.activity_list, name="activities"),

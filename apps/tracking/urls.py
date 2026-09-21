@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import import_views, views
 
 app_name = "tracking"
 
@@ -13,4 +13,11 @@ urlpatterns = [
     path("stempeln/stop/", views.clock_out_view, name="clock_out"),
     path("meine-zeiten/", views.my_entries, name="my_entries"),
     path("zeitraum-bestaetigen/", views.confirm_period, name="confirm_period"),
+    path("zeiten-import/", import_views.import_entries, name="import_entries"),
+    path("zeiten-import/vorlage.csv", import_views.import_sample, name="import_sample"),
+    path(
+        "zeiten-import/<int:import_id>/uebernehmen/",
+        import_views.import_apply,
+        name="import_apply",
+    ),
 ]

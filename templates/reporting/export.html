@@ -1,7 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Auswertung und Export{% endblock %}
+{% block title %}Export{% endblock %}
 {% block content %}
-<h1>Auswertung und Export</h1>
+<h1>Export</h1>
+
+<p><a href="{% url 'reporting:summary' %}">Zurück zur Auswertung mit Summen und Diagramm</a></p>
 
 {% if profiles %}
 <div class="card">
@@ -35,6 +37,7 @@
       <div>{{ form.groups.label_tag }}{{ form.groups }}<p class="help">{{ form.groups.help_text }}</p></div>
       <div>{{ form.users.label_tag }}{{ form.users }}</div>
       <div>{{ form.activities.label_tag }}{{ form.activities }}</div>
+      <div>{{ form.cost_centers.label_tag }}{{ form.cost_centers }}<p class="help">{{ form.cost_centers.help_text }}</p></div>
       <div>{{ form.grouping.label_tag }}{{ form.grouping }}</div>
     </div>
   </div>

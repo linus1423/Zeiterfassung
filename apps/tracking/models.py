@@ -186,3 +186,45 @@ class BreakEntry(models.Model):
     @property
     def duration(self) -> timedelta:
         return elapsed(self.start, self.end or timezone.now())
+
+
+class EntryImport(models.Model):
+    """Ein Importlauf: die hochgeladene Datei, ihre Prüfung und ihr Ergebnis (Issue 54).
+
+    Der Import läuft in zwei Schritten, und zwischen Vorschau und Übernahme
+    muss die Datei irgendwo liegen. Sie liegt hier und nicht in der Sitzung
+    oder in einer Datei auf der Platte: so findet der zweite Schritt sie auch
+    dann, wenn ihn ein anderer Arbeitsprozess beantwortet, und der Lauf ist
+    nachvollziehbar.
+
+    Nach der Übernahme wird der Inhalt gelöscht und nur die Zusammenfassung
+    behalten: die Datei enthält personenbezogene Zeiten, und die stehen danach
+    ohnehin als Zeiteinträge in der Datenbank.
+    """
+
+    class Status(models.TextChoices):
+        PREPARED = "prepared", "Geprüft"
+        APPLIED = "applied", "Übernommen"
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Hochgeladen von",
+        on_delete=models.CASCADE,
+        related_name="entry_imports",
+    )
+    filename = models.CharField("Dateiname", max_length=255, blank=True)
+    payload = models.BinaryField("Dateiinhalt", default=b"", editable=False)
+    status = models.CharField(
+        "Stand", max_length=10, choices=Status.choices, default=Status.PREPARED
+    )
+    summary = models.JSONField("Zusammenfassung", default=dict, blank=True)
+    created_at = models.DateTimeField("Hochgeladen am", auto_now_add=True)
+    applied_at = models.DateTimeField("Übernommen am", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Zeitimport"
+        verbose_name_plural = "Zeitimporte"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.filename or 'Import'} vom {timezone.localtime(self.created_at):%d.%m.%Y}"
