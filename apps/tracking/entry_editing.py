@@ -18,7 +18,14 @@ from django.db import transaction
 from apps.audit.models import AuditLog, log
 from apps.groups import closing
 
-from .entries import apply_breaks, lock_user, overlap_message, overlapping_entry, snapshot
+from .entries import (
+    apply_breaks,
+    lock_user,
+    overlap_guard,
+    overlap_message,
+    overlapping_entry,
+    snapshot,
+)
 from .models import TimeEntry
 from .utils import local_day_range
 
@@ -100,7 +107,8 @@ def update_entry(
     locked.source = TimeEntry.Source.CORRECTION
     locked.is_incomplete = False
     _validate(locked)
-    locked.save()
+    with overlap_guard(EntryEditError):
+        locked.save()
     apply_breaks(locked, breaks)
 
     log(
@@ -152,7 +160,8 @@ def create_entry(
         source=TimeEntry.Source.CORRECTION,
     )
     _validate(entry)
-    entry.save()
+    with overlap_guard(EntryEditError):
+        entry.save()
     apply_breaks(entry, breaks)
 
     log(

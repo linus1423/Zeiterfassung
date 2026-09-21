@@ -135,6 +135,11 @@ Die Datei `.env` wird dabei gelesen; `POSTGRES_PASSWORD` und
 `DJANGO_BEHIND_PROXY=true` in die Umgebung, damit Django die Verbindung als
 HTTPS erkennt.
 
+Die Migrationen legen unter PostgreSQL die Erweiterung `btree_gist` an; das
+Datenbankkonto muss das dürfen (Eigentümer der Datenbank oder Superuser). Sie
+trägt die Bedingung, dass sich die Zeiten einer Person nicht überschneiden
+dürfen.
+
 ### Podman mit Quadlet
 
 Derselbe Aufbau läuft rootless unter systemd. Die Unit-Dateien liegen in

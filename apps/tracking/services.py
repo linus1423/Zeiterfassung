@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
 
+from .entries import is_overlap_violation
 from .models import BreakEntry, TimeEntry
 
 
@@ -88,7 +89,12 @@ def clock_in(user, group, activity=None, *, note: str = "") -> TimeEntry:
             source=TimeEntry.Source.CLOCK,
         )
     except IntegrityError as exc:
-        # Der Datenbank-Constraint fängt zwei gleichzeitige Klicks ab.
+        # Zwei gleichzeitige Klicks fängt die Eindeutigkeitsbedingung ab, eine
+        # im selben Moment nachgetragene Zeit die Ausschlussbedingung (Issue 43).
+        if is_overlap_violation(exc):
+            raise ClockError(
+                "Für diesen Zeitpunkt ist bereits eine Zeit erfasst. Bitte lade die Seite neu."
+            ) from exc
         raise ClockError("Du bist bereits eingestempelt.") from exc
 
     log(AuditLog.Action.CLOCK_IN, actor=user, target=entry, group=group, subject=user)
@@ -122,13 +128,23 @@ def switch_activity(user, activity) -> TimeEntry:
     entry.save(update_fields=["end", "updated_at"])
     log(AuditLog.Action.CLOCK_OUT, actor=user, target=entry, group=entry.group, subject=user)
 
-    new_entry = TimeEntry.objects.create(
-        user=user,
-        group=entry.group,
-        activity=activity,
-        start=boundary,
-        source=TimeEntry.Source.CLOCK,
-    )
+    try:
+        new_entry = TimeEntry.objects.create(
+            user=user,
+            group=entry.group,
+            activity=activity,
+            start=boundary,
+            source=TimeEntry.Source.CLOCK,
+        )
+    except IntegrityError as exc:
+        # Der neue Eintrag läuft ab jetzt ohne Ende. Liegt dahinter schon eine
+        # nachgetragene Zeit, lehnt die Ausschlussbedingung ihn ab (Issue 43).
+        if not is_overlap_violation(exc):
+            raise
+        raise ClockError(
+            "Nach dem jetzigen Zeitpunkt ist bereits eine Zeit erfasst. "
+            "Die Tätigkeit kann deshalb nicht gewechselt werden."
+        ) from exc
     log(
         AuditLog.Action.CLOCK_IN,
         actor=user,

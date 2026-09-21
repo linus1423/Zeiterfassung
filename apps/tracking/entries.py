@@ -8,11 +8,22 @@ beiden Anwendungen.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from .models import BreakEntry, TimeEntry
+
+# Name der Ausschlussbedingung aus Migration 0003 der Anwendung tracking.
+OVERLAP_CONSTRAINT = "time_entry_no_overlap_per_user"
+
+OVERLAP_RACE_MESSAGE = (
+    "Die gewünschte Zeit überschneidet sich mit einem anderen Zeiteintrag. "
+    "Bitte lade die Seite neu und sieh dir die Zeiten der Person noch einmal an."
+)
 
 
 def snapshot(entry: TimeEntry) -> dict:
@@ -78,3 +89,29 @@ def overlap_message(clash: TimeEntry) -> str:
         "Die gewünschte Zeit überschneidet sich mit einem anderen Zeiteintrag "
         f"vom {local:%d.%m.%Y} ab {local:%H:%M} Uhr."
     )
+
+
+def is_overlap_violation(exc: BaseException) -> bool:
+    """Kommt der Datenbankfehler von der Ausschlussbedingung (Issue 43)?"""
+    return OVERLAP_CONSTRAINT in str(exc)
+
+
+@contextmanager
+def overlap_guard(error_cls: type[Exception]):
+    """Übersetzt die Ausschlussbedingung der Datenbank in eine lesbare Meldung.
+
+    Die Prüfung in der Anwendung liest nur, deshalb bleibt die Datenbank die
+    letzte Absicherung: unter PostgreSQL lehnt sie eine überschneidende Zeit
+    auch dann ab, wenn sie erst nach der Prüfung entstanden ist. Ohne diesen
+    Übersetzer sähe die Person an dieser Stelle einen Serverfehler.
+
+    Der eigene Sicherungspunkt hält die umgebende Transaktion benutzbar, falls
+    der Aufrufer die Ausnahme abfängt und weiterarbeitet.
+    """
+    try:
+        with transaction.atomic():
+            yield
+    except IntegrityError as exc:
+        if not is_overlap_violation(exc):
+            raise
+        raise error_cls(OVERLAP_RACE_MESSAGE) from exc

@@ -15,6 +15,7 @@ from apps.groups import closing
 from apps.tracking.entries import (
     apply_breaks,
     lock_user,
+    overlap_guard,
     overlap_message,
     overlapping_entry,
     snapshot,
@@ -152,14 +153,15 @@ def approve(
         breaks = overrides["breaks"] if overrides else locked.proposed_breaks
         lock_user(locked.requested_by)
         _reject_overlap(locked.requested_by, start, end)
-        entry = TimeEntry.objects.create(
-            user=locked.requested_by,
-            group=locked.group,
-            activity=activity,
-            start=start,
-            end=end,
-            source=TimeEntry.Source.CORRECTION,
-        )
+        with overlap_guard(CorrectionError):
+            entry = TimeEntry.objects.create(
+                user=locked.requested_by,
+                group=locked.group,
+                activity=activity,
+                start=start,
+                end=end,
+                source=TimeEntry.Source.CORRECTION,
+            )
         apply_breaks(entry, breaks)
         locked.time_entry = entry
         log(
@@ -203,7 +205,8 @@ def approve(
             raise CorrectionError(
                 "Die gewünschte Zeit ist nicht gültig: " + "; ".join(exc.messages)
             ) from exc
-        entry.save()
+        with overlap_guard(CorrectionError):
+            entry.save()
         apply_breaks(entry, overrides["breaks"] if overrides else locked.proposed_breaks)
         log(
             AuditLog.Action.ENTRY_UPDATED,
