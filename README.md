@@ -127,6 +127,29 @@ Eine PDF-Ausgabe gibt es bewusst nicht, das spart eine Abhängigkeit.
 Laufende Einträge zählen auf dem Blatt nicht mit und werden darunter vermerkt;
 automatisch beendete Tage sind als unvollständig gekennzeichnet.
 
+## Arbeitszeitgesetz
+
+Geprüft wird der Tag als Ganzes und über alle Einträge einer Person zusammen:
+zweimal vier Stunden sind acht Stunden Arbeitszeit und brauchen dieselbe Pause
+wie ein Eintrag über acht Stunden. Eine Nachtschicht zählt anteilig zu beiden
+Tagen, und die Zeitumstellung wird mitgerechnet.
+
+| Regel | Grenze |
+| --- | --- |
+| Pause (§ 4 ArbZG) | ab 6 h Arbeitszeit 30 Minuten, ab 9 h 45 Minuten |
+| Höchstarbeitszeit (§ 3 ArbZG) | 10 h am Tag |
+| Ruhezeit (§ 5 ArbZG) | 11 h zwischen Feierabend und nächstem Beginn |
+
+Beim Ausstempeln erscheint ein Hinweis, wenn eine der Regeln verletzt ist.
+Gruppen-Admins sehen unter Gruppe > **Auffälligkeiten** alle Fälle ihrer Gruppe
+in einem wählbaren Zeitraum, mit Person, Tag, Regel und Wert; die Buchhaltung
+liest dort mit. Es wird ausschließlich gewarnt und niemals etwas abgezogen oder
+gekappt: was gestempelt wurde, bleibt stehen, entscheiden müssen Menschen.
+
+Abschaltbar ist das mit `STATUTORY_BREAK_WARNINGS=false` für die Pause und
+`STATUTORY_LIMIT_WARNINGS=false` für Höchstarbeitszeit und Ruhezeit. Die
+Grenzwerte selbst stehen in `apps/tracking/arbzg.py`.
+
 ## Benachrichtigungen
 
 Ohne Mailserver zeigt die Navigation Zähler: offene Anträge für Admins,

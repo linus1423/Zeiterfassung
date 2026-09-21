@@ -66,7 +66,8 @@ def clock(request):
         "today_entries": today_entries,
         "worked_today": worked_today,
         "paused_today": paused_today,
-        "break_warning": services.statutory_break_warning(worked_today, paused_today),
+        # Geprüft wird der ganze Tag, nicht der einzelne Eintrag (Issue 49).
+        "statutory_warnings": services.statutory_warnings(request.user, today, today),
         "incomplete_entries": incomplete,
         "has_groups": bool(request.user.member_group_ids()),
     }
@@ -142,10 +143,16 @@ def break_end_view(request):
 @login_required
 def clock_out_view(request):
     try:
-        services.clock_out(request.user)
-        messages.success(request, "Ausgestempelt.")
+        entry = services.clock_out(request.user)
     except services.ClockError as exc:
         messages.error(request, str(exc))
+        return redirect("tracking:clock")
+
+    messages.success(request, "Ausgestempelt.")
+    # Hinweis auf verletzte Arbeitszeitregeln, sobald der Tag feststeht
+    # (Issue 49). Abgezogen wird nie etwas, nur gewarnt.
+    for text in services.warnings_for_entry(entry):
+        messages.warning(request, text)
     return redirect("tracking:clock")
 
 
