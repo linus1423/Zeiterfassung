@@ -79,6 +79,21 @@ class ScopeForm(forms.Form):
             "cost_centers": list(self.cleaned_data["cost_centers"]),
         }
 
+    def as_query(self) -> dict:
+        """Dieselbe Auswahl als Parameter für eine Adresszeile."""
+        selection = self.selection()
+        return {
+            "start": selection["start"].isoformat(),
+            "end": selection["end"].isoformat(),
+            "groups": selection["group_ids"],
+            "activities": selection["activity_ids"],
+            "cost_centers": selection["cost_centers"],
+        }
+
+
+class SummaryForm(ScopeForm):
+    """Zeitraum und Filter der Auswertungsseite (Issue 56)."""
+
 
 class ExportForm(ScopeForm):
     """Zeitraum, Filter, Verdichtung und Spaltenauswahl für den Export."""

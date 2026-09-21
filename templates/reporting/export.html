@@ -1,7 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Auswertung und Export{% endblock %}
+{% block title %}Export{% endblock %}
 {% block content %}
-<h1>Auswertung und Export</h1>
+<h1>Export</h1>
+
+<p><a href="{% url 'reporting:summary' %}">Zurück zur Auswertung mit Summen und Diagramm</a></p>
 
 {% if profiles %}
 <div class="card">

@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from apps.groups.periods import member_start_day, period_for
+from apps.groups.periods import member_start_day, period_for, quick_range
 
 from . import services
 from .daysplit import entries_in_range, parts_in_range
@@ -149,22 +149,6 @@ def clock_out_view(request):
     return redirect("tracking:clock")
 
 
-def _quick_range(name: str, start_day: int, today: date) -> tuple[date, date] | None:
-    """Die Zeiträume hinter den Schnellschaltern über der Liste."""
-    if name == "woche":
-        monday = today - timedelta(days=today.weekday())
-        return monday, today
-    if name == "vorwoche":
-        monday = today - timedelta(days=today.weekday() + 7)
-        return monday, monday + timedelta(days=6)
-    if name == "monat":
-        return period_for(today, start_day).start, today
-    if name == "vormonat":
-        previous = period_for(today, start_day).previous()
-        return previous.start, previous.end
-    return None
-
-
 def _week_totals(parts) -> list[dict]:
     """Summen je Kalenderwoche, neueste zuerst."""
     weeks: dict[tuple[int, int], dict] = {}
@@ -223,11 +207,11 @@ def my_entries(request):
     default_start = period_for(today, start_day_of_cycle).start
 
     quick = request.GET.get("bereich", "")
-    quick_range = _quick_range(quick, start_day_of_cycle, today)
+    span = quick_range(quick, start_day_of_cycle, today)
     data = {"start": default_start, "end": today}
     data.update(request.GET.dict())
-    if quick_range is not None:
-        data["start"], data["end"] = quick_range
+    if span is not None:
+        data["start"], data["end"] = span
 
     form = MyEntriesFilterForm(request.user, data)
     is_valid = form.is_valid()
