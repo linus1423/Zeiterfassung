@@ -59,7 +59,18 @@
 </div>
 {% endif %}
 
-{% if break_warning %}<div class="card"><strong>Hinweis:</strong> {{ break_warning }}</div>{% endif %}
+{% if statutory_warnings %}
+<div class="card">
+  <strong>Hinweis zum Arbeitszeitgesetz</strong>
+  <ul>
+    {% for warning in statutory_warnings %}<li>{{ warning }}</li>{% endfor %}
+  </ul>
+  <p class="help">
+    Geprüft wird die Arbeitszeit des ganzen Tages über alle Einträge hinweg. Es wird nur
+    gewarnt, abgezogen wird nichts.
+  </p>
+</div>
+{% endif %}
 
 <div class="card">
   <h2>Heute</h2>

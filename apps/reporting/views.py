@@ -5,17 +5,18 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import urlencode
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from apps.audit.models import AuditLog, log
 from apps.groups.closing import ClosedPeriods
-from apps.groups.periods import member_start_day, period_for
+from apps.groups.periods import QUICK_RANGES, member_start_day, period_for, quick_range
 from apps.groups.permissions import readable_groups, require_group_read
 from apps.tracking.forms import PeriodForm
 
 from . import schedules as schedule_jobs
-from . import services, timesheet
+from . import services, summary, timesheet
 from .access import (
     may_change_schedule,
     require_reporting_access,
@@ -23,15 +24,94 @@ from .access import (
     visible_schedules,
 )
 from .columns import resolve
-from .forms import CSV_DIALECTS, ExportForm, ExportScheduleForm, ProfileSaveForm
+from .forms import (
+    CSV_DIALECTS,
+    ExportForm,
+    ExportScheduleForm,
+    ProfileSaveForm,
+    SummaryForm,
+)
 from .models import ExportProfile, ExportSchedule
 
 PREVIEW_ROWS = 25
 
 
+# Felder, die die Auswertungsseite an den Export weiterreicht.
+_QUERY_FIELDS = ("start", "end")
+_QUERY_LISTS = ("groups", "users", "activities", "cost_centers")
+
+
+def _initial_from_query(request) -> dict:
+    """Zeitraum und Filter aus der Adresszeile als Vorauswahl.
+
+    So bringt der Weg von der Auswertungsseite zum Export dieselbe Auswahl
+    mit. Geprüft wird nichts: was hier steht, ist nur eine Vorbelegung des
+    Formulars, und das Formular lässt ohnehin nur lesbare Gruppen zu.
+    """
+    initial = {}
+    for name in _QUERY_FIELDS:
+        value = request.GET.get(name)
+        if value:
+            initial[name] = value
+    for name in _QUERY_LISTS:
+        values = request.GET.getlist(name)
+        if values:
+            initial[name] = values
+    return initial
+
+
+@login_required
+def summary_view(request):
+    """Summen und Verteilung im Zeitraum, ohne Umweg über eine Datei (Issue 56).
+
+    Die Zahlen kommen aus derselben Verdichtung wie der Export, damit Ansicht
+    und Datei nie auseinanderlaufen.
+    """
+    require_reporting_access(request.user)
+
+    today = timezone.localdate()
+    start_day_of_cycle = member_start_day(request.user)
+    default_start = period_for(today, start_day_of_cycle).start
+
+    quick = request.GET.get("bereich", "")
+    span = quick_range(quick, start_day_of_cycle, today)
+    # Eine Kopie der Adresszeile, damit die Mehrfachfelder ihre Listen behalten.
+    data = request.GET.copy()
+    data.setdefault("start", default_start.isoformat())
+    data.setdefault("end", today.isoformat())
+    if span is not None:
+        data["start"], data["end"] = span[0].isoformat(), span[1].isoformat()
+
+    form = SummaryForm(request.user, data)
+    result = None
+    query = {}
+    first_day = last_day = None
+    if form.is_valid():
+        first_day, last_day = form.cleaned_data["start"], form.cleaned_data["end"]
+        # Eine Abfrage, ein Durchlauf über die Tagesanteile, danach nur noch
+        # Rechnen im Speicher: keine Abfrage je Zeile.
+        entries = services.query_entries(request.user, **form.selection())
+        result = summary.build(services.base_rows(entries, first_day=first_day, last_day=last_day))
+        query = form.as_query()
+
+    filters = {name: query.get(name, []) for name in ("groups", "activities", "cost_centers")}
+    context = {
+        "form": form,
+        "summary": result,
+        "quick": quick,
+        "quick_ranges": QUICK_RANGES,
+        "start_day": first_day,
+        "end_day": last_day,
+        # Für die Schnellschalter (ohne Zeitraum) und den Weg zum Export (mit).
+        "filter_query": urlencode(filters, doseq=True),
+        "export_query": urlencode(query, doseq=True),
+    }
+    return render(request, "reporting/summary.html", context)
+
+
 @login_required
 def export_view(request, profile_id=None):
-    """Auswertung mit Vorschau und Download als Excel oder CSV."""
+    """Export mit Vorschau und Download als Excel oder CSV."""
     require_reporting_access(request.user)
 
     profile = None
@@ -47,20 +127,20 @@ def export_view(request, profile_id=None):
         form = ExportForm(request.user, initial=initial)
     else:
         today = timezone.localdate()
-        form = ExportForm(request.user, initial={"start": today.replace(day=1), "end": today})
+        form = ExportForm(
+            request.user,
+            initial={
+                "start": today.replace(day=1),
+                "end": today,
+                **_initial_from_query(request),
+            },
+        )
 
     rows = []
     columns = []
     if request.method == "POST" and form.is_valid():
         columns = resolve(form.ordered_columns())
-        entries = services.query_entries(
-            request.user,
-            start=form.cleaned_data["start"],
-            end=form.cleaned_data["end"],
-            group_ids=[group.pk for group in form.cleaned_data["groups"]],
-            user_ids=[user.pk for user in form.cleaned_data["users"]],
-            activity_ids=[activity.pk for activity in form.cleaned_data["activities"]],
-        )
+        entries = services.query_entries(request.user, **form.selection())
         closed = ClosedPeriods(readable_groups(request.user).values_list("pk", flat=True))
         rows = services.build_rows(
             entries,
@@ -146,12 +226,14 @@ def _save_profile(request, form):
         messages.error(request, "Bitte einen Namen für die Vorlage angeben.")
         return redirect("reporting:export")
 
+    selection = form.selection()
     filters = {
-        "start": form.cleaned_data["start"].isoformat(),
-        "end": form.cleaned_data["end"].isoformat(),
-        "groups": [group.pk for group in form.cleaned_data["groups"]],
-        "users": [user.pk for user in form.cleaned_data["users"]],
-        "activities": [activity.pk for activity in form.cleaned_data["activities"]],
+        "start": selection["start"].isoformat(),
+        "end": selection["end"].isoformat(),
+        "groups": selection["group_ids"],
+        "users": selection["user_ids"],
+        "activities": selection["activity_ids"],
+        "cost_centers": selection["cost_centers"],
         "csv_dialect": form.cleaned_data.get("csv_dialect") or "de",
     }
     ExportProfile.objects.update_or_create(

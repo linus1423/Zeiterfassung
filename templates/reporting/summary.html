@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Auswertung{% endblock %}
+{% block content %}
+<h1>Auswertung</h1>
+
+<div class="card">
+  <div class="actions quick">
+    {% for name, label in quick_ranges %}
+      <a class="badge{% if quick == name %} count{% endif %}" href="?bereich={{ name }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <form method="get">
+    <div class="grid two">
+      <div>{{ form.start.label_tag }}{{ form.start }}{{ form.start.errors }}</div>
+      <div>{{ form.end.label_tag }}{{ form.end }}{{ form.end.errors }}</div>
+      <div>{{ form.groups.label_tag }}{{ form.groups }}<p class="help">{{ form.groups.help_text }}</p>{{ form.groups.errors }}</div>
+      <div>{{ form.activities.label_tag }}{{ form.activities }}{{ form.activities.errors }}</div>
+      <div>{{ form.cost_centers.label_tag }}{{ form.cost_centers }}<p class="help">{{ form.cost_centers.help_text }}</p>{{ form.cost_centers.errors }}</div>
+    </div>
+    <div class="actions">
+      <button class="primary" type="submit">Anzeigen</button>
+    </div>
+  </form>
+</div>
+
+{% if summary %}
+  <div class="card">
+    <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}</h2>
+    <p>
+      <strong>Gesamtsumme: {{ summary.hhmm }} Stunden</strong>
+      ({{ summary.hours }} Stunden dezimal, aus {{ summary.entry_count }} Tagesanteilen)
+    </p>
+    <p>
+      <a href="{% url 'reporting:export' %}{% if export_query %}?{{ export_query }}{% endif %}">Diesen Zeitraum und diese Filter exportieren</a>
+      &ndash; dort gibt es Spaltenauswahl, Vorlagen, Excel und CSV.
+    </p>
+    {% if summary.is_empty %}
+      <p class="muted">In diesem Zeitraum wurde nichts erfasst.</p>
+    {% endif %}
+  </div>
+
+  {% for section in summary.sections %}
+    {% if section.rows %}
+      <div class="card">
+        <h2>{{ section.title }}</h2>
+        {% if section.chart %}
+          <div class="diagramm">{{ section.chart }}</div>
+        {% endif %}
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ section.column }}</th>
+                <th class="num">Arbeitszeit (hh:mm)</th>
+                <th class="num">Arbeitszeit (h)</th>
+                <th class="num">Anteil</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in section.rows %}
+                <tr>
+                  <td>{{ row.label }}</td>
+                  <td class="num">{{ row.hhmm }}</td>
+                  <td class="num">{{ row.hours }}</td>
+                  <td class="num">{{ row.share }} %</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Summe</th>
+                <th class="num">{{ section.hhmm }}</th>
+                <th class="num">{{ section.hours }}</th>
+                <th class="num"></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% endblock %}

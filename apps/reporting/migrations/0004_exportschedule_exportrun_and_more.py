@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("groups", "0003_alter_activity_options_alter_periodlock_options_and_more"),
-        ("reporting", "0002_alter_exportprofile_grouping_and_more"),
+        ("reporting", "0003_alter_exportprofile_grouping"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
