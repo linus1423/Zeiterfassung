@@ -153,3 +153,50 @@ class AdminEntryForm(forms.Form):
         if start and start > timezone.now():
             self.add_error("start", "Ein Beginn in der Zukunft ist nicht möglich.")
         return cleaned
+
+
+class GroupChangeRequestForm(forms.Form):
+    """Antrag auf einen Wechsel in eine andere Gruppe (Issue 37).
+
+    Zur Auswahl stehen nur eigene Gruppen als Ausgangspunkt und nur aktive
+    Gruppen ohne eigene Mitgliedschaft als Ziel. Die Begründung ist Pflicht:
+    zwei Admins entscheiden darüber und brauchen dafür einen Anhaltspunkt.
+    """
+
+    from_group = forms.ModelChoiceField(
+        queryset=Group.objects.none(), label="Bisherige Gruppe", empty_label=None
+    )
+    to_group = forms.ModelChoiceField(
+        queryset=Group.objects.none(), label="Neue Gruppe", empty_label=None
+    )
+    reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        self.fields["from_group"].queryset = Group.objects.filter(
+            pk__in=user.member_group_ids()
+        ).order_by("name")
+        self.fields["to_group"].queryset = (
+            Group.objects.filter(is_active=True)
+            .exclude(pk__in=user.member_group_ids())
+            .order_by("name")
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        from_group, to_group = cleaned.get("from_group"), cleaned.get("to_group")
+        if from_group and to_group and from_group.pk == to_group.pk:
+            self.add_error("to_group", "Das ist die Gruppe, in der du schon bist.")
+        return cleaned
+
+
+class GroupChangeDecisionForm(forms.Form):
+    """Zustimmung oder Ablehnung zu einem Wechsel. Welche von beiden, sagt der Knopf."""
+
+    note = forms.CharField(
+        label="Bemerkung",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Bei einer Ablehnung ist sie Pflicht.",
+    )

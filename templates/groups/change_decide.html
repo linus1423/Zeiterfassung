@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Gruppenwechsel entscheiden{% endblock %}
+{% block content %}
+<h1>Gruppenwechsel von {{ change.user.full_name }}</h1>
+<div class="grid two">
+  <div class="card">
+    <h2>Bisherige Gruppe</h2>
+    <p>
+      {{ change.from_group.name }}<br>
+      {% if change.source_decided_at %}
+        Zugestimmt am {{ change.source_decided_at|date:"d.m.Y H:i" }}
+        von {{ change.source_decided_by.full_name|default:"-" }}
+        {% if change.source_note %}<br><span class="help">{{ change.source_note }}</span>{% endif %}
+      {% else %}
+        <span class="badge pending">Entscheidet zuerst</span>
+      {% endif %}
+    </p>
+    {% if membership and membership.from_idp %}
+      <p class="help">
+        Diese Mitgliedschaft kommt aus dem Identity-Provider. Steht die Gruppe dort
+        weiter im Token, entsteht sie beim nächsten Login erneut. Dann muss sie auch
+        beim Provider geändert werden.
+      </p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Neue Gruppe</h2>
+    <p>
+      {{ change.to_group.name }}<br>
+      {% if change.target_decided_at %}
+        Entschieden am {{ change.target_decided_at|date:"d.m.Y H:i" }}
+        von {{ change.target_decided_by.full_name|default:"-" }}
+        {% if change.target_note %}<br><span class="help">{{ change.target_note }}</span>{% endif %}
+      {% else %}
+        <span class="badge pending">Entscheidet danach</span>
+      {% endif %}
+    </p>
+  </div>
+</div>
+<div class="card">
+  <h2>Begründung des Antragstellers</h2>
+  <p>{{ change.reason|linebreaksbr }}</p>
+  <p class="help">
+    Erfasste Zeiten bleiben bei {{ change.from_group.name }}. In
+    {{ change.to_group.name }} beginnt {{ change.user.full_name }} als Mitglied.
+  </p>
+</div>
+<div class="card">
+  {% if may_decide %}
+    <p>
+      Du entscheidest jetzt für <strong>{{ change.deciding_group.name }}</strong>.
+      {% if change.status == "pending_source" %}
+        Stimmst du zu, geht der Antrag an die Admins von {{ change.to_group.name }}.
+      {% else %}
+        Mit deiner Zustimmung wechselt die Mitgliedschaft sofort.
+      {% endif %}
+    </p>
+    <form method="post">{% csrf_token %}{{ form.as_p }}
+      <div class="actions">
+        <button class="primary" type="submit" name="action" value="approve">Zustimmen</button>
+        <button class="danger" type="submit" name="action" value="reject">Ablehnen</button>
+        <a class="button" href="{% url 'groups:change_inbox' %}">Zurück</a>
+      </div>
+    </form>
+    <p class="help">Eine Ablehnung braucht eine Begründung. Jede Entscheidung wird protokolliert.</p>
+  {% else %}
+    <p>
+      {% if change.is_pending %}
+        {% if change.deciding_group %}
+          Zurzeit entscheidet {{ change.deciding_group.name }}.
+        {% endif %}
+        Über den eigenen Antrag entscheidet ein anderer Admin.
+      {% else %}
+        Dieser Antrag ist bereits entschieden: {{ change.get_status_display }}.
+      {% endif %}
+    </p>
+    <p><a class="button" href="{% url 'groups:change_inbox' %}">Zurück</a></p>
+  {% endif %}
+</div>
+{% endblock %}

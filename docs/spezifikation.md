@@ -769,3 +769,56 @@ je Mitglied, gezählt werden dort nur die Zeiten dieser Gruppe. Ausgegeben wird
 im Browser mit einem eigenen Druck-Stylesheet, das Navigation und Knöpfe
 ausblendet und je Person eine Seite beginnt; PDF bleibt wie in Rückfrage 21
 zurückgestellt.
+
+---
+
+## 15. Gruppenwechsel (Issue 37)
+
+Wer die Abteilung wechselt, beantragt das im Tool. Der Antrag braucht zwei
+Zustimmungen, nacheinander:
+
+1. Das Mitglied wählt unter "Gruppenwechsel" die bisherige und die neue Gruppe
+   und begründet den Wechsel.
+2. Zuerst entscheidet ein Admin der **bisherigen** Gruppe. Er gibt die Person
+   ab oder lehnt ab.
+3. Danach entscheidet ein Admin der **neuen** Gruppe. Er nimmt sie auf oder
+   lehnt ab.
+4. Erst mit der zweiten Zustimmung wechselt die Mitgliedschaft.
+
+Ein Antrag steht deshalb in fünf Zuständen: "Wartet auf die bisherige Gruppe",
+"Wartet auf die neue Gruppe", "Genehmigt", "Abgelehnt" und "Zurückgezogen".
+Solange er offen ist, kann der Antragsteller ihn zurücknehmen; ein zweiter
+offener Antrag derselben Person ist nicht möglich, dafür sorgt auch eine
+Bedingung in der Datenbank.
+
+**Wer entscheidet.** Ein Admin der Gruppe, die gerade an der Reihe ist, aber
+nie der Antragsteller selbst. Ist er der einzige Admin seiner Gruppe,
+entscheidet ein System-Admin, wie beim Korrekturantrag (Rückfrage 10).
+
+**Was der Wechsel mitnimmt, und was nicht.** Erfasste Zeiten bleiben bei der
+alten Gruppe: sie stecken in deren Auswertung und in abgeschlossenen
+Zeiträumen, ein nachträgliches Umhängen würde bereits exportierte Monate
+verändern. In der neuen Gruppe beginnt die Person als Mitglied; die
+Admin-Rolle gilt je Gruppe und wandert nicht mit. Offene Korrekturanträge
+bleiben bei ihrer Gruppe, deren Admins entscheiden sie weiter.
+
+**Wann ein Wechsel nicht geht.** Wer gerade eingestempelt ist, wechselt nicht;
+der laufende Eintrag gehört noch zur alten Gruppe. Der einzige Admin einer
+Gruppe kann nicht weg, solange kein zweiter da ist. In eine stillgelegte
+Gruppe führt kein Wechsel, und in eine Gruppe, in der man schon Mitglied ist,
+auch nicht. Alle diese Bedingungen werden beim Antrag und noch einmal bei der
+zweiten Zustimmung geprüft, weil zwischen beidem Zeit vergeht.
+
+**Mitgliedschaften aus dem Identity-Provider.** Kam die bisherige
+Mitgliedschaft aus dem Token (Kapitel 6), entsteht sie beim nächsten Login
+erneut, solange die Gruppe dort im Claim steht. Der entscheidende Admin sieht
+dazu einen Hinweis: der Wechsel muss dann auch beim Provider nachvollzogen
+werden. Die neue Mitgliedschaft wird im Tool gepflegt und vom Abgleich nicht
+angetastet.
+
+**Protokoll und Benachrichtigung.** Antrag, jede Zustimmung, jede Ablehnung,
+die Rücknahme und der vollzogene Wechsel stehen im Änderungsprotokoll. Mails
+gehen nur mit `GROUP_CHANGE_EMAILS_ENABLED=true` raus, und zwar immer an die
+Stelle, die am Zug ist: erst an die Admins der bisherigen Gruppe, dann an die
+der neuen, am Ende an den Antragsteller. Ohne Mailserver genügt der Zähler in
+der Navigation neben "Wechselanträge".

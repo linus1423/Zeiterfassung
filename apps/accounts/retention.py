@@ -7,8 +7,9 @@ verschwinden, die Zeiteinträge bleiben für die Statistik erhalten, sind
 aber keiner Person mehr zuzuordnen.
 
 Ein Konto wird nur angefasst, wenn seit der Frist nichts mehr passiert ist:
-keine Zeiten, keine Anmeldung, kein offener Korrekturantrag. Frische Konten,
-die noch nie gestempelt haben, bleiben also unberührt.
+keine Zeiten, keine Anmeldung, kein offener Korrektur- und kein offener
+Wechselantrag. Frische Konten, die noch nie gestempelt haben, bleiben also
+unberührt.
 """
 
 from __future__ import annotations
@@ -54,6 +55,7 @@ def is_anonymized(user) -> bool:
 def candidates(months: int | None = None, today: date | None = None) -> list[Candidate]:
     """Konten, deren Aufbewahrungsfrist abgelaufen ist."""
     from apps.corrections.models import CorrectionRequest
+    from apps.groups.models import GroupChangeRequest
 
     User = get_user_model()
     cutoff = retention_cutoff(months, today)
@@ -62,6 +64,13 @@ def candidates(months: int | None = None, today: date | None = None) -> list[Can
     pending_user_ids = set(
         CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDING).values_list(
             "requested_by_id", flat=True
+        )
+    )
+    # Ein laufender Gruppenwechsel (Issue 37) hält das Konto ebenso: er hängt
+    # an der Mitgliedschaft, die die Anonymisierung löschen würde.
+    pending_user_ids |= set(
+        GroupChangeRequest.objects.filter(status__in=GroupChangeRequest.OPEN_STATUSES).values_list(
+            "user_id", flat=True
         )
     )
 

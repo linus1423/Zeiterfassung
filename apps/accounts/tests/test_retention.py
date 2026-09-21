@@ -9,6 +9,8 @@ from django.utils import timezone
 from apps.accounts import retention
 from apps.audit.models import AuditLog
 from apps.corrections.models import CorrectionRequest
+from apps.groups import change_requests
+from apps.groups.models import GroupMembership
 from apps.tracking.models import TimeEntry
 
 
@@ -134,3 +136,14 @@ def test_the_command_anonymizes_with_apply(make_user, group):
     user.refresh_from_db()
     assert user.personnel_number == ""
     assert "1 Konten anonymisiert" in output.getvalue()
+
+
+def test_an_open_group_change_protects_the_account(make_user, group, other_group):
+    """Ein laufender Wechsel (Issue 37) hängt an der Mitgliedschaft."""
+    user = _old_account(make_user, group)
+    GroupMembership.objects.create(user=user, group=group)
+    change_requests.create_request(
+        user=user, from_group=group, to_group=other_group, reason="Ich wechsle."
+    )
+
+    assert retention.candidates() == []

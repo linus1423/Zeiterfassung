@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -14,16 +14,18 @@ from apps.tracking.daysplit import entries_in_range, parts_in_range
 from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
 
-from . import closing
+from . import change_requests, closing
 from .forms import (
     ActivityForm,
     AdminEntryForm,
     ClosePeriodForm,
+    GroupChangeDecisionForm,
+    GroupChangeRequestForm,
     GroupForm,
     GroupSettingsForm,
     MembershipForm,
 )
-from .models import Activity, GroupMembership, PeriodLock
+from .models import Activity, GroupChangeRequest, GroupMembership, PeriodLock
 from .periods import period_for
 from .permissions import readable_groups, require_group_admin, require_group_read
 
@@ -361,3 +363,133 @@ def _handle_period_post(request, group) -> None:
             messages.error(request, "Unbekannte Aktion.")
     except closing.ClosingError as exc:
         messages.error(request, str(exc))
+
+
+@login_required
+def change_list(request):
+    """Eigene Anträge auf Gruppenwechsel, samt Formular für einen neuen (Issue 37)."""
+    form = GroupChangeRequestForm(request.user, request.POST or None)
+    open_request = change_requests.open_request_for(request.user)
+
+    if request.method == "POST":
+        if open_request is not None:
+            messages.error(request, "Es läuft schon ein Antrag auf Gruppenwechsel.")
+            return redirect("groups:change_list")
+        if form.is_valid():
+            try:
+                change_requests.create_request(
+                    user=request.user,
+                    from_group=form.cleaned_data["from_group"],
+                    to_group=form.cleaned_data["to_group"],
+                    reason=form.cleaned_data["reason"],
+                )
+            except change_requests.GroupChangeError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(
+                    request,
+                    "Antrag gestellt. Zuerst entscheidet die bisherige Gruppe, danach die neue.",
+                )
+                return redirect("groups:change_list")
+
+    own = (
+        GroupChangeRequest.objects.filter(user=request.user)
+        .select_related("from_group", "to_group", "source_decided_by", "target_decided_by")
+        .order_by("-created_at")
+    )
+    # Wer seine Anträge ansieht, hat die Entscheidungen gesehen; damit geht der
+    # Zähler in der Navigation wieder aus.
+    change_requests.mark_decisions_seen(request.user)
+    return render(
+        request,
+        "groups/change_list.html",
+        {
+            "form": form,
+            "requests": own,
+            "open_request": open_request,
+            "may_request": form.fields["to_group"].queryset.exists(),
+        },
+    )
+
+
+@require_POST
+@login_required
+def change_withdraw(request, change_id):
+    change = get_object_or_404(GroupChangeRequest, pk=change_id)
+    try:
+        change_requests.withdraw(change, request.user)
+        messages.success(request, "Antrag zurückgenommen.")
+    except change_requests.GroupChangeError as exc:
+        messages.error(request, str(exc))
+    return redirect("groups:change_list")
+
+
+@login_required
+def change_inbox(request):
+    """Wechsel, über die der Nutzer als Admin gerade zu entscheiden hat."""
+    group_ids = request.user.administrated_group_ids()
+    decided = (
+        GroupChangeRequest.objects.filter(
+            Q(from_group_id__in=group_ids) | Q(to_group_id__in=group_ids)
+        )
+        .exclude(status__in=GroupChangeRequest.OPEN_STATUSES)
+        .select_related("user", "from_group", "to_group")
+        .order_by("-created_at")[:20]
+    )
+    return render(
+        request,
+        "groups/change_inbox.html",
+        {
+            "requests": change_requests.decidable_requests(request.user, group_ids),
+            "decided": decided,
+        },
+    )
+
+
+@login_required
+def change_decide(request, change_id):
+    """Einen Wechsel ansehen und über die offene Stufe entscheiden."""
+    change = get_object_or_404(
+        GroupChangeRequest.objects.select_related(
+            "user", "from_group", "to_group", "source_decided_by", "target_decided_by"
+        ),
+        pk=change_id,
+    )
+    if not (
+        request.user.is_group_admin(change.from_group)
+        or request.user.is_group_admin(change.to_group)
+    ):
+        raise PermissionDenied("Nur Admins der beteiligten Gruppen dürfen das sehen.")
+
+    form = GroupChangeDecisionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        action = request.POST.get("action", "")
+        if action not in ("approve", "reject"):
+            messages.error(request, "Unbekannte Aktion.")
+            return redirect("groups:change_decide", change_id=change.pk)
+        try:
+            change_requests.decide(
+                change,
+                request.user,
+                approve=action == "approve",
+                note=form.cleaned_data["note"],
+            )
+        except change_requests.GroupChangeError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request, "Zustimmung erteilt." if action == "approve" else "Antrag abgelehnt."
+            )
+            return redirect("groups:change_inbox")
+
+    membership = GroupMembership.objects.filter(user=change.user, group=change.from_group).first()
+    return render(
+        request,
+        "groups/change_decide.html",
+        {
+            "change": change,
+            "form": form,
+            "may_decide": change_requests.may_decide(request.user, change),
+            "membership": membership,
+        },
+    )

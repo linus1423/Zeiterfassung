@@ -12,8 +12,8 @@ Die vollständige fachliche Beschreibung steht in
 
 | Rolle | Darf |
 |---|---|
-| Mitarbeitende | eigene Zeit stempeln, eigene Zeiten sehen, Korrektur beantragen |
-| Gruppen-Admin | zusätzlich Tätigkeiten und Mitglieder der eigenen Gruppe pflegen, Zeiten der Gruppe sehen, Korrekturanträge entscheiden |
+| Mitarbeitende | eigene Zeit stempeln, eigene Zeiten sehen, Korrektur und Gruppenwechsel beantragen |
+| Gruppen-Admin | zusätzlich Tätigkeiten und Mitglieder der eigenen Gruppe pflegen, Zeiten der Gruppe sehen, Korrektur- und Wechselanträge entscheiden |
 | Buchhaltung | alle Gruppen lesen und nach Excel oder CSV exportieren, mit frei wählbaren Spalten; ändert nichts |
 | System-Admin | Gruppen anlegen, Rollen vergeben, Django-Adminoberfläche |
 
@@ -101,6 +101,22 @@ Gruppe > Abrechnungszeiträume ab. Danach lehnt das System Korrekturanträge
 für diesen Zeitraum ab, auch bereits gestellte werden nicht mehr genehmigt.
 Ein exportierter Monat bleibt so, wie er exportiert wurde. Wieder öffnen kann
 den Abschluss nur ein System-Admin.
+
+## Gruppenwechsel
+
+Wer die Abteilung wechselt, beantragt das unter **Gruppenwechsel**. Der Antrag
+braucht zwei Zustimmungen: zuerst entscheidet ein Admin der bisherigen Gruppe,
+danach einer der neuen. Erst dann wechselt die Mitgliedschaft. Admins sehen die
+Anträge unter **Wechselanträge**, mit Zähler in der Navigation; eine Mail dazu
+gibt es nur mit `GROUP_CHANGE_EMAILS_ENABLED=true`.
+
+Erfasste Zeiten bleiben bei der alten Gruppe, sonst änderten sich bereits
+abgeschlossene Zeiträume. In der neuen Gruppe beginnt die Person als Mitglied,
+eine Admin-Rolle wandert nicht mit. Wer gerade eingestempelt ist, wechselt
+nicht, und der einzige Admin einer Gruppe kann erst weg, wenn es einen zweiten
+gibt. Kam die bisherige Mitgliedschaft aus dem Identity-Provider, muss der
+Wechsel auch dort nachvollzogen werden: sonst entsteht sie beim nächsten Login
+erneut.
 
 ## Arbeitszeitnachweis
 

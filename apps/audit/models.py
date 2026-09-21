@@ -28,6 +28,10 @@ class AuditLog(models.Model):
         USER_UPDATED = "user_updated", "Stammdaten geändert"
         MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
         GROUP_CREATED = "group_created", "Gruppe angelegt"
+        GROUP_CHANGE_REQUESTED = "group_change_requested", "Gruppenwechsel beantragt"
+        GROUP_CHANGE_APPROVED = "group_change_approved", "Gruppenwechsel genehmigt"
+        GROUP_CHANGE_REJECTED = "group_change_rejected", "Gruppenwechsel abgelehnt"
+        GROUP_CHANGE_WITHDRAWN = "group_change_withdrawn", "Gruppenwechsel zurückgezogen"
         NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
 
     actor = models.ForeignKey(

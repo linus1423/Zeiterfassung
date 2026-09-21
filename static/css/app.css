@@ -119,7 +119,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   color: var(--warn);
   font-variant-numeric: tabular-nums;
 }
-.badge.pending { border-color: var(--warn); color: var(--warn); }
+.badge.pending,
+.badge.pending_source,
+.badge.pending_target { border-color: var(--warn); color: var(--warn); }
 .badge.approved { border-color: var(--ok); color: var(--ok); }
 .badge.rejected { border-color: var(--bad); color: var(--bad); }
 

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Gruppenwechsel{% endblock %}
+{% block content %}
+<h1>Gruppenwechsel</h1>
+
+{% if open_request %}
+  <div class="card">
+    <h2>Dein laufender Antrag</h2>
+    <p>
+      {{ open_request.from_group.name }} &rarr; {{ open_request.to_group.name }}:
+      <span class="badge {{ open_request.status }}">{{ open_request.get_status_display }}</span>
+    </p>
+    <p class="help">
+      Erst stimmt ein Admin von {{ open_request.from_group.name }} zu, danach einer von
+      {{ open_request.to_group.name }}. Solange der Antrag läuft, geht kein zweiter.
+    </p>
+  </div>
+{% elif may_request %}
+  <div class="card">
+    <h2>Wechsel beantragen</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Antrag stellen</button>
+    </form>
+    <p class="help">
+      Deine bisher erfassten Zeiten bleiben bei der alten Gruppe. In der neuen Gruppe
+      beginnst du als Mitglied. Wer gerade eingestempelt ist, stempelt zuerst aus.
+    </p>
+  </div>
+{% else %}
+  <div class="card">
+    <p class="muted">Es gibt zurzeit keine Gruppe, in die du wechseln könntest.</p>
+  </div>
+{% endif %}
+
+<div class="card">
+  <h2>Meine Anträge</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Gestellt am</th><th>Von</th><th>Nach</th><th>Status</th><th></th></tr>
+      {% for change in requests %}
+        <tr>
+          <td>{{ change.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ change.from_group.name }}</td>
+          <td>{{ change.to_group.name }}</td>
+          <td>
+            <span class="badge {{ change.status }}">{{ change.get_status_display }}</span>
+            {% if change.source_note %}
+              <br><span class="help">{{ change.from_group.name }}: {{ change.source_note }}</span>
+            {% endif %}
+            {% if change.target_note %}
+              <br><span class="help">{{ change.to_group.name }}: {{ change.target_note }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if change.is_pending %}
+              <form method="post" action="{% url 'groups:change_withdraw' change.pk %}">{% csrf_token %}
+                <button type="submit">Zurücknehmen</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="muted">Noch keine Anträge.</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

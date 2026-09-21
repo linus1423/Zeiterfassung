@@ -5,6 +5,7 @@ def navigation(request):
         return {"nav": {}}
 
     from apps.corrections.models import CorrectionRequest
+    from apps.groups import change_requests
     from apps.reminders import services as reminder_services
 
     admin_group_ids = user.administrated_group_ids()
@@ -31,5 +32,9 @@ def navigation(request):
             "new_decisions": new_decisions,
             # Hinweise, die Arbeit ersparen, bevor etwas schiefgeht (Issue 34).
             "reminders": reminder_services.open_count(user),
+            # Gruppenwechsel laufen über zwei Zustimmungen (Issue 37): der
+            # Zähler zeigt, was gerade an einem selbst hängt.
+            "pending_group_changes": change_requests.pending_decision_count(user, admin_group_ids),
+            "new_group_changes": change_requests.new_decision_count(user),
         }
     }
