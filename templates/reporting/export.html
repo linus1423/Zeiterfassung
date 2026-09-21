@@ -5,6 +5,11 @@
 
 <p><a href="{% url 'reporting:summary' %}">Zurück zur Auswertung mit Summen und Diagramm</a></p>
 
+<p>
+  Eine gespeicherte Vorlage kann auch monatlich von selbst verschickt werden:
+  <a href="{% url 'reporting:schedules' %}">Geplante Exporte</a>.
+</p>
+
 {% if profiles %}
 <div class="card">
   <h2>Vorlagen</h2>

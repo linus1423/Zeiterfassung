@@ -1,11 +1,15 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 from apps.groups.models import Activity
+from apps.groups.periods import MAX_MONTH_START_DAY
 from apps.groups.permissions import readable_groups
 
+from .access import may_schedule, visible_profiles
 from .columns import COLUMNS, DEFAULT_COLUMNS
-from .models import ExportProfile
+from .models import ExportProfile, ExportSchedule
 from .services import cost_center_choices
 
 User = get_user_model()
@@ -139,3 +143,89 @@ class ExportForm(ScopeForm):
 class ProfileSaveForm(forms.Form):
     name = forms.CharField(label="Name der Vorlage", max_length=120)
     is_shared = forms.BooleanField(label="Mit der Buchhaltung teilen", required=False)
+
+
+MAX_RECIPIENTS = 10
+
+
+class ExportScheduleForm(forms.ModelForm):
+    """Zeitplan zu einer Vorlage: Tag im Monat, Zeitraum, Format und Empfänger."""
+
+    recipients = forms.CharField(
+        label="Empfänger",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Eine oder mehrere E-Mail-Adressen, getrennt durch Komma oder Zeilenumbruch.",
+    )
+
+    class Meta:
+        model = ExportSchedule
+        fields = [
+            "profile",
+            "day_of_month",
+            "timeframe",
+            "period_group",
+            "export_format",
+            "recipients",
+            "is_active",
+        ]
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.fields["profile"].queryset = visible_profiles(user)
+        self.fields["period_group"].queryset = readable_groups(user)
+        self.fields["period_group"].empty_label = "Kalendermonat"
+        self.fields["day_of_month"].widget.attrs.update({"min": 1, "max": MAX_MONTH_START_DAY})
+        if isinstance(self.initial.get("recipients"), list):
+            self.initial["recipients"] = ", ".join(self.initial["recipients"])
+
+    def clean_day_of_month(self) -> int:
+        day = self.cleaned_data["day_of_month"]
+        if not 1 <= day <= MAX_MONTH_START_DAY:
+            raise forms.ValidationError(
+                f"Bitte einen Tag zwischen 1 und {MAX_MONTH_START_DAY} wählen, "
+                "damit es ihn in jedem Monat gibt."
+            )
+        return day
+
+    def clean_recipients(self) -> list[str]:
+        raw = self.cleaned_data["recipients"].replace(";", ",").replace("\n", ",")
+        addresses: list[str] = []
+        for part in raw.split(","):
+            address = part.strip()
+            if not address or address in addresses:
+                continue
+            try:
+                validate_email(address)
+            except ValidationError as exc:
+                raise forms.ValidationError(
+                    f"„{address}“ ist keine gültige E-Mail-Adresse."
+                ) from exc
+            addresses.append(address)
+        if not addresses:
+            raise forms.ValidationError("Bitte mindestens eine E-Mail-Adresse angeben.")
+        if len(addresses) > MAX_RECIPIENTS:
+            raise forms.ValidationError(f"Höchstens {MAX_RECIPIENTS} Empfänger je Zeitplan.")
+        return addresses
+
+    def clean_profile(self) -> ExportProfile:
+        """Die Vorlage muss der Nutzer wirklich benutzen dürfen, nicht nur im Feld stehen haben."""
+        profile = self.cleaned_data["profile"]
+        if not may_schedule(self.user, profile):
+            raise forms.ValidationError("Diese Vorlage darfst du nicht einplanen.")
+        return profile
+
+    def clean(self):
+        cleaned = super().clean()
+        profile = cleaned.get("profile")
+        day = cleaned.get("day_of_month")
+        if profile and day:
+            taken = ExportSchedule.objects.filter(
+                profile=profile, created_by=self.user, day_of_month=day
+            ).exclude(pk=self.instance.pk)
+            if taken.exists():
+                self.add_error(
+                    "day_of_month",
+                    "Zu dieser Vorlage gibt es an diesem Tag schon einen Zeitplan.",
+                )
+        return cleaned

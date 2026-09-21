@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Geplante Exporte{% endblock %}
+{% block content %}
+<h1>Geplante Exporte</h1>
+
+<p>
+  Ein Zeitplan verschickt eine gespeicherte
+  <a href="{% url 'reporting:export' %}">Export-Vorlage</a> jeden Monat von selbst.
+  Der Zeitraum steht nicht als festes Datum im Plan, sondern ergibt sich beim Lauf
+  aus dem Abrechnungszeitraum.
+</p>
+
+{% if not emails_enabled %}
+<div class="card warning">
+  <p>
+    Der Mailversand für geplante Exporte ist nicht eingeschaltet
+    (<code>EXPORT_EMAILS_ENABLED</code>). Fällige Pläne werden bis dahin als
+    fehlgeschlagen protokolliert und danach erneut versucht.
+  </p>
+</div>
+{% endif %}
+
+{% if schedules %}
+<div class="card">
+  <h2>Bestehende Pläne</h2>
+  <div class="table-scroll">
+    <table>
+      <tr>
+        <th>Vorlage</th>
+        <th>Tag</th>
+        <th>Zeitraum</th>
+        <th>Format</th>
+        <th>Empfänger</th>
+        <th>Angelegt von</th>
+        <th>Zuletzt</th>
+        <th></th>
+      </tr>
+      {% for item in schedules %}
+        <tr>
+          <td>
+            <a href="{% url 'reporting:export_profile' item.profile_id %}">{{ item.profile.name }}</a>
+            {% if not item.is_active %}<span class="muted">(inaktiv)</span>{% endif %}
+          </td>
+          <td>{{ item.day_of_month }}. jedes Monats</td>
+          <td>
+            {{ item.get_timeframe_display }}
+            {% if item.period_group %}<span class="muted">({{ item.period_group.name }})</span>{% endif %}
+          </td>
+          <td>{{ item.get_export_format_display }}</td>
+          <td>{{ item.recipients_label }}</td>
+          <td>{{ item.created_by.full_name }}</td>
+          <td>
+            {% with letzter=item.runs.all|first %}
+              {% if letzter %}
+                {{ letzter.due_on|date:"d.m.Y" }}: {{ letzter.get_status_display }}
+                {% if letzter.message %}<p class="help">{{ letzter.message }}</p>{% endif %}
+              {% else %}
+                <span class="muted">noch nicht gelaufen</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            <form method="post" action="{% url 'reporting:schedule_delete' item.pk %}" class="inline">
+              {% csrf_token %}<button type="submit">Löschen</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card">
+    <h2>Neuen Zeitplan anlegen</h2>
+    {{ form.non_field_errors }}
+    <div class="grid two">
+      <div>{{ form.profile.label_tag }}{{ form.profile }}{{ form.profile.errors }}</div>
+      <div>
+        {{ form.day_of_month.label_tag }}{{ form.day_of_month }}{{ form.day_of_month.errors }}
+        <p class="help">{{ form.day_of_month.help_text }}</p>
+      </div>
+      <div>{{ form.timeframe.label_tag }}{{ form.timeframe }}{{ form.timeframe.errors }}</div>
+      <div>
+        {{ form.period_group.label_tag }}{{ form.period_group }}{{ form.period_group.errors }}
+        <p class="help">{{ form.period_group.help_text }}</p>
+      </div>
+      <div>{{ form.export_format.label_tag }}{{ form.export_format }}{{ form.export_format.errors }}</div>
+      <div>
+        {{ form.recipients.label_tag }}{{ form.recipients }}{{ form.recipients.errors }}
+        <p class="help">{{ form.recipients.help_text }}</p>
+      </div>
+      <div><label>{{ form.is_active }} Aktiv</label>{{ form.is_active.errors }}</div>
+    </div>
+    <div class="actions">
+      <button class="primary" type="submit">Zeitplan speichern</button>
+    </div>
+    <p class="help">
+      Ausgewertet wird mit deinen Leserechten: Du bekommst nur die Zeiten der Gruppen,
+      die du auch von Hand exportieren dürftest. Der Anhang darf höchstens
+      {{ max_attachment_mb }} MB groß werden; sonst steht der Grund am Plan und es geht
+      keine Mail hinaus.
+    </p>
+  </div>
+</form>
+{% endblock %}

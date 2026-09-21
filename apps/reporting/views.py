@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -16,24 +15,25 @@ from apps.groups.periods import QUICK_RANGES, member_start_day, period_for, quic
 from apps.groups.permissions import readable_groups, require_group_read
 from apps.tracking.forms import PeriodForm
 
+from . import schedules as schedule_jobs
 from . import services, summary, timesheet
+from .access import (
+    may_change_schedule,
+    require_reporting_access,
+    visible_profiles,
+    visible_schedules,
+)
 from .columns import resolve
-from .forms import CSV_DIALECTS, ExportForm, ProfileSaveForm, SummaryForm
-from .models import ExportProfile
+from .forms import (
+    CSV_DIALECTS,
+    ExportForm,
+    ExportScheduleForm,
+    ProfileSaveForm,
+    SummaryForm,
+)
+from .models import ExportProfile, ExportSchedule
 
 PREVIEW_ROWS = 25
-
-
-def _require_reporting_access(user):
-    """Auswertung sehen: Buchhaltung, System-Admin oder Admin mindestens einer Gruppe."""
-    if not (user.sees_all_groups or user.is_any_group_admin):
-        raise PermissionDenied("Kein Zugriff auf die Auswertung.")
-
-
-def _visible_profiles(user):
-    return ExportProfile.objects.filter(
-        Q(owner=user) | Q(is_shared=True, owner__is_accounting=True)
-    ).select_related("owner")
 
 
 # Felder, die die Auswertungsseite an den Export weiterreicht.
@@ -67,7 +67,7 @@ def summary_view(request):
     Die Zahlen kommen aus derselben Verdichtung wie der Export, damit Ansicht
     und Datei nie auseinanderlaufen.
     """
-    _require_reporting_access(request.user)
+    require_reporting_access(request.user)
 
     today = timezone.localdate()
     start_day_of_cycle = member_start_day(request.user)
@@ -112,12 +112,12 @@ def summary_view(request):
 @login_required
 def export_view(request, profile_id=None):
     """Export mit Vorschau und Download als Excel oder CSV."""
-    _require_reporting_access(request.user)
+    require_reporting_access(request.user)
 
     profile = None
     initial = None
     if profile_id is not None:
-        profile = get_object_or_404(_visible_profiles(request.user), pk=profile_id)
+        profile = get_object_or_404(visible_profiles(request.user), pk=profile_id)
         initial = dict(profile.filters or {})
         initial.update({"columns": profile.columns, "grouping": profile.grouping})
 
@@ -161,7 +161,7 @@ def export_view(request, profile_id=None):
     context = {
         "form": form,
         "profile": profile,
-        "profiles": _visible_profiles(request.user),
+        "profiles": visible_profiles(request.user),
         "profile_form": ProfileSaveForm(),
         "columns": columns,
         "preview_rows": [
@@ -257,6 +257,54 @@ def profile_delete(request, profile_id):
     profile.delete()
     messages.success(request, "Vorlage gelöscht.")
     return redirect("reporting:export")
+
+
+@login_required
+def schedule_list(request):
+    """Geplante Exporte anlegen und ansehen (Issue 55).
+
+    Einrichten darf nur, wer die Auswertung benutzen darf und die Vorlage
+    sehen kann; der Export läuft später mit genau diesen Rechten.
+    """
+    require_reporting_access(request.user)
+
+    if request.method == "POST":
+        form = ExportScheduleForm(request.user, request.POST)
+        if form.is_valid():
+            schedule = form.save(commit=False)
+            schedule.created_by = request.user
+            schedule.save()
+            messages.success(
+                request,
+                f"Zeitplan gespeichert: am {schedule.day_of_month}. jedes Monats "
+                f"an {schedule.recipients_label}.",
+            )
+            return redirect("reporting:schedules")
+    else:
+        form = ExportScheduleForm(request.user)
+
+    return render(
+        request,
+        "reporting/schedules.html",
+        {
+            "form": form,
+            "schedules": visible_schedules(request.user),
+            "emails_enabled": schedule_jobs.emails_enabled(),
+            "max_attachment_mb": schedule_jobs.max_attachment_bytes() // (1024 * 1024),
+        },
+    )
+
+
+@require_POST
+@login_required
+def schedule_delete(request, schedule_id):
+    require_reporting_access(request.user)
+    schedule = get_object_or_404(ExportSchedule.objects.select_related("profile"), pk=schedule_id)
+    if not may_change_schedule(request.user, schedule):
+        raise PermissionDenied("Diesen Zeitplan darfst du nicht löschen.")
+    schedule.delete()
+    messages.success(request, "Zeitplan gelöscht.")
+    return redirect("reporting:schedules")
 
 
 def _sheet_range(request, start_day_of_cycle: int):

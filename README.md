@@ -273,9 +273,27 @@ python manage.py close_stale_entries          # vergessene Stempelungen beenden
 python manage.py remind_open_entries          # ans Ausstempeln erinnern
 python manage.py remind_pending_corrections   # an offene Anträge erinnern
 python manage.py remind_period_closing        # an den Abschluss erinnern
+python manage.py send_scheduled_exports       # geplante Exporte verschicken
 ```
 
 Jedes Kommando ist unschädlich, wenn es nichts zu tun gibt.
+
+### Geplante Exporte
+
+Zu einer gespeicherten Export-Vorlage lässt sich unter "Auswertung" ➜
+"Geplante Exporte" ein Zeitplan hinterlegen, etwa "am 3. jedes Monats für den
+letzten abgeschlossenen Abrechnungszeitraum". Der Zeitraum ergibt sich beim
+Lauf aus dem Abrechnungszyklus, nicht als festes Datum. Verschickt wird die
+Datei als Excel oder CSV an eine oder mehrere Adressen; jeder Versand steht
+im Protokoll.
+
+`send_scheduled_exports` führt jede Fälligkeit höchstens einmal aus, auch
+wenn das Kommando mehrfach oder gleichzeitig startet. Ausgewertet wird mit
+den Leserechten der Person, die den Plan angelegt hat; fallen die weg, wird
+der Plan deaktiviert statt verschickt. Ohne `EXPORT_EMAILS_ENABLED` geht
+nichts hinaus: der fällige Lauf wird als Fehler protokolliert und beim
+nächsten Durchgang erneut versucht. `EXPORT_MAX_ATTACHMENT_MB` und
+`EXPORT_MAX_ROWS` begrenzen die Größe des Anhangs.
 
 Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht
