@@ -720,3 +720,27 @@ hineinlaufen; gezählt wird davon nur der Anteil im Zeitraum. Gerechnet wird
 über UTC, weil ein Tag beim Wechsel zwischen Sommer- und Winterzeit 23 oder 25
 Stunden hat und Python zwei Zeitpunkte derselben Zeitzone sonst ohne Rücksicht
 darauf voneinander abzieht.
+
+**Erinnerungen** (Issue 34). Benachrichtigt wurde bisher nur nachträglich.
+Dazu kommen drei Hinweise, die Arbeit ersparen, bevor etwas schiefgeht: wer
+länger als `OPEN_ENTRY_REMINDER_HOURS` eingestempelt ist, wird ans Ausstempeln
+erinnert, bevor `close_stale_entries` den Eintrag kappt; liegt ein
+Korrekturantrag länger als `PENDING_CORRECTION_REMINDER_DAYS` offen, werden die
+Admins der Gruppe erinnert; ist ein Abrechnungszeitraum seit
+`PERIOD_CLOSING_REMINDER_DAYS` abgelaufen und noch nicht abgeschlossen, bekommen
+die Admins einen Hinweis samt der Zahl der offenen Anträge und der
+unvollständigen Einträge in diesem Zeitraum.
+
+Jeder Hinweis steht im Tool unter "Hinweise", mit Zähler in der Navigation, und
+geht nur mit `REMINDER_EMAILS_ENABLED=true` zusätzlich als Mail raus. Er
+entsteht genau einmal je Anlass und Empfänger; dafür sorgt die Tabelle
+`reminders_reminder` mit einer eindeutigen Bezeichnung des Anlasses. Erledigt
+sich der Anlass, schließt sich der Hinweis: beim Ausstempeln, beim
+automatischen Beenden, bei der Entscheidung oder Rücknahme eines Antrags und
+beim Abschluss eines Zeitraums. Was daneben passiert, etwa ein Eingriff in der
+Datenbank, räumt der nächste Lauf des Kommandos weg. Wer einen Hinweis
+ausblendet, bekommt ihn zu diesem Anlass nicht wieder.
+
+Die drei Kommandos `remind_open_entries`, `remind_pending_corrections` und
+`remind_period_closing` laufen zusammen mit `close_stale_entries` im Dienst
+`scheduler` beziehungsweise im systemd-Timer.

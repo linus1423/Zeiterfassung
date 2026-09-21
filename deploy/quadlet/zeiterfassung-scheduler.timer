@@ -5,7 +5,7 @@
 # Quadlet erzeugt aus zeiterfassung-scheduler.container die Unit
 # zeiterfassung-scheduler.service, die dieser Timer startet.
 [Unit]
-Description=Vergessene Stempelungen stündlich beenden
+Description=Wiederkehrende Aufgaben der Zeiterfassung stündlich ausführen
 
 [Timer]
 OnCalendar=hourly

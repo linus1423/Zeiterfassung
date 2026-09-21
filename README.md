@@ -122,6 +122,28 @@ Versandt wird nach dem Commit, im Request und begrenzt durch
 Vorgang nicht, der Fehlversuch landet im Protokoll. Bei hohem Mailaufkommen
 gehört an diese Stelle eine Warteschlange.
 
+### Erinnerungen
+
+Benachrichtigt wird damit nur nachträglich. Daneben gibt es drei Hinweise,
+die Arbeit ersparen, bevor etwas schiefgeht:
+
+| Hinweis | Anlass | Empfänger |
+| --- | --- | --- |
+| Ausstempeln vergessen | länger als `OPEN_ENTRY_REMINDER_HOURS` eingestempelt | die Person selbst |
+| Antrag liegt offen | Antrag älter als `PENDING_CORRECTION_REMINDER_DAYS` | Admins der Gruppe |
+| Zeitraum noch offen | Zeitraum seit `PERIOD_CLOSING_REMINDER_DAYS` abgelaufen | Admins der Gruppe |
+
+Sie stehen im Tool unter **Hinweise**, mit einem Zähler in der Navigation.
+Eine Mail dazu gibt es nur mit `REMINDER_EMAILS_ENABLED=true`. Jeder Hinweis
+entsteht genau einmal je Anlass, nicht bei jedem Lauf des Diensts, und
+verschwindet wieder, sobald der Anlass erledigt ist: nach dem Ausstempeln,
+nach der Entscheidung, nach dem Abschluss. Wer einen Hinweis ausblendet,
+bekommt ihn zu diesem Anlass nicht noch einmal.
+
+Die Schwelle fürs Ausstempeln gehört deutlich unter `MAX_OPEN_ENTRY_HOURS`,
+sonst kommt der Hinweis erst, wenn `close_stale_entries` den Eintrag schon
+gekappt hat.
+
 ## Betrieb
 
 ### Docker Compose
@@ -171,17 +193,22 @@ DJANGO_SECRET_KEY_FILE=/run/secrets/django-secret-key
 Damit funktionieren `podman secret` und `docker secret`. Eine gesetzte
 Umgebungsvariable hat Vorrang.
 
-### Vergessene Stempelungen
+### Wiederkehrende Aufgaben
 
-Unter Compose beendet der Dienst `scheduler` sie.
-Er ruft `python manage.py close_stale_entries` in einer Schleife auf, standard-
-mäßig jede Stunde (`SCHEDULER_INTERVAL_SECONDS`). Unter Podman macht das ein
-systemd-Timer. Wer ohne beides betreibt, legt dafür einen Cronjob oder einen
-systemd-Timer an:
+Unter Compose erledigt sie der Dienst `scheduler`. Er ruft die folgenden
+Kommandos in einer Schleife auf, standardmäßig jede Stunde
+(`SCHEDULER_INTERVAL_SECONDS`). Unter Podman macht das ein systemd-Timer.
+Wer ohne beides betreibt, legt dafür einen Cronjob oder einen systemd-Timer
+an:
 
 ```bash
-python manage.py close_stale_entries
+python manage.py close_stale_entries          # vergessene Stempelungen beenden
+python manage.py remind_open_entries          # ans Ausstempeln erinnern
+python manage.py remind_pending_corrections   # an offene Anträge erinnern
+python manage.py remind_period_closing        # an den Abschluss erinnern
 ```
+
+Jedes Kommando ist unschädlich, wenn es nichts zu tun gibt.
 
 Der Eintrag wird dann auf die Höchstdauer (`MAX_OPEN_ENTRY_HOURS`, Vorgabe 16
 Stunden) gekürzt und als unvollständig markiert. Die betroffene Person sieht

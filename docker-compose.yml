@@ -31,9 +31,11 @@ services:
     ports:
       - "8000:8000"
 
-  # Vergessene Stempelungen beenden (Issue 7). Läuft als eigener Dienst im
-  # selben Stack, damit dafür kein Cronjob auf dem Host und kein Broker
-  # gebraucht wird. Das Kommando ist unschädlich, wenn es nichts zu tun gibt.
+  # Wiederkehrende Aufgaben: vergessene Stempelungen beenden (Issue 7) und die
+  # Erinnerungen verschicken (Issue 34). Läuft als eigener Dienst im selben
+  # Stack, damit dafür kein Cronjob auf dem Host und kein Broker gebraucht
+  # wird. Jedes Kommando ist unschädlich, wenn es nichts zu tun gibt, und ein
+  # fehlgeschlagenes hält die übrigen nicht auf.
   # Unter Podman übernimmt das ein systemd-Timer, siehe docs/podman-quadlet.md.
   scheduler:
     build: .
@@ -50,6 +52,9 @@ services:
     command: >
       sh -c "while true; do
                python manage.py close_stale_entries || echo 'close_stale_entries fehlgeschlagen';
+               python manage.py remind_open_entries || echo 'remind_open_entries fehlgeschlagen';
+               python manage.py remind_pending_corrections || echo 'remind_pending_corrections fehlgeschlagen';
+               python manage.py remind_period_closing || echo 'remind_period_closing fehlgeschlagen';
                sleep ${SCHEDULER_INTERVAL_SECONDS:-3600};
              done"
 
