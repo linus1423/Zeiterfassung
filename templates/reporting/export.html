@@ -18,7 +18,7 @@
       <tr>
         <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
         <td>{{ item.get_grouping_display }}</td>
-        <td>{% if item.is_shared %}geteilt{% endif %}</td>
+        <td>{% if item.sharing_label %}geteilt mit {{ item.sharing_label }}{% endif %}</td>
         <td>
           {% if item.owner_id == user.pk %}
             <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
@@ -60,7 +60,8 @@
       <div>
         <label for="id_name">Als Vorlage speichern unter</label>
         <input type="text" name="name" id="id_name" maxlength="120" placeholder="z. B. Monatsabrechnung">
-        <label><input type="checkbox" name="is_shared" value="on"> Mit der Buchhaltung teilen</label>
+        <label><input type="checkbox" name="share_with_group_admins" value="on"> Mit den Admins meiner Gruppen teilen</label>
+        <label><input type="checkbox" name="share_with_accounting" value="on"> Mit der Buchhaltung teilen</label>
       </div>
     </div>
     <div class="actions">

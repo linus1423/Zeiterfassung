@@ -10,6 +10,8 @@ from __future__ import annotations
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 
+from apps.groups.models import GroupMembership
+
 from .models import ExportProfile, ExportSchedule
 
 
@@ -29,10 +31,30 @@ def require_reporting_access(user) -> None:
 
 
 def visible_profiles(user):
-    """Vorlagen, die der Nutzer benutzen darf: eigene und geteilte der Buchhaltung."""
-    return ExportProfile.objects.filter(
-        Q(owner=user) | Q(is_shared=True, owner__is_accounting=True)
-    ).select_related("owner")
+    """Vorlagen, die der Nutzer benutzen darf.
+
+    Eigene immer; dazu die beiden Wege, auf denen eine Vorlage geteilt sein
+    kann. Der Besitzer entscheidet je Weg getrennt, weil eine Person beides
+    sein kann, Buchhalterin und Gruppen-Admin (Issue 72).
+    """
+    conditions = Q(owner=user)
+
+    if user.sees_all_groups:
+        conditions |= Q(share_with_accounting=True)
+
+    # Admin-Kollegen sind alle Admins der Gruppen, die der Betrachter selbst
+    # verwaltet. Über die Nutzer-Ids statt über einen Join, sonst kommt eine
+    # Vorlage bei mehreren gemeinsamen Gruppen mehrfach zurück.
+    administrated = user.administrated_group_ids()
+    if administrated:
+        peers = GroupMembership.objects.filter(
+            group_id__in=administrated,
+            group__is_active=True,
+            role=GroupMembership.Role.ADMIN,
+        ).values("user_id")
+        conditions |= Q(share_with_group_admins=True, owner_id__in=peers)
+
+    return ExportProfile.objects.filter(conditions).select_related("owner")
 
 
 def may_schedule(user, profile: ExportProfile) -> bool:

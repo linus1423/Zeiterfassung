@@ -5,8 +5,15 @@ from .models import ExportProfile, ExportRun, ExportSchedule
 
 @admin.register(ExportProfile)
 class ExportProfileAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "grouping", "is_shared", "updated_at")
-    list_filter = ("grouping", "is_shared")
+    list_display = (
+        "name",
+        "owner",
+        "grouping",
+        "share_with_group_admins",
+        "share_with_accounting",
+        "updated_at",
+    )
+    list_filter = ("grouping", "share_with_group_admins", "share_with_accounting")
     search_fields = ("name", "owner__email")
 
 

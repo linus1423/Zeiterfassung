@@ -329,10 +329,11 @@ def test_geteilte_vorlage_liefert_nur_die_eigenen_gruppen(
     accountant, group_admin, member, group, other_group
 ):
     """Ein Gruppen-Admin bekommt über einen Plan keine fremden Zeiten."""
+    GroupMembership.objects.create(user=accountant, group=group, role=GroupMembership.Role.ADMIN)
     geteilt = ExportProfile.objects.create(
         name="Alle Gruppen",
         owner=accountant,
-        is_shared=True,
+        share_with_group_admins=True,
         columns=["full_name", "hours"],
         filters={},
     )
