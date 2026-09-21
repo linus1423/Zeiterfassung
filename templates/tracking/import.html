@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}Zeiten importieren{% endblock %}
+{% block content %}
+<h1>Zeiten importieren</h1>
+<p class="help">
+  Für die Übernahme einer Zeitliste aus einem Altsystem. Die Datei wird zuerst nur
+  geprüft; geschrieben wird erst im zweiten Schritt, und nur dann, wenn keine einzige
+  Zeile fehlerhaft ist. Alle Zeiten werden als „Importiert“ angelegt und stehen im Protokoll.
+</p>
+
+<div class="card">
+  <h2>Datei hochladen</h2>
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    {{ form.as_p }}
+    <div class="actions">
+      <button class="primary" type="submit">Prüfen</button>
+      <a class="button" href="{% url 'tracking:import_sample' %}">Beispieldatei herunterladen</a>
+    </div>
+  </form>
+  <p class="help">
+    Spalten: <strong>Personalnummer</strong> oder <strong>E-Mail</strong>, <strong>Gruppe</strong>,
+    <strong>Tätigkeit</strong>, <strong>Datum</strong>, <strong>Beginn</strong>,
+    <strong>Ende</strong>, <strong>Pausen</strong>, <strong>Notiz</strong>.
+    Gruppe, Beginn und Ende sind Pflicht, dazu eine Spalte zur Person.
+    Beginn und Ende dürfen „TT.MM.JJJJ HH:MM“ heißen oder nur „HH:MM“, wenn es eine
+    Spalte Datum gibt; ein Ende vor dem Beginn zählt dann als Folgetag.
+    Pausen sind entweder eine Dauer („30“ oder „0:30“, sie wird mittig gelegt) oder
+    Zeiträume wie „11:30-12:00“, mehrere davon durch Komma getrennt.
+  </p>
+</div>
+
+{% if plan %}
+<div class="card">
+  <h2>Ergebnis der Prüfung</h2>
+  <table>
+    <tr><th>Gelesene Zeilen</th><td>{{ plan.row_count }}</td></tr>
+    <tr><th>Zeiten zum Anlegen</th><td>{{ plan.entries|length }}</td></tr>
+    <tr><th>Fehlerhafte Zeilen</th><td>{{ plan.error_count }}</td></tr>
+    <tr><th>Erkannte Nutzer</th>
+      <td>{% for person in plan.users %}{{ person.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
+    <tr><th>Erkannte Gruppen</th>
+      <td>{% for group in plan.groups %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
+    <tr><th>Zeitraum</th>
+      <td>{% if plan.first_day %}{{ plan.first_day|date:"d.m.Y" }} bis {{ plan.last_day|date:"d.m.Y" }}{% else %}—{% endif %}</td></tr>
+    <tr><th>Arbeitszeit gesamt</th><td>{{ plan.total_work|dauer }} h</td></tr>
+  </table>
+</div>
+
+{% if plan.errors %}
+<div class="card">
+  <h2>Fehler je Zeile</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Zeile</th><th>Begründung</th></tr>
+      {% for error in plan.errors %}
+        <tr><td>{{ error.line }}</td><td>{{ error.message }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% if plan.truncated %}
+    <p class="help">Es werden nur die ersten Fehler angezeigt. Bitte die Datei berichtigen und erneut hochladen.</p>
+  {% endif %}
+  <p class="help">Solange ein Fehler bleibt, wird nichts importiert.</p>
+</div>
+{% endif %}
+
+{% if preview_rows %}
+<div class="card">
+  <h2>Vorschau</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Zeile</th><th>Nutzer</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th></tr>
+      {% for item in preview_rows %}
+        <tr>
+          <td>{{ item.line }}</td>
+          <td>{{ item.user.full_name }}</td>
+          <td>{{ item.group.name }}</td>
+          <td>{% if item.activity %}{{ item.activity.name }}{% else %}<span class="muted">ohne</span>{% endif %}</td>
+          <td>{{ item.start|date:"d.m.Y H:i" }}</td>
+          <td>{{ item.end|date:"d.m.Y H:i" }}</td>
+          <td>{{ item.break_total|dauer }}</td>
+          <td>{{ item.work|dauer }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% if plan.entries|length > preview_limit %}
+    <p class="help">Von {{ plan.entries|length }} Zeiten werden die ersten {{ preview_limit }} angezeigt.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if plan.ok and record %}
+<div class="card">
+  <h2>Übernehmen</h2>
+  <p>
+    {{ plan.entries|length }} Zeiten werden angelegt. Geprüft wird dabei noch einmal alles,
+    falls sich seit der Vorschau etwas geändert hat.
+  </p>
+  <form method="post" action="{% url 'tracking:import_apply' record.pk %}">{% csrf_token %}
+    <div class="actions">
+      <button class="primary" type="submit">Jetzt importieren</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

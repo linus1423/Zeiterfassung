@@ -16,15 +16,18 @@
         <a href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
         <a href="{% url 'corrections:mine' %}">Korrekturen{% if nav.new_decisions %} <span class="badge count">{{ nav.new_decisions }}</span>{% endif %}</a>
         {% if nav.reminders %}<a href="{% url 'reminders:list' %}">Hinweise <span class="badge count">{{ nav.reminders }}</span></a>{% endif %}
-        {% if nav.is_group_admin %}
+        {% if nav.is_group_admin or nav.is_accounting %}
           <a href="{% url 'groups:list' %}">Gruppen</a>
+        {% endif %}
+        {% if nav.is_group_admin %}
           <a href="{% url 'corrections:inbox' %}">Anträge{% if nav.pending_corrections %} <span class="badge count">{{ nav.pending_corrections }}</span>{% endif %}</a>
         {% endif %}
         {% if nav.is_group_admin or nav.is_accounting %}
-          <a href="{% url 'reporting:export' %}">Auswertung</a>
+          <a href="{% url 'reporting:summary' %}">Auswertung</a>
         {% endif %}
         {% if nav.is_superuser %}
           <a href="{% url 'accounts:user_list' %}">Nutzer</a>
+          <a href="{% url 'tracking:import_entries' %}">Import</a>
         {% endif %}
         <span class="spacer"></span>
         <a href="{% url 'accounts:profile' %}">{{ user.full_name }}</a>
