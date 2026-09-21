@@ -29,6 +29,8 @@ class AuditLog(models.Model):
         MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
         GROUP_CREATED = "group_created", "Gruppe angelegt"
         NOTIFICATION_FAILED = "notification_failed", "Benachrichtigung fehlgeschlagen"
+        EMERGENCY_LOGIN = "emergency_login", "Notfallzugang genutzt"
+        EMERGENCY_LOGIN_FAILED = "emergency_login_failed", "Notfallzugang gescheitert"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

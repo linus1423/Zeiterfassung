@@ -33,3 +33,25 @@ class UserStammdatenForm(forms.ModelForm):
 
 class UserSearchForm(forms.Form):
     q = forms.CharField(label="Suche", required=False, max_length=100)
+
+
+class EmergencyLoginForm(forms.Form):
+    """Benutzername und Passwort für den Notfallzugang.
+
+    Bewusst ohne jede eigene Prüflogik: das Formular sammelt nur ein, ob ein
+    Konto existiert und ob es ein System-Admin ist, entscheidet allein die
+    View (siehe apps/accounts/views.emergency_login). So kann das Formular
+    auch nichts darüber verraten.
+
+    Das Passwort ist auf 128 Zeichen begrenzt. Das ist keine fachliche Grenze,
+    sondern hält die Kosten des Hashens klein: ein beliebig langes Passwort
+    wäre sonst ein billiger Weg, Rechenzeit zu verbrennen.
+    """
+
+    username = forms.CharField(label="Benutzername", max_length=150, strip=True)
+    password = forms.CharField(
+        label="Passwort",
+        max_length=128,
+        strip=False,
+        widget=forms.PasswordInput(render_value=False),
+    )
