@@ -14,7 +14,7 @@ from apps.tracking.daysplit import entries_in_range, parts_in_range
 from apps.tracking.forms import PeriodForm, break_formset, validate_breaks_within
 from apps.tracking.models import BreakEntry, TimeEntry
 
-from . import closing, overview
+from . import closing, confirmation, overview
 from .forms import (
     ActivityForm,
     AdminEntryForm,
@@ -342,12 +342,19 @@ def period_list(request, group_id):
         _handle_period_post(request, group)
         return redirect("groups:periods", group_id=group.pk)
 
+    # Wer den Zeitraum noch nicht bestätigt hat (Issue 50). Das steht hier als
+    # Hinweis und hält den Abschluss nicht auf.
+    rows = closing.period_overview(group)
+    missing = confirmation.missing_confirmations(group, [row["period"] for row in rows])
+    for row in rows:
+        row["confirmations"] = missing.get(row["period"].start)
+
     return render(
         request,
         "groups/period_list.html",
         {
             "group": group,
-            "rows": closing.period_overview(group),
+            "rows": rows,
             "form": ClosePeriodForm(),
             "may_close": closing.may_close(request.user, group),
             "may_reopen": closing.may_reopen(request.user),

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Activity, Group, GroupMembership, PeriodLock
+from .models import Activity, Group, GroupMembership, PeriodConfirmation, PeriodLock
 
 
 class MembershipInline(admin.TabularInline):
@@ -42,3 +42,10 @@ class PeriodLockAdmin(admin.ModelAdmin):
     list_display = ("group", "period_start", "period_end", "closed_by", "closed_at")
     list_filter = ("group",)
     autocomplete_fields = ("closed_by",)
+
+
+@admin.register(PeriodConfirmation)
+class PeriodConfirmationAdmin(admin.ModelAdmin):
+    list_display = ("user", "group", "period_start", "period_end", "confirmed_at", "entry_count")
+    list_filter = ("group",)
+    autocomplete_fields = ("user",)

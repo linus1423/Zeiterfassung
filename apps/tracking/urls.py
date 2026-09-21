@@ -12,4 +12,5 @@ urlpatterns = [
     path("stempeln/weiter/", views.break_end_view, name="break_end"),
     path("stempeln/stop/", views.clock_out_view, name="clock_out"),
     path("meine-zeiten/", views.my_entries, name="my_entries"),
+    path("zeitraum-bestaetigen/", views.confirm_period, name="confirm_period"),
 ]

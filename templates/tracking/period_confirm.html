@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load zeit %}
+{% block title %}Zeitraum bestätigen{% endblock %}
+{% block content %}
+<h1>Meinen Zeitraum bestätigen</h1>
+
+{% if not groups %}
+  <div class="card">
+    <p class="muted">Du gehörst zu keiner Gruppe. Sobald dich ein Admin einer Gruppe zuordnet, kannst du hier deinen Abrechnungszeitraum bestätigen.</p>
+  </div>
+{% else %}
+  <div class="card">
+    <form method="get" class="grid two">
+      {% if groups|length > 1 %}
+        <div>
+          <label for="gruppe">Gruppe</label>
+          <select name="gruppe" id="gruppe">
+            {% for choice in groups %}
+              <option value="{{ choice.pk }}"{% if choice.pk == group.pk %} selected{% endif %}>{{ choice.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% else %}
+        <div><p>Gruppe: <strong>{{ group.name }}</strong></p></div>
+      {% endif %}
+      <div>
+        <label for="zeitraum">Abrechnungszeitraum</label>
+        <select name="zeitraum" id="zeitraum">
+          {% for choice in periods %}
+            <option value="{{ choice.key }}"{% if choice.key == period.key %} selected{% endif %}>{{ choice.label }} ({{ choice.start|date:"d.m.Y" }} bis {{ choice.end|date:"d.m.Y" }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="actions">
+        <button class="primary" type="submit">Anzeigen</button>
+      </div>
+    </form>
+    <p class="help">
+      Der Zeitraum folgt dem Zyklus der Gruppe.
+      {% if group.month_start_day == 1 %}
+        {{ group.name }} rechnet nach Kalendermonat ab.
+      {% else %}
+        Bei {{ group.name }} beginnt ein Zeitraum am {{ group.month_start_day }}. eines Monats.
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>{{ period.label }} · {{ group.name }}</h2>
+    <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden) · Zeiteinträge: {{ entry_count }}</p>
+
+    {% if state.is_confirmed %}
+      <p><span class="badge">bestätigt</span> am {{ state.confirmation.confirmed_at|date:"d.m.Y H:i" }} Uhr mit {{ state.confirmation.total|dauer }} h.</p>
+    {% elif state.is_stale %}
+      <p>
+        <span class="badge pending">Bestätigung verfallen</span>
+        Du hattest am {{ state.confirmation.confirmed_at|date:"d.m.Y H:i" }} Uhr {{ state.confirmation.total|dauer }} h bestätigt.
+        Danach wurden die Zeiten dieses Zeitraums noch geändert, deshalb zählt die alte Bestätigung nicht mehr.
+      </p>
+    {% else %}
+      <p><span class="badge pending">noch nicht bestätigt</span></p>
+    {% endif %}
+
+    {% if incomplete_count %}
+      <p><span class="badge pending">unvollständig</span>
+      Unvollständige Zeiteinträge in diesem Zeitraum: {{ incomplete_count }}. Dort wurde das Ausstempeln vergessen, die Zeit stimmt also vermutlich nicht. Bitte erst einen Korrekturantrag stellen.</p>
+    {% endif %}
+    {% if open_requests %}
+      <p>Offene Korrekturanträge zu diesem Zeitraum: {{ open_requests }}. Wird einer davon genehmigt, verfällt deine Bestätigung und du bestätigst noch einmal.</p>
+    {% endif %}
+
+    {% if lock %}
+      <p class="muted">Dieser Zeitraum ist seit dem {{ lock.closed_at|date:"d.m.Y" }} abgeschlossen und kann nicht mehr bestätigt werden.</p>
+    {% else %}
+      <form method="post" class="actions">{% csrf_token %}
+        <input type="hidden" name="gruppe" value="{{ group.pk }}">
+        <input type="hidden" name="zeitraum" value="{{ period.key }}">
+        <button class="primary" type="submit">{% if state.is_confirmed %}Erneut bestätigen{% else %}Zeitraum bestätigen{% endif %}</button>
+      </form>
+      <p class="help">
+        Mit der Bestätigung sagst du, dass deine Tage in diesem Zeitraum stimmen.
+        Der Abschluss durch den Gruppen-Admin bleibt davon unberührt, er sieht nur, wer noch nicht bestätigt hat.
+      </p>
+    {% endif %}
+    <p><a href="{% url 'tracking:my_entries' %}?start={{ period.start|date:"Y-m-d" }}&amp;end={{ period.end|date:"Y-m-d" }}">Einzelne Zeiten dieses Zeitraums ansehen</a></p>
+  </div>
+
+  <div class="card">
+    <h2>Tagessummen</h2>
+    <table>
+      {% for day, total_day in by_day %}
+        <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
+      {% empty %}
+        <tr><td class="muted">In diesem Zeitraum wurde nichts erfasst.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

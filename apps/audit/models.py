@@ -24,6 +24,7 @@ class AuditLog(models.Model):
         EXPORT = "export", "Export erstellt"
         PERIOD_CLOSED = "period_closed", "Zeitraum abgeschlossen"
         PERIOD_REOPENED = "period_reopened", "Zeitraum wieder geöffnet"
+        PERIOD_CONFIRMED = "period_confirmed", "Zeitraum bestätigt"
         USER_ANONYMIZED = "user_anonymized", "Konto anonymisiert"
         USER_UPDATED = "user_updated", "Stammdaten geändert"
         MEMBERSHIP_SYNCED = "membership_synced", "Mitgliedschaften abgeglichen"
