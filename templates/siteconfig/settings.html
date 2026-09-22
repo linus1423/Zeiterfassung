@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Darstellung{% endblock %}
+{% block content %}
+<h1>Darstellung</h1>
+<p class="lead">
+  Was hier steht, erscheint auf jeder Seite in Kopf- und Fußzeile, auch vor der
+  Anmeldung. Impressum und Datenschutz sind ohne Anmeldung lesbar.
+</p>
+
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="card">
+    <h2>Kopfzeile</h2>
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      {% if field.name in kopf_felder %}
+        <p>
+          {{ field.label_tag }}{{ field }}
+          {{ field.errors }}
+          {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+        </p>
+      {% endif %}
+    {% endfor %}
+    {# "site" kommt aus dem Kontextprozessor und zeigt deshalb das
+       gespeicherte Logo, auch wenn das Formular gerade Fehler hat. #}
+    {% if site.has_logo %}
+      <p class="logo-vorschau">
+        <img src="{% url 'siteconfig:logo' %}?v={{ site.logo_version }}"
+             alt="{{ site.logo_description }}">
+      </p>
+      <p class="help">Hinterlegt: {{ site.logo_filename }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Fußzeile</h2>
+    {% for field in form %}
+      {% if field.name in fuss_felder %}
+        <p>
+          {{ field.label_tag }}{{ field }}
+          {{ field.errors }}
+          {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+        </p>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h2>Weitere Verweise in der Fußzeile</h2>
+    <p class="help">
+      Zum Beispiel Kontakt, Barrierefreiheit oder ein Handbuch. Leere Zeilen
+      werden nicht site.
+    </p>
+    {{ links.management_form }}
+    {{ links.non_form_errors }}
+    <div class="link-zeilen">
+      {% for zeile in links %}
+        <div class="link-zeile">
+          {{ zeile.id }}
+          <span>{{ zeile.label.label_tag }}{{ zeile.label }}{{ zeile.label.errors }}</span>
+          <span>{{ zeile.url.label_tag }}{{ zeile.url }}{{ zeile.url.errors }}</span>
+          <span>{{ zeile.position.label_tag }}{{ zeile.position }}{{ zeile.position.errors }}</span>
+          {% if zeile.instance.pk %}<span>{{ zeile.DELETE.label_tag }}{{ zeile.DELETE }}</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" type="submit">Speichern</button>
+  </div>
+</form>
+{% endblock %}

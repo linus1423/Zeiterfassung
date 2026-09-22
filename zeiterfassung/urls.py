@@ -9,6 +9,7 @@ urlpatterns = [
     path("protokoll/", include("apps.audit.urls")),
     path("hinweise/", include("apps.reminders.urls")),
     path("konto/", include("apps.accounts.urls")),
+    path("", include("apps.siteconfig.urls")),
     # allauth übernimmt den OIDC-Ablauf (Weiterleitung, Rückkanal, Abmelden).
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),

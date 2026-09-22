@@ -89,12 +89,24 @@ header.site {
 }
 
 header.site .inner,
+footer.site .inner,
 main { max-width: 1100px; margin: 0 auto; }
 
 main { padding: var(--space-5) var(--space-4) var(--space-6); }
 
 nav.site { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-nav.site .brand { font-weight: 700; margin-right: 0.5rem; }
+nav.site .brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  margin-right: 0.5rem;
+  color: inherit;
+}
+nav.site .brand:hover { text-decoration: none; }
+nav.site .brand .titel { font-weight: 700; }
+nav.site .brand .firma { color: var(--muted); font-size: 0.95rem; }
+nav.site .brand img.logo { height: 2rem; width: auto; max-width: 10rem; display: block; }
 nav.site a { text-decoration: none; padding: 0.35rem 0.1rem; }
 nav.site a:hover { text-decoration: underline; }
 nav.site .spacer { flex: 1; }
@@ -545,7 +557,7 @@ details.panel[open] > summary { margin-bottom: var(--space-3); }
 
 @media print {
   /* Auf Papier gehören weder Navigation noch Knöpfe hin. */
-  header.site, .no-print, .messages { display: none !important; }
+  header.site, footer.site, .no-print, .messages { display: none !important; }
   body { background: #fff; }
   main { margin: 0; max-width: none; padding: 0; }
   .sheet { box-shadow: none; border: 0; padding: 0; page-break-after: always; }
@@ -747,3 +759,68 @@ nav.site input.menu-schalter {
     }
   }
 }
+
+/* --- Fußzeile ------------------------------------------------------------ */
+
+/* Angaben des Betreibers: Firma, Freitext und die Verweise auf Impressum,
+   Datenschutz und weitere Seiten (Issue 77). Die Inhalte pflegt ein
+   System-Admin unter "Darstellung", hier steht nur ihr Aussehen. */
+footer.site {
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  margin-top: var(--space-6);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+footer.site p { margin: 0 0 var(--space-1); }
+footer.site .firma { font-weight: 650; color: var(--ink); }
+footer.site .footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-2);
+}
+footer.site .footer-links a { text-decoration: none; }
+footer.site .footer-links a:hover { text-decoration: underline; }
+
+@supports (padding: max(0px)) {
+  footer.site {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+}
+
+@media (pointer: coarse) {
+  /* Mit dem Finger getroffen werden die Verweise nur mit etwas Luft. */
+  footer.site .footer-links a { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+/* --- Impressum, Datenschutz und ihre Pflege ------------------------------ */
+
+/* Fließtext liest sich in einer schmalen Spalte besser; die Zeilenumbrüche
+   aus dem Pflegefeld bleiben erhalten, ohne dass HTML erlaubt wäre. */
+.textseite { max-width: 44rem; }
+.textseite p { white-space: pre-line; }
+
+/* Die Verweise der Fußzeile: ab Tablet eine Zeile je Verweis, auf dem Handy
+   liegen die Felder untereinander. */
+.link-zeilen { display: grid; gap: var(--space-3); }
+.link-zeile {
+  display: grid;
+  gap: var(--space-1) var(--space-4);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-2);
+}
+@media screen and (min-width: 720px) {
+  .link-zeile { grid-template-columns: 2fr 3fr auto auto; align-items: end; }
+}
+
+.logo-vorschau {
+  display: inline-block;
+  background: var(--card-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+}
+.logo-vorschau img { height: 3rem; width: auto; max-width: 16rem; display: block; }
