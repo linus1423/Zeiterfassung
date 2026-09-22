@@ -2,23 +2,31 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}{{ site.site_title }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
 <header class="site">
   <div class="inner">
-    <a class="brand" href="{% url 'tracking:clock' %}">
-      {% if site.has_logo %}
-        <img src="{% url 'siteconfig:logo' %}?v={{ site.logo_version }}"
-             alt="{{ site.logo_description }}" class="logo">
-      {% endif %}
-      <span class="titel">{{ site.site_title }}</span>
-      {% if site.company_name %}<span class="firma">{{ site.company_name }}</span>{% endif %}
-    </a>
     <nav class="site">
+      <a class="brand" href="{% url 'tracking:clock' %}">
+        {% if site.has_logo %}
+          <img src="{% url 'siteconfig:logo' %}?v={{ site.logo_version }}"
+               alt="{{ site.logo_description }}" class="logo">
+        {% endif %}
+        <span class="titel">{{ site.site_title }}</span>
+        {% if site.company_name %}<span class="firma">{{ site.company_name }}</span>{% endif %}
+      </a>
       {% if user.is_authenticated %}
+      {% comment %}
+        Auf schmalen Geräten klappt das Menü auf, ab Tablet steht es als Zeile da
+        (Issue 78). Der Schalter ist ein Ankreuzfeld, damit dafür kein JavaScript
+        nötig ist.
+      {% endcomment %}
+      <input type="checkbox" id="menu-schalter" class="menu-schalter">
+      <label class="menu-knopf" for="menu-schalter">Menü</label>
+      <div class="menu-items">
         <a href="{% url 'tracking:clock' %}">Stempeluhr</a>
         <a href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
         <a href="{% url 'tracking:confirm_period' %}">Zeitraum bestätigen</a>
@@ -44,6 +52,7 @@
           {% csrf_token %}
           <button type="submit">Abmelden</button>
         </form>
+      </div>
       {% endif %}
     </nav>
   </div>
@@ -68,7 +77,7 @@
       </nav>
     {% elif nav.is_superuser %}
       {# Solange nichts gepflegt ist, sieht nur der System-Admin, wo es hingehört. #}
-      <p class="freitext muted">
+      <p class="freitext">
         Impressum und Datenschutz fehlen noch:
         <a href="{% url 'siteconfig:settings' %}">Darstellung pflegen</a>.
       </p>

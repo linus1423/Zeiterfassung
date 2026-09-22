@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Geplante Exporte{% endblock %}
 {% block content %}
-<h1>Geplante Exporte</h1>
+<div class="page-head">
+  <h1>Geplante Exporte</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'reporting:export' %}">Zum Export</a>
+  </div>
+</div>
 
-<p>
+<p class="lead">
   Ein Zeitplan verschickt eine gespeicherte
   <a href="{% url 'reporting:export' %}">Export-Vorlage</a> jeden Monat von selbst.
   Der Zeitraum steht nicht als festes Datum im Plan, sondern ergibt sich beim Lauf
@@ -12,6 +17,7 @@
 
 {% if not emails_enabled %}
 <div class="card warning">
+  <h2>Mailversand ist aus</h2>
   <p>
     Der Mailversand für geplante Exporte ist nicht eingeschaltet
     (<code>EXPORT_EMAILS_ENABLED</code>). Fällige Pläne werden bis dahin als
@@ -25,47 +31,51 @@
   <h2>Bestehende Pläne</h2>
   <div class="table-scroll">
     <table>
-      <tr>
-        <th>Vorlage</th>
-        <th>Tag</th>
-        <th>Zeitraum</th>
-        <th>Format</th>
-        <th>Empfänger</th>
-        <th>Angelegt von</th>
-        <th>Zuletzt</th>
-        <th></th>
-      </tr>
-      {% for item in schedules %}
+      <thead>
         <tr>
-          <td>
-            <a href="{% url 'reporting:export_profile' item.profile_id %}">{{ item.profile.name }}</a>
-            {% if not item.is_active %}<span class="muted">(inaktiv)</span>{% endif %}
-          </td>
-          <td>{{ item.day_of_month }}. jedes Monats</td>
-          <td>
-            {{ item.get_timeframe_display }}
-            {% if item.period_group %}<span class="muted">({{ item.period_group.name }})</span>{% endif %}
-          </td>
-          <td>{{ item.get_export_format_display }}</td>
-          <td>{{ item.recipients_label }}</td>
-          <td>{{ item.created_by.full_name }}</td>
-          <td>
-            {% with letzter=item.runs.all|first %}
-              {% if letzter %}
-                {{ letzter.due_on|date:"d.m.Y" }}: {{ letzter.get_status_display }}
-                {% if letzter.message %}<p class="help">{{ letzter.message }}</p>{% endif %}
-              {% else %}
-                <span class="muted">noch nicht gelaufen</span>
-              {% endif %}
-            {% endwith %}
-          </td>
-          <td>
-            <form method="post" action="{% url 'reporting:schedule_delete' item.pk %}" class="inline">
-              {% csrf_token %}<button type="submit">Löschen</button>
-            </form>
-          </td>
+          <th>Vorlage</th>
+          <th>Tag</th>
+          <th>Zeitraum</th>
+          <th>Format</th>
+          <th>Empfänger</th>
+          <th>Angelegt von</th>
+          <th>Zuletzt</th>
+          <th></th>
         </tr>
-      {% endfor %}
+      </thead>
+      <tbody>
+        {% for item in schedules %}
+          <tr>
+            <td>
+              <a href="{% url 'reporting:export_profile' item.profile_id %}">{{ item.profile.name }}</a>
+              {% if not item.is_active %}<span class="badge">inaktiv</span>{% endif %}
+            </td>
+            <td>{{ item.day_of_month }}. jedes Monats</td>
+            <td>
+              {{ item.get_timeframe_display }}
+              {% if item.period_group %}<span class="muted">({{ item.period_group.name }})</span>{% endif %}
+            </td>
+            <td>{{ item.get_export_format_display }}</td>
+            <td class="muted">{{ item.recipients_label }}</td>
+            <td class="muted">{{ item.created_by.full_name }}</td>
+            <td>
+              {% with letzter=item.runs.all|first %}
+                {% if letzter %}
+                  {{ letzter.due_on|date:"d.m.Y" }}: {{ letzter.get_status_display }}
+                  {% if letzter.message %}<p class="help">{{ letzter.message }}</p>{% endif %}
+                {% else %}
+                  <span class="muted">noch nicht gelaufen</span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td class="actions-cell">
+              <form method="post" action="{% url 'reporting:schedule_delete' item.pk %}" class="inline">
+                {% csrf_token %}<button class="quiet danger" type="submit">Löschen</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>

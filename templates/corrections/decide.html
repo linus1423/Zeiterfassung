@@ -2,14 +2,20 @@
 {% load zeit %}
 {% block title %}Antrag entscheiden{% endblock %}
 {% block content %}
-<h1>Antrag von {{ correction.requested_by.full_name }}</h1>
+<div class="page-head">
+  <h1>Antrag von {{ correction.requested_by.full_name }}</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'corrections:inbox' %}">Zurück zu den Anträgen</a>
+  </div>
+</div>
+
 <div class="grid two">
   <div class="card">
     <h2>Bisher</h2>
     {% if correction.time_entry %}
       <p>
-        {{ correction.time_entry.start|date:"d.m.Y H:i" }} bis
-        {% if correction.time_entry.end %}{{ correction.time_entry.end|date:"H:i" }}{% else %}läuft{% endif %}<br>
+        <strong>{{ correction.time_entry.start|date:"d.m.Y H:i" }} bis
+        {% if correction.time_entry.end %}{{ correction.time_entry.end|date:"H:i" }}{% else %}läuft{% endif %}</strong><br>
         {{ correction.time_entry.group.name }}
         {% if correction.time_entry.activity %} · {{ correction.time_entry.activity.name }}{% endif %}
       </p>
@@ -21,24 +27,28 @@
   <div class="card">
     <h2>Gewünscht</h2>
     {% if correction.kind == "delete" %}
-      <p><strong>Der Eintrag soll gelöscht werden.</strong></p>
+      <p><span class="badge rejected">Löschung</span> Der Eintrag soll gelöscht werden.</p>
     {% else %}
       <p>
-        {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"H:i" }}<br>
+        <strong>{{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"H:i" }}</strong><br>
         {{ correction.group.name }}
         {% if correction.proposed_activity %} · {{ correction.proposed_activity.name }}{% endif %}
       </p>
       {% if correction.proposed_break_periods %}
         <h3>Beantragte Pausen</h3>
         <table>
-          {% for pause in correction.proposed_break_periods %}
-            <tr>
-              <td>{{ pause.start|date:"d.m.Y H:i" }}</td>
-              <td>bis {{ pause.end|date:"H:i" }}</td>
-              <td class="num">{{ pause.duration|dauer }}</td>
-            </tr>
-          {% endfor %}
-          <tr><th>Summe</th><th></th><th class="num">{{ correction.proposed_break_total|dauer }}</th></tr>
+          <tbody>
+            {% for pause in correction.proposed_break_periods %}
+              <tr>
+                <td>{{ pause.start|date:"d.m.Y H:i" }}</td>
+                <td>bis {{ pause.end|date:"H:i" }}</td>
+                <td class="num">{{ pause.duration|dauer }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><th>Summe</th><th></th><th class="num">{{ correction.proposed_break_total|dauer }}</th></tr>
+          </tfoot>
         </table>
       {% else %}
         <p class="help">Keine Pause beantragt.</p>
@@ -46,12 +56,15 @@
     {% endif %}
   </div>
 </div>
+
 <div class="card">
   <h2>Begründung des Antragstellers</h2>
   <p>{{ correction.reason|linebreaksbr }}</p>
 </div>
+
 {% if period_lock %}
-<div class="card">
+<div class="card warning">
+  <h2>Zeitraum abgeschlossen</h2>
   <p>
     Der Zeitraum {{ period_lock.period.label }} ist seit dem
     {{ period_lock.closed_at|date:"d.m.Y" }} abgeschlossen. Dieser Antrag kann nicht
@@ -59,18 +72,19 @@
   </p>
 </div>
 {% endif %}
+
 <div class="card">
   {% if may_decide %}
+    <h2>Entscheidung</h2>
     <form method="post">{% csrf_token %}{{ form.as_p }}
       <div class="actions">
         <button class="primary" type="submit" name="action" value="approve">Genehmigen</button>
         <button class="danger" type="submit" name="action" value="reject">Ablehnen</button>
-        <a class="button" href="{% url 'corrections:inbox' %}">Zurück</a>
       </div>
     </form>
     <p class="help">Eine Ablehnung braucht eine Begründung. Jede Entscheidung wird protokolliert.</p>
     {% if may_adjust %}
-      <details {% if adjusting %}open{% endif %}>
+      <details class="panel" {% if adjusting %}open{% endif %}>
         <summary>Genehmigen mit Änderung</summary>
         <p class="help">
           Ist der Antrag nur um eine Kleinigkeit daneben, ändere die Zeiten hier und
@@ -83,16 +97,18 @@
             <ul class="messages">{% for error in adjust_breaks.non_form_errors %}<li class="error">{{ error }}</li>{% endfor %}</ul>
           {% endif %}
           <table class="breaks">
-            <tr><th>Von</th><th>Bis</th></tr>
-            {% for pause in adjust_breaks %}
-              <tr>
-                <td>{{ pause.start }}{{ pause.start.errors }}</td>
-                <td>{{ pause.end }}{{ pause.end.errors }}</td>
-              </tr>
-              {% if pause.non_field_errors %}
-                <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
-              {% endif %}
-            {% endfor %}
+            <thead><tr><th>Von</th><th>Bis</th></tr></thead>
+            <tbody>
+              {% for pause in adjust_breaks %}
+                <tr>
+                  <td><span class="feldname">Von</span>{{ pause.start }}{{ pause.start.errors }}</td>
+                  <td><span class="feldname">Bis</span>{{ pause.end }}{{ pause.end.errors }}</td>
+                </tr>
+                {% if pause.non_field_errors %}
+                  <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
           </table>
           <div class="actions">
             <button class="primary" type="submit" name="action" value="approve_adjusted">

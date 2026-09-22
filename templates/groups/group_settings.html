@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Einstellungen: {{ group.name }}{% endblock %}
 {% block content %}
-<h1>Einstellungen der Gruppe {{ group.name }}</h1>
+<div class="page-head">
+  <h1>Einstellungen der Gruppe {{ group.name }}</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a>
+  </div>
+</div>
 <div class="card">
   <form method="post">{% csrf_token %}{{ form.as_p }}
     <div class="actions">
       <button class="primary" type="submit">Speichern</button>
-      <a class="button" href="{% url 'groups:detail' group.pk %}">Zurück</a>
+      <a class="button" href="{% url 'groups:detail' group.pk %}">Abbrechen</a>
     </div>
   </form>
   <p class="help">

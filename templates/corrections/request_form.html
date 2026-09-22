@@ -5,13 +5,13 @@
 <h1>{% if entry %}Korrektur beantragen{% else %}Zeit nachtragen{% endif %}</h1>
 {% if entry %}
 <div class="card">
-  <h2>Bisher erfasst</h2>
+  <div class="card-head">
+    <h2>Bisher erfasst</h2>
+    <a class="card-note" href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Löschung beantragen</a>
+  </div>
   <p>
-    {{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }},
+    <strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong> ·
     {{ entry.group.name }}{% if entry.activity %} · {{ entry.activity.name }}{% endif %}
-  </p>
-  <p>
-    <a href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Löschung beantragen</a>
   </p>
 </div>
 {% endif %}
@@ -23,16 +23,18 @@
       <ul class="messages">{% for error in breaks.non_form_errors %}<li class="error">{{ error }}</li>{% endfor %}</ul>
     {% endif %}
     <table class="breaks">
-      <tr><th>Von</th><th>Bis</th></tr>
-      {% for pause in breaks %}
-        <tr>
-          <td>{{ pause.start }}{{ pause.start.errors }}</td>
-          <td>{{ pause.end }}{{ pause.end.errors }}</td>
-        </tr>
-        {% if pause.non_field_errors %}
-          <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
-        {% endif %}
-      {% endfor %}
+      <thead><tr><th>Von</th><th>Bis</th></tr></thead>
+      <tbody>
+        {% for pause in breaks %}
+          <tr>
+            <td><span class="feldname">Von</span>{{ pause.start }}{{ pause.start.errors }}</td>
+            <td><span class="feldname">Bis</span>{{ pause.end }}{{ pause.end.errors }}</td>
+          </tr>
+          {% if pause.non_field_errors %}
+            <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
     </table>
     <p class="help">
       Eine Zeile je Pause, höchstens {{ breaks.max_num }}. Leere Zeilen werden verworfen.
