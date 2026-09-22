@@ -30,12 +30,33 @@ header.site {
 }
 
 header.site .inner,
+footer.site .inner,
 main { max-width: 1100px; margin: 0 auto; }
 
 main { padding: 1rem; }
 
+/* Der Kopfbereich hält die Seite zusammen: links die Marke (Logo, Name der
+   Anwendung, Firma), rechts daneben die Navigation. Auf schmalen Geräten
+   rutscht die Navigation unter die Marke. */
+header.site .inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+header.site .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+}
+header.site .brand .titel { font-weight: 700; }
+header.site .brand .firma { color: var(--muted); font-size: 0.95rem; }
+header.site .brand img.logo { height: 2rem; width: auto; max-width: 12rem; display: block; }
+header.site nav.site { flex: 1; }
+
 nav.site { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-nav.site .brand { font-weight: 700; margin-right: 0.5rem; }
 nav.site a { text-decoration: none; padding: 0.35rem 0.1rem; }
 nav.site a:hover { text-decoration: underline; }
 nav.site .spacer { flex: 1; }
@@ -169,7 +190,7 @@ form.switch select { max-width: 20rem; }
 
 @media print {
   /* Auf Papier gehören weder Navigation noch Knöpfe hin. */
-  header.site, .no-print, .messages { display: none !important; }
+  header.site, footer.site, .no-print, .messages { display: none !important; }
   main { margin: 0; max-width: none; }
   .sheet { page-break-after: always; }
   .sheet:last-child { page-break-after: auto; }
@@ -187,3 +208,44 @@ svg.balken .balken-flaeche { fill: var(--accent); }
 svg.balken text { font-family: inherit; font-size: 13px; fill: var(--ink); }
 svg.balken .beschriftung { fill: var(--muted); }
 svg.balken .wert { font-variant-numeric: tabular-nums; }
+
+/* Fußzeile mit den Angaben des Betreibers (Issue 77). Die Inhalte pflegt ein
+   System-Admin unter "Darstellung", hier steht nur ihr Aussehen. */
+footer.site {
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 1rem;
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+footer.site p { margin: 0 0 0.35rem; }
+footer.site .firma { font-weight: 600; color: var(--ink); }
+footer.site .footer-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+footer.site .footer-links a { text-decoration: none; }
+footer.site .footer-links a:hover { text-decoration: underline; }
+
+/* Impressum und Datenschutz als Fließtext: schmale Spalte liest sich besser. */
+.textseite { max-width: 44rem; }
+.textseite p { white-space: pre-line; }
+
+/* Pflege der Darstellung: die Verweise der Fußzeile als Tabelle mit Feldern,
+   die auf dem Handy untereinander rutschen. */
+.link-zeilen { display: grid; gap: 0.75rem; }
+.link-zeile {
+  display: grid;
+  gap: 0.25rem 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.5rem;
+}
+@media (min-width: 700px) {
+  .link-zeile { grid-template-columns: 2fr 3fr auto auto; align-items: end; }
+}
+.logo-vorschau {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+}
+.logo-vorschau img { height: 3rem; width: auto; max-width: 16rem; display: block; }

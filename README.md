@@ -272,6 +272,35 @@ Entscheidung. Liegt dann noch etwas, meldet der nächste Lauf den neuen
 ältesten. Die zweite Frist gehört über die erste — steht sie darunter, warnt
 das Kommando und rechnet mit der ersten weiter.
 
+## Kopf- und Fußzeile
+
+Firmenname, Logo, Impressum und Datenschutz stehen nicht im Code und nicht in
+der `.env`, sondern werden in der Oberfläche gepflegt: ein System-Admin findet
+die Seite in der Navigation unter **Darstellung**
+(`/darstellung/`). Gepflegt werden dort
+
+* **Name der Anwendung** und **Firma** für die Kopfzeile und den Fenstertitel,
+* das **Logo** neben dem Namen,
+* ein **Freitext** für die Fußzeile, etwa Anschrift oder Ansprechpartner,
+* **Impressum** und **Datenschutz**, je wahlweise als Text im Tool oder als
+  Verweis auf eine bestehende Seite,
+* **weitere Verweise** für die Fußzeile (Kontakt, Barrierefreiheit, Handbuch
+  und so weiter).
+
+Kopf- und Fußzeile erscheinen auf jeder Seite, auch vor der Anmeldung.
+Impressum und Datenschutz sind ohne Anmeldung lesbar; ohne hinterlegten Text
+gibt es die Seite nicht (404), und in der Fußzeile fehlt dann der Verweis. Ist
+eine Adresse hinterlegt, geht sie dem eigenen Text vor. Erlaubt sind nur
+`http`- und `https`-Adressen.
+
+Das Logo wird beim Hochladen geprüft: erlaubt sind PNG, JPEG, GIF und WebP bis
+512 KB, erkannt am Inhalt der Datei und nicht an der Angabe des Browsers. SVG
+ist bewusst ausgeschlossen, weil eine SVG-Datei Skripte enthalten kann und
+unter derselben Herkunft wie das Tool ausgeliefert würde. Gespeichert wird das
+Bild in der Datenbank, nicht im Dateisystem: es steckt damit in jeder Sicherung
+(`manage.py backup_database`) und der Betrieb im Container braucht dafür kein
+zusätzliches Volume.
+
 ## Betrieb
 
 ### Docker Compose
@@ -456,6 +485,7 @@ apps/tracking/      Zeiteinträge, Pausen, Stempel-Logik, CSV-Import
 apps/corrections/   Korrekturanträge und deren Ablauf
 apps/reporting/     Auswertung, Spaltenauswahl, Export nach Excel und CSV
 apps/audit/         unveränderliches Protokoll aller Änderungen
+apps/siteconfig/    Kopf- und Fußzeile: Firma, Logo, Impressum, Datenschutz
 templates/          Oberfläche (Django-Templates)
 docker/             Einstiegspunkt und Healthcheck des Containers
 deploy/quadlet/     systemd-Units für den Betrieb mit Podman

@@ -3,14 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Zeiterfassung{% endblock %}</title>
+  <title>{% block title %}{{ site.site_title }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
 <header class="site">
   <div class="inner">
+    <a class="brand" href="{% url 'tracking:clock' %}">
+      {% if site.has_logo %}
+        <img src="{% url 'siteconfig:logo' %}?v={{ site.logo_version }}"
+             alt="{{ site.logo_description }}" class="logo">
+      {% endif %}
+      <span class="titel">{{ site.site_title }}</span>
+      {% if site.company_name %}<span class="firma">{{ site.company_name }}</span>{% endif %}
+    </a>
     <nav class="site">
-      <span class="brand">Zeiterfassung</span>
       {% if user.is_authenticated %}
         <a href="{% url 'tracking:clock' %}">Stempeluhr</a>
         <a href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
@@ -29,6 +36,7 @@
         {% if nav.is_superuser %}
           <a href="{% url 'accounts:user_list' %}">Nutzer</a>
           <a href="{% url 'tracking:import_entries' %}">Import</a>
+          <a href="{% url 'siteconfig:settings' %}">Darstellung</a>
         {% endif %}
         <span class="spacer"></span>
         <a href="{% url 'accounts:profile' %}">{{ user.full_name }}</a>
@@ -48,5 +56,24 @@
   {% endif %}
   {% block content %}{% endblock %}
 </main>
+<footer class="site">
+  <div class="inner">
+    {% if site.company_name %}<p class="firma">{{ site.company_name }}</p>{% endif %}
+    {% if site.footer_text %}<p class="freitext">{{ site.footer_text|linebreaksbr }}</p>{% endif %}
+    {% if site.imprint_link or site.privacy_link or footer_links %}
+      <nav class="footer-links">
+        {% if site.imprint_link %}<a href="{{ site.imprint_link }}">Impressum</a>{% endif %}
+        {% if site.privacy_link %}<a href="{{ site.privacy_link }}">Datenschutz</a>{% endif %}
+        {% for link in footer_links %}<a href="{{ link.url }}">{{ link.label }}</a>{% endfor %}
+      </nav>
+    {% elif nav.is_superuser %}
+      {# Solange nichts gepflegt ist, sieht nur der System-Admin, wo es hingehört. #}
+      <p class="freitext muted">
+        Impressum und Datenschutz fehlen noch:
+        <a href="{% url 'siteconfig:settings' %}">Darstellung pflegen</a>.
+      </p>
+    {% endif %}
+  </div>
+</footer>
 </body>
 </html>

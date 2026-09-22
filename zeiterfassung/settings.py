@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     "apps.corrections",
     "apps.reporting",
     "apps.reminders",
+    "apps.siteconfig",
 ]
 
 MIDDLEWARE = [
@@ -160,6 +161,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.accounts.context_processors.navigation",
+                "apps.siteconfig.context_processors.branding",
             ],
         },
     },
