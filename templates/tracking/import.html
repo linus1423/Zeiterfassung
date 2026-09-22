@@ -69,21 +69,23 @@
 <div class="card">
   <h2>Vorschau</h2>
   <div class="table-scroll">
-    <table>
-      <tr><th>Zeile</th><th>Nutzer</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th></tr>
-      {% for item in preview_rows %}
-        <tr>
-          <td>{{ item.line }}</td>
-          <td>{{ item.user.full_name }}</td>
-          <td>{{ item.group.name }}</td>
-          <td>{% if item.activity %}{{ item.activity.name }}{% else %}<span class="muted">ohne</span>{% endif %}</td>
-          <td>{{ item.start|date:"d.m.Y H:i" }}</td>
-          <td>{{ item.end|date:"d.m.Y H:i" }}</td>
-          <td>{{ item.break_total|dauer }}</td>
-          <td>{{ item.work|dauer }}</td>
-        </tr>
-      {% endfor %}
-    </table>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Zeile</th><th>Nutzer</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th></tr>
+        {% for item in preview_rows %}
+          <tr>
+            <td>{{ item.line }}</td>
+            <td>{{ item.user.full_name }}</td>
+            <td>{{ item.group.name }}</td>
+            <td>{% if item.activity %}{{ item.activity.name }}{% else %}<span class="muted">ohne</span>{% endif %}</td>
+            <td>{{ item.start|date:"d.m.Y H:i" }}</td>
+            <td>{{ item.end|date:"d.m.Y H:i" }}</td>
+            <td>{{ item.break_total|dauer }}</td>
+            <td>{{ item.work|dauer }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   </div>
   {% if plan.entries|length > preview_limit %}
     <p class="help">Von {{ plan.entries|length }} Zeiten werden die ersten {{ preview_limit }} angezeigt.</p>

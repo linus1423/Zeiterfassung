@@ -26,8 +26,8 @@
       <tr><th>Von</th><th>Bis</th></tr>
       {% for pause in breaks %}
         <tr>
-          <td>{{ pause.start }}{{ pause.start.errors }}</td>
-          <td>{{ pause.end }}{{ pause.end.errors }}</td>
+          <td><span class="feldname">Von</span>{{ pause.start }}{{ pause.start.errors }}</td>
+          <td><span class="feldname">Bis</span>{{ pause.end }}{{ pause.end.errors }}</td>
         </tr>
         {% if pause.non_field_errors %}
           <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>

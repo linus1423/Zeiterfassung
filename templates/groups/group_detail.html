@@ -23,16 +23,18 @@
 <div class="card">
   <h2>Gerade eingestempelt</h2>
   {% if currently_working %}
-    <table>
-      {% for entry in currently_working %}
-        <tr>
-          <td>{{ entry.user.full_name }}</td>
-          <td>{{ entry.activity.name|default:"-" }}</td>
-          <td>seit {{ entry.start|time:"H:i" }}</td>
-          <td>{% if entry.is_on_break %}<span class="badge pending">in Pause</span>{% endif %}</td>
-        </tr>
-      {% endfor %}
-    </table>
+    <div class="table-scroll">
+      <table>
+        {% for entry in currently_working %}
+          <tr>
+            <td>{{ entry.user.full_name }}</td>
+            <td>{{ entry.activity.name|default:"-" }}</td>
+            <td>seit {{ entry.start|time:"H:i" }}</td>
+            <td>{% if entry.is_on_break %}<span class="badge pending">in Pause</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   {% else %}
     <p class="muted">Gerade arbeitet niemand.</p>
   {% endif %}

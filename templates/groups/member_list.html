@@ -3,27 +3,29 @@
 {% block content %}
 <h1>Mitglieder von {{ group.name }}</h1>
 <div class="card">
-  <table>
-    <tr><th>Name</th><th>E-Mail</th><th>Personalnummer</th><th>Rolle</th><th></th></tr>
-    {% for membership in memberships %}
-      <tr>
-        <td>{{ membership.user.full_name }}</td>
-        <td>{{ membership.user.email }}</td>
-        <td>{% if membership.user.personnel_number %}{{ membership.user.personnel_number }}{% else %}<span class="badge pending">fehlt</span>{% endif %}</td>
-        <td>{{ membership.get_role_display }}</td>
-        <td>
-          <form method="post" action="{% url 'groups:member_role' group.pk membership.pk %}" class="inline">
-            {% csrf_token %}
-            <button type="submit">{% if membership.is_admin %}Adminrechte entziehen{% else %}Zum Admin machen{% endif %}</button>
-          </form>
-          <form method="post" action="{% url 'groups:member_remove' group.pk membership.pk %}" class="inline">
-            {% csrf_token %}
-            <button type="submit" class="danger">Entfernen</button>
-          </form>
-        </td>
-      </tr>
-    {% empty %}<tr><td colspan="5" class="muted">Noch keine Mitglieder.</td></tr>{% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Name</th><th>E-Mail</th><th>Personalnummer</th><th>Rolle</th><th></th></tr>
+      {% for membership in memberships %}
+        <tr>
+          <td>{{ membership.user.full_name }}</td>
+          <td>{{ membership.user.email }}</td>
+          <td>{% if membership.user.personnel_number %}{{ membership.user.personnel_number }}{% else %}<span class="badge pending">fehlt</span>{% endif %}</td>
+          <td>{{ membership.get_role_display }}</td>
+          <td>
+            <form method="post" action="{% url 'groups:member_role' group.pk membership.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit">{% if membership.is_admin %}Adminrechte entziehen{% else %}Zum Admin machen{% endif %}</button>
+            </form>
+            <form method="post" action="{% url 'groups:member_remove' group.pk membership.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="danger">Entfernen</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="muted">Noch keine Mitglieder.</td></tr>{% endfor %}
+    </table>
+  </div>
 </div>
 <div class="card">
   <h2>Mitglied hinzufügen</h2>
