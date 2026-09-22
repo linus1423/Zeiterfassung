@@ -4,9 +4,8 @@ Hallo,
 
 Art: {{ correction.get_kind_display }}
 {% if correction.is_move %}Gewünschte Gruppe: {{ correction.proposed_group.name }}
-{% if correction.proposed_activity %}Gewünschte Tätigkeit: {{ correction.proposed_activity.name }}
-{% else %}Gewünschte Tätigkeit: keine
-{% endif %}{% if correction.source_decided_at %}{{ group.name }} hat am {{ correction.source_decided_at|date:"d.m.Y" }} zugestimmt. Jetzt fehlt die Zustimmung von {{ deciding_group.name }}.
+Gewünschte Tätigkeit: {{ correction.proposed_activity.name }}
+{% if correction.source_decided_at %}{{ group.name }} hat am {{ correction.source_decided_at|date:"d.m.Y" }} zugestimmt. Jetzt fehlt die Zustimmung von {{ deciding_group.name }}.
 {% endif %}{% endif %}{% if correction.proposed_start %}Gewünscht: {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"d.m.Y H:i" }}
 {% endif %}Begründung: {{ correction.reason }}
 

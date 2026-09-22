@@ -181,7 +181,8 @@ dort in die Auswertung.
 
 Die Zeiten ändern sich beim Wechsel nicht, nur die Gruppe. Weil eine Tätigkeit
 immer genau einer Gruppe gehört, wählt man im Antrag gleich die neue aus der
-Zielgruppe; bleibt das Feld leer, steht der Eintrag danach ohne Tätigkeit da.
+Zielgruppe. Sie ist Pflicht, denn ein Zeiteintrag ohne Tätigkeit soll es nicht
+geben; eine Gruppe ohne Tätigkeiten steht deshalb nicht zur Wahl.
 
 Nicht möglich ist der Wechsel bei einem laufenden Eintrag, in eine Gruppe, in
 der man nicht selbst Mitglied ist, und wenn einer der beiden Zeiträume schon

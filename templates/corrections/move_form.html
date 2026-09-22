@@ -21,8 +21,9 @@
     </form>
   {% else %}
     <p>
-      Du bist nur in {{ entry.group.name }} Mitglied. Ein Wechsel braucht eine zweite
-      eigene Gruppe.
+      Es gibt keine Gruppe, in die dieser Eintrag wechseln könnte. Dafür brauchst du
+      eine zweite eigene Gruppe, und die muss eine Tätigkeit haben, auf die der
+      Eintrag danach läuft.
     </p>
     <p><a class="button" href="{% url 'tracking:my_entries' %}">Zurück</a></p>
   {% endif %}

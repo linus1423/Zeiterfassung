@@ -976,14 +976,16 @@ nicht entstehen, denn geprüft wird sie je Person, nicht je Gruppe.
 
 **Die Tätigkeit dagegen schon.** Eine Tätigkeit gehört immer genau einer
 Gruppe (Kapitel 4), die alte passt nach dem Wechsel also nicht mehr. Deshalb
-wählt man schon im Antrag die neue aus den Tätigkeiten der Zielgruppe. Bleibt
-das Feld leer, steht der Eintrag danach ohne Tätigkeit da; das ist zulässig
-und in der Antragsliste als "ohne Tätigkeit" vermerkt.
+wählt man schon im Antrag die neue aus den Tätigkeiten der Zielgruppe, und
+zwar verpflichtend: ein Zeiteintrag ohne Tätigkeit soll es nicht geben. Eine
+Gruppe ohne aktive Tätigkeit steht darum gar nicht erst zur Wahl, sonst wäre
+der Antrag nicht abschickbar. Geprüft wird die Tätigkeit auch bei der zweiten
+Zustimmung noch einmal.
 
 **Wann ein Wechsel nicht geht.** Ein laufender Eintrag wechselt nicht, er ist
 noch nicht fertig. Die Zielgruppe muss eine eigene sein, in der die Person
-Mitglied ist, muss aktiv sein und darf nicht die sein, in der der Eintrag
-schon steht. Ist einer der beiden Zeiträume abgeschlossen (Kapitel 9), ist
+Mitglied ist, muss aktiv sein, muss eine Tätigkeit haben und darf nicht die
+sein, in der der Eintrag schon steht. Ist einer der beiden Zeiträume abgeschlossen (Kapitel 9), ist
 Schluss: in der alten Gruppe verschwände die Zeit aus einem bereits
 abgerechneten Monat, in der neuen entstünde sie dort neu. Geprüft wird das
 beim Antrag und noch einmal bei der zweiten Zustimmung, denn dazwischen

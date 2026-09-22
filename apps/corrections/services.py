@@ -158,7 +158,11 @@ def _check_move_target(user, entry: TimeEntry, target, activity) -> None:
     # Zeit in eine Gruppe, mit der er nichts zu tun hat.
     if not user.is_group_member(target):
         raise CorrectionError(f"{user.full_name} ist kein Mitglied von {target.name}.")
-    if activity is not None and activity.group_id != target.pk:
+    # Ein Zeiteintrag ohne Tätigkeit soll es nicht geben, und die alte gehört
+    # zur alten Gruppe. Der Wechsel bringt deshalb immer eine neue mit.
+    if activity is None:
+        raise CorrectionError("Für den Gruppenwechsel fehlt die Tätigkeit in der neuen Gruppe.")
+    if activity.group_id != target.pk:
         raise CorrectionError("Die gewünschte Tätigkeit gehört nicht zur gewünschten Gruppe.")
 
 

@@ -21,9 +21,7 @@
             <td>{{ request.group.name }}</td>
             <td>
               {% if request.is_move %}
-                nach {{ request.proposed_group.name }}
-                {% if request.proposed_activity %} · {{ request.proposed_activity.name }}
-                {% else %} · ohne Tätigkeit{% endif %}
+                nach {{ request.proposed_group.name }} · {{ request.proposed_activity.name }}
               {% elif request.proposed_start %}
                 {{ request.proposed_start|date:"d.m.Y H:i" }} bis {{ request.proposed_end|date:"H:i" }}
               {% else %}-{% endif %}

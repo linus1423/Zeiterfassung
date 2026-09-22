@@ -96,8 +96,8 @@ class MoveRequestForm(forms.Form):
 
     Die Zeiten bleiben, nur die Gruppe wechselt. Eine Tätigkeit gehört immer
     genau einer Gruppe, die alte passt danach also nicht mehr; deshalb wird
-    hier gleich die neue gewählt. Bleibt das Feld leer, steht der Eintrag
-    danach ohne Tätigkeit da.
+    hier gleich die neue gewählt. Sie ist Pflicht: ein Zeiteintrag ohne
+    Tätigkeit soll es nicht geben.
     """
 
     target_group = forms.ModelChoiceField(
@@ -109,8 +109,7 @@ class MoveRequestForm(forms.Form):
     activity = forms.ModelChoiceField(
         queryset=Activity.objects.none(),
         label="Tätigkeit in der neuen Gruppe",
-        required=False,
-        help_text="Leer lassen, wenn der Eintrag ohne Tätigkeit stehen soll.",
+        help_text="Die alte Tätigkeit gehört zur alten Gruppe und passt danach nicht mehr.",
     )
     reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
 
@@ -121,16 +120,18 @@ class MoveRequestForm(forms.Form):
         target_ids = [
             group_id for group_id in user.member_group_ids() if group_id != entry.group_id
         ]
+        # Ohne wählbare Tätigkeit wäre der Wechsel dorthin nicht abschickbar,
+        # also steht eine solche Gruppe gar nicht erst zur Wahl.
         self.fields["target_group"].queryset = Group.objects.filter(
-            pk__in=target_ids, is_active=True
-        )
+            pk__in=target_ids, is_active=True, activities__is_active=True
+        ).distinct()
         self.fields["activity"].queryset = Activity.objects.filter(
             group_id__in=target_ids, is_active=True
         ).select_related("group")
 
     @property
     def has_targets(self) -> bool:
-        """Ohne zweite Gruppe gibt es nichts zu wechseln."""
+        """Ohne zweite Gruppe mit Tätigkeiten gibt es nichts zu wechseln."""
         return self.fields["target_group"].queryset.exists()
 
     def clean(self):

@@ -93,23 +93,17 @@ def test_second_approval_moves_the_entry(
     ).exists()
 
 
-def test_entry_may_end_up_without_an_activity(
-    member, group, entry, target_group, group_admin, target_admin
-):
-    request_obj = services.create_request(
-        requested_by=member,
-        group=group,
-        kind=CorrectionRequest.Kind.MOVE,
-        reason="Die Zielgruppe hat keine passende Tätigkeit.",
-        entry=entry,
-        proposed_group=target_group,
-    )
-    services.approve(request_obj, group_admin)
-    services.approve(request_obj, target_admin)
-
-    entry.refresh_from_db()
-    assert entry.group_id == target_group.pk
-    assert entry.activity_id is None
+def test_a_move_without_an_activity_is_refused(member, group, entry, target_group):
+    """Ein Zeiteintrag ohne Tätigkeit soll es nicht geben."""
+    with pytest.raises(services.CorrectionError, match="fehlt die Tätigkeit"):
+        services.create_request(
+            requested_by=member,
+            group=group,
+            kind=CorrectionRequest.Kind.MOVE,
+            reason="Ohne Tätigkeit.",
+            entry=entry,
+            proposed_group=target_group,
+        )
 
 
 def test_the_old_group_cannot_decide_twice(move_request, group_admin, target_group):
@@ -146,6 +140,7 @@ def test_requester_may_withdraw_after_the_first_approval(move_request, group_adm
 
 
 def test_move_into_a_group_one_is_not_a_member_of_is_refused(member, group, entry, other_group):
+    stranger_activity = Activity.objects.create(group=other_group, name="Fremdes")
     with pytest.raises(services.CorrectionError, match="kein Mitglied"):
         services.create_request(
             requested_by=member,
@@ -154,10 +149,11 @@ def test_move_into_a_group_one_is_not_a_member_of_is_refused(member, group, entr
             reason="Fremde Gruppe.",
             entry=entry,
             proposed_group=other_group,
+            proposed_activity=stranger_activity,
         )
 
 
-def test_move_into_the_same_group_is_refused(member, group, entry):
+def test_move_into_the_same_group_is_refused(member, group, entry, activity):
     with pytest.raises(services.CorrectionError, match="bereits in dieser Gruppe"):
         services.create_request(
             requested_by=member,
@@ -166,6 +162,7 @@ def test_move_into_the_same_group_is_refused(member, group, entry):
             reason="Steht schon da.",
             entry=entry,
             proposed_group=group,
+            proposed_activity=activity,
         )
 
 
@@ -182,7 +179,9 @@ def test_an_activity_of_another_group_is_refused(member, group, entry, target_gr
         )
 
 
-def test_a_running_entry_cannot_change_group(member, group, target_group, yesterday_morning):
+def test_a_running_entry_cannot_change_group(
+    member, group, target_group, target_activity, yesterday_morning
+):
     running = TimeEntry.objects.create(user=member, group=group, start=yesterday_morning, end=None)
     with pytest.raises(services.CorrectionError, match="laufender"):
         services.create_request(
@@ -192,11 +191,12 @@ def test_a_running_entry_cannot_change_group(member, group, target_group, yester
             reason="Läuft noch.",
             entry=running,
             proposed_group=target_group,
+            proposed_activity=target_activity,
         )
 
 
 def test_a_closed_period_in_the_target_group_blocks_the_request(
-    member, group, entry, target_group, superuser
+    member, group, entry, target_group, target_activity, superuser
 ):
     day = timezone.localtime(entry.start).date()
     PeriodLock.objects.create(
@@ -213,6 +213,7 @@ def test_a_closed_period_in_the_target_group_blocks_the_request(
             reason="Zielgruppe ist zu.",
             entry=entry,
             proposed_group=target_group,
+            proposed_activity=target_activity,
         )
 
 
@@ -258,3 +259,33 @@ def test_a_proposed_group_on_another_kind_is_refused(member, group, entry, targe
             proposed_end=entry.end,
             proposed_group=target_group,
         )
+
+
+def test_the_form_demands_an_activity(member, entry, target_group, target_activity):
+    from apps.corrections.forms import MoveRequestForm
+
+    form = MoveRequestForm(
+        member, entry, {"target_group": target_group.pk, "reason": "Ohne Tätigkeit."}
+    )
+
+    assert form.is_valid() is False
+    assert "activity" in form.errors
+
+
+def test_a_group_without_activities_is_not_offered(member, entry, target_group):
+    """Dorthin könnte der Eintrag nicht wechseln, also steht die Gruppe nicht zur Wahl."""
+    from apps.corrections.forms import MoveRequestForm
+
+    form = MoveRequestForm(member, entry)
+
+    assert form.has_targets is False
+
+
+def test_a_group_with_activities_is_offered(member, entry, target_group, target_activity):
+    from apps.corrections.forms import MoveRequestForm
+
+    form = MoveRequestForm(member, entry)
+
+    assert form.has_targets is True
+    assert list(form.fields["target_group"].queryset) == [target_group]
+    assert list(form.fields["activity"].queryset) == [target_activity]

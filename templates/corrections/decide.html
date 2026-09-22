@@ -32,12 +32,8 @@
       <p>
         <span class="badge info">Gruppenwechsel</span>
         Der Eintrag soll von {{ correction.group.name }} nach
-        {{ correction.proposed_group.name }} wechseln. Die Zeit bleibt unverändert.
-        {% if correction.proposed_activity %}
-          Neue Tätigkeit: {{ correction.proposed_activity.name }}.
-        {% else %}
-          Danach ohne Tätigkeit.
-        {% endif %}
+        {{ correction.proposed_group.name }} wechseln. Die Zeit bleibt unverändert,
+        neue Tätigkeit: {{ correction.proposed_activity.name }}.
       </p>
       {% if correction.source_decided_at %}
         <p class="help">
