@@ -47,6 +47,8 @@
             <td>
               {% if entry.end %}
                 <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
+                ·
+                <a href="{% url 'corrections:request_move' entry.pk %}">Gruppe wechseln</a>
               {% endif %}
             </td>
           </tr>

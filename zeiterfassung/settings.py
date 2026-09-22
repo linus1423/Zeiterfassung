@@ -72,7 +72,6 @@ env = environ.Env(
     BACKUP_KEEP_DAYS=(int, 0),
     CORRECTION_EMAILS_ENABLED=(bool, False),
     REMINDER_EMAILS_ENABLED=(bool, False),
-    GROUP_CHANGE_EMAILS_ENABLED=(bool, False),
     OPEN_ENTRY_REMINDER_HOURS=(int, 10),
     PENDING_CORRECTION_REMINDER_DAYS=(int, 3),
     PENDING_CORRECTION_ESCALATION_DAYS=(int, 14),
@@ -341,9 +340,6 @@ CORRECTION_EMAILS_ENABLED = env("CORRECTION_EMAILS_ENABLED")
 # Erinnerungen, bevor ein Fehler entsteht (Issue 34). Ohne Mailserver
 # stehen sie unter "Hinweise" im Tool.
 REMINDER_EMAILS_ENABLED = env("REMINDER_EMAILS_ENABLED")
-# Anträge auf Gruppenwechsel (Issue 37). Ohne Mailserver sehen die
-# beteiligten Admins sie am Zähler in der Navigation.
-GROUP_CHANGE_EMAILS_ENABLED = env("GROUP_CHANGE_EMAILS_ENABLED")
 SITE_BASE_URL = env("SITE_BASE_URL", default="")
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="zeiterfassung@localhost")
 EMAIL_BACKEND = env(

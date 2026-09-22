@@ -12,6 +12,8 @@
   </p>
   <p>
     <a href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Löschung beantragen</a>
+    ·
+    <a href="{% url 'corrections:request_move' entry.pk %}">Stattdessen Gruppe wechseln</a>
   </p>
 </div>
 {% endif %}

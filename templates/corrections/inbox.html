@@ -5,12 +5,19 @@
 <div class="card">
   <div class="table-scroll">
     <table>
-      <tr><th>Gestellt am</th><th>Person</th><th>Gruppe</th><th>Art</th><th>Begründung</th><th></th></tr>
+      <tr><th>Gestellt am</th><th>Person</th><th>Zuständig</th><th>Art</th><th>Begründung</th><th></th></tr>
       {% for request in requests %}
         <tr>
           <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
           <td>{{ request.requested_by.full_name }}</td>
-          <td>{{ request.group.name }}</td>
+          <td>
+            {{ request.deciding_group.name }}
+            {% if request.is_move %}
+              <br><span class="help">
+                {{ request.group.name }} nach {{ request.proposed_group.name }}
+              </span>
+            {% endif %}
+          </td>
           <td>{{ request.get_kind_display }}</td>
           <td>{{ request.reason|truncatechars:80 }}</td>
           <td><a href="{% url 'corrections:decide' request.pk %}">Ansehen</a></td>

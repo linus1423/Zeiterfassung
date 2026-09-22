@@ -22,6 +22,30 @@
     <h2>Gewünscht</h2>
     {% if correction.kind == "delete" %}
       <p><strong>Der Eintrag soll gelöscht werden.</strong></p>
+    {% elif correction.is_move %}
+      <p>
+        <strong>Der Eintrag soll von {{ correction.group.name }} nach
+        {{ correction.proposed_group.name }} wechseln.</strong><br>
+        Die Zeit bleibt unverändert.
+        {% if correction.proposed_activity %}
+          Neue Tätigkeit: {{ correction.proposed_activity.name }}.
+        {% else %}
+          Danach ohne Tätigkeit.
+        {% endif %}
+      </p>
+      {% if correction.source_decided_at %}
+        <p class="help">
+          {{ correction.group.name }} hat am
+          {{ correction.source_decided_at|date:"d.m.Y H:i" }} zugestimmt
+          ({{ correction.source_decided_by.full_name|default:"-" }}).
+          {% if correction.source_note %}<br>{{ correction.source_note }}{% endif %}
+        </p>
+      {% else %}
+        <p class="help">
+          Deine Zustimmung ist die erste von zweien. Danach entscheidet
+          {{ correction.proposed_group.name }}.
+        </p>
+      {% endif %}
     {% else %}
       <p>
         {{ correction.proposed_start|date:"d.m.Y H:i" }} bis {{ correction.proposed_end|date:"H:i" }}<br>
@@ -63,7 +87,9 @@
   {% if may_decide %}
     <form method="post">{% csrf_token %}{{ form.as_p }}
       <div class="actions">
-        <button class="primary" type="submit" name="action" value="approve">Genehmigen</button>
+        <button class="primary" type="submit" name="action" value="approve">
+          {% if correction.is_move and not correction.source_decided_at %}Zustimmen{% else %}Genehmigen{% endif %}
+        </button>
         <button class="danger" type="submit" name="action" value="reject">Ablehnen</button>
         <a class="button" href="{% url 'corrections:inbox' %}">Zurück</a>
       </div>

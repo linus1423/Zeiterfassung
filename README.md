@@ -170,21 +170,24 @@ diesem Zeitraum. Das ist die Liste für den Monatslauf. Gruppen-Admins sehen dor
 ihre Gruppen, die Buchhaltung und System-Admins alle; verlinkt ist die Seite
 auch aus der Auswertung. Abschließen darf weiterhin nur ein Admin der Gruppe.
 
-## Gruppenwechsel
+## Gruppe eines Eintrags wechseln
 
-Wer die Abteilung wechselt, beantragt das unter **Gruppenwechsel**. Der Antrag
-braucht zwei Zustimmungen: zuerst entscheidet ein Admin der bisherigen Gruppe,
-danach einer der neuen. Erst dann wechselt die Mitgliedschaft. Admins sehen die
-Anträge unter **Wechselanträge**, mit Zähler in der Navigation; eine Mail dazu
-gibt es nur mit `GROUP_CHANGE_EMAILS_ENABLED=true`.
+Wer in mehreren Gruppen arbeitet, stempelt gelegentlich auf die falsche. Unter
+**Meine Zeiten** steht deshalb bei jedem abgeschlossenen Eintrag *Gruppe
+wechseln*. Der Antrag braucht zwei Zustimmungen: zuerst entscheidet ein Admin
+der Gruppe, in der der Eintrag steht, danach einer der gewünschten Gruppe.
+Erst dann wandert er. Bis dahin bleibt er unverändert, wo er ist, und zählt
+dort in die Auswertung.
 
-Erfasste Zeiten bleiben bei der alten Gruppe, sonst änderten sich bereits
-abgeschlossene Zeiträume. In der neuen Gruppe beginnt die Person als Mitglied,
-eine Admin-Rolle wandert nicht mit. Wer gerade eingestempelt ist, wechselt
-nicht, und der einzige Admin einer Gruppe kann erst weg, wenn es einen zweiten
-gibt. Kam die bisherige Mitgliedschaft aus dem Identity-Provider, muss der
-Wechsel auch dort nachvollzogen werden: sonst entsteht sie beim nächsten Login
-erneut.
+Die Zeiten ändern sich beim Wechsel nicht, nur die Gruppe. Weil eine Tätigkeit
+immer genau einer Gruppe gehört, wählt man im Antrag gleich die neue aus der
+Zielgruppe; bleibt das Feld leer, steht der Eintrag danach ohne Tätigkeit da.
+
+Nicht möglich ist der Wechsel bei einem laufenden Eintrag, in eine Gruppe, in
+der man nicht selbst Mitglied ist, und wenn einer der beiden Zeiträume schon
+abgeschlossen ist. Die Anträge laufen in denselben Eingang wie die übrigen
+Korrekturen, mit Zähler in der Navigation; eine Mail dazu gibt es nur mit
+`CORRECTION_EMAILS_ENABLED=true`.
 
 ## Arbeitszeitnachweis
 

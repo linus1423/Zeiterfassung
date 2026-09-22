@@ -1,13 +1,6 @@
 from django.contrib import admin
 
-from .models import (
-    Activity,
-    Group,
-    GroupChangeRequest,
-    GroupMembership,
-    PeriodConfirmation,
-    PeriodLock,
-)
+from .models import Activity, Group, GroupMembership, PeriodConfirmation, PeriodLock
 
 
 class MembershipInline(admin.TabularInline):
@@ -49,15 +42,6 @@ class PeriodLockAdmin(admin.ModelAdmin):
     list_display = ("group", "period_start", "period_end", "closed_by", "closed_at")
     list_filter = ("group",)
     autocomplete_fields = ("closed_by",)
-
-
-@admin.register(GroupChangeRequest)
-class GroupChangeRequestAdmin(admin.ModelAdmin):
-    """Nur zum Nachsehen: entschieden wird im Tool, damit es protokolliert wird."""
-
-    list_display = ("user", "from_group", "to_group", "status", "created_at")
-    list_filter = ("status", "from_group", "to_group")
-    autocomplete_fields = ("user",)
 
 
 @admin.register(PeriodConfirmation)

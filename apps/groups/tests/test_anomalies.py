@@ -106,9 +106,8 @@ def test_the_page_does_not_grow_with_the_number_of_people(
     client.force_login(group_admin)
 
     # Die Prüfung selbst braucht zwei Abfragen, der Rest ist Anmeldung und
-    # Navigation (seit Issue 37 eine Abfrage mehr für die Wechselanträge);
-    # je Person kommt keine dazu.
-    with django_assert_max_num_queries(13):
+    # Navigation; je Person kommt keine dazu.
+    with django_assert_max_num_queries(12):
         response = client.get(url(group))
 
     assert len(response.context["rows"]) == 10

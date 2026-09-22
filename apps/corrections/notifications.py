@@ -36,22 +36,29 @@ def _request_context(request_obj: CorrectionRequest) -> dict:
         "correction": request_obj,
         "requester": request_obj.requested_by,
         "group": request_obj.group,
+        "deciding_group": request_obj.deciding_group or request_obj.group,
         "inbox_url": absolute_url(reverse("corrections:inbox")),
         "mine_url": absolute_url(reverse("corrections:mine")),
     }
 
 
 def notify_admins_of_new_request(request_obj: CorrectionRequest) -> None:
-    """Meldet einen neuen Antrag den Admins der Gruppe."""
+    """Meldet einen Antrag den Admins der Gruppe, die jetzt entscheidet.
+
+    Beim Gruppenwechsel eines Eintrags (Issue 37) ist das zweimal der Fall:
+    erst die bisherige Gruppe, nach deren Zustimmung die gewünschte.
+    """
     if not emails_enabled():
         return
 
+    group = request_obj.deciding_group or request_obj.group
     recipients = [
-        address
-        for address in request_obj.group.admin_emails()
-        if address != request_obj.requested_by.email
+        address for address in group.admin_emails() if address != request_obj.requested_by.email
     ]
-    subject = f"Neuer Korrekturantrag: {request_obj.group.name}"
+    if request_obj.status == CorrectionRequest.Status.PENDING_TARGET:
+        subject = f"Gruppenwechsel zur Zustimmung: {group.name}"
+    else:
+        subject = f"Neuer Korrekturantrag: {group.name}"
     transaction.on_commit(
         lambda: send_plain_mail(
             subject,

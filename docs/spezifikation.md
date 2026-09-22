@@ -936,53 +936,66 @@ Djangos Übersetzungsmechanismus (Rückfrage 20 bleibt offen).
 
 ---
 
-## 16. Gruppenwechsel (Issue 37)
+## 16. Gruppenwechsel eines Zeiteintrags (Issue 37)
 
-Wer die Abteilung wechselt, beantragt das im Tool. Der Antrag braucht zwei
-Zustimmungen, nacheinander:
+Gemeint ist nicht der Wechsel der eigenen Gruppenzugehörigkeit, sondern der
+eines einzelnen Zeiteintrags: Wer in mehreren Gruppen arbeitet, stempelt
+gelegentlich auf die falsche. Der Eintrag soll dann von der einen eigenen
+Gruppe in die andere wandern.
 
-1. Das Mitglied wählt unter "Gruppenwechsel" die bisherige und die neue Gruppe
-   und begründet den Wechsel.
-2. Zuerst entscheidet ein Admin der **bisherigen** Gruppe. Er gibt die Person
-   ab oder lehnt ab.
-3. Danach entscheidet ein Admin der **neuen** Gruppe. Er nimmt sie auf oder
-   lehnt ab.
-4. Erst mit der zweiten Zustimmung wechselt die Mitgliedschaft.
+Das ist eine vierte Art des Korrekturantrags aus Kapitel 5, neben Änderung,
+Nachtrag und Löschung. Sie unterscheidet sich in einem Punkt: der Wechsel
+betrifft zwei Gruppen, also entscheiden auch beide.
 
-Ein Antrag steht deshalb in fünf Zuständen: "Wartet auf die bisherige Gruppe",
-"Wartet auf die neue Gruppe", "Genehmigt", "Abgelehnt" und "Zurückgezogen".
-Solange er offen ist, kann der Antragsteller ihn zurücknehmen; ein zweiter
-offener Antrag derselben Person ist nicht möglich, dafür sorgt auch eine
-Bedingung in der Datenbank.
+**Der Ablauf.**
+
+1. Unter "Meine Zeiten" wählt die Person bei ihrem Eintrag "Gruppe wechseln",
+   sucht die gewünschte Gruppe aus, wählt dort eine Tätigkeit und begründet
+   den Antrag.
+2. Zuerst entscheidet ein Admin der Gruppe, **in der der Eintrag steht**. Er
+   gibt die Zeit ab oder lehnt ab.
+3. Danach entscheidet ein Admin der **gewünschten** Gruppe. Er nimmt sie an
+   oder lehnt ab.
+4. Erst mit der zweiten Zustimmung wechselt der Eintrag. Bis dahin steht er
+   unverändert in seiner alten Gruppe und zählt dort in die Auswertung.
+
+Der Antrag kennt dafür einen Zustand mehr als die anderen Arten: nach der
+ersten Zustimmung steht er auf "Wartet auf die neue Gruppe". Solange er offen
+ist, kann der Antragsteller ihn zurücknehmen, auch nach der ersten
+Zustimmung. Eine Ablehnung aus einer der beiden Gruppen beendet den Antrag.
 
 **Wer entscheidet.** Ein Admin der Gruppe, die gerade an der Reihe ist, aber
-nie der Antragsteller selbst. Ist er der einzige Admin seiner Gruppe,
-entscheidet ein System-Admin, wie beim Korrekturantrag (Rückfrage 10).
+nie der Antragsteller selbst. Ist er der einzige Admin, entscheidet ein
+System-Admin, wie beim übrigen Korrekturantrag (Rückfrage 10). Im Eingang
+steht deshalb eine Spalte "Zuständig": sie nennt die Gruppe, die jetzt am Zug
+ist, und darunter die Richtung des Wechsels.
 
-**Was der Wechsel mitnimmt, und was nicht.** Erfasste Zeiten bleiben bei der
-alten Gruppe: sie stecken in deren Auswertung und in abgeschlossenen
-Zeiträumen, ein nachträgliches Umhängen würde bereits exportierte Monate
-verändern. In der neuen Gruppe beginnt die Person als Mitglied; die
-Admin-Rolle gilt je Gruppe und wandert nicht mit. Offene Korrekturanträge
-bleiben bei ihrer Gruppe, deren Admins entscheiden sie weiter.
+**Die Zeiten ändern sich nicht.** Beginn, Ende und Pausen bleiben, wie sie
+erfasst wurden; es wechselt nur die Gruppe. Eine Überschneidung kann dadurch
+nicht entstehen, denn geprüft wird sie je Person, nicht je Gruppe.
 
-**Wann ein Wechsel nicht geht.** Wer gerade eingestempelt ist, wechselt nicht;
-der laufende Eintrag gehört noch zur alten Gruppe. Der einzige Admin einer
-Gruppe kann nicht weg, solange kein zweiter da ist. In eine stillgelegte
-Gruppe führt kein Wechsel, und in eine Gruppe, in der man schon Mitglied ist,
-auch nicht. Alle diese Bedingungen werden beim Antrag und noch einmal bei der
-zweiten Zustimmung geprüft, weil zwischen beidem Zeit vergeht.
+**Die Tätigkeit dagegen schon.** Eine Tätigkeit gehört immer genau einer
+Gruppe (Kapitel 4), die alte passt nach dem Wechsel also nicht mehr. Deshalb
+wählt man schon im Antrag die neue aus den Tätigkeiten der Zielgruppe. Bleibt
+das Feld leer, steht der Eintrag danach ohne Tätigkeit da; das ist zulässig
+und in der Antragsliste als "ohne Tätigkeit" vermerkt.
 
-**Mitgliedschaften aus dem Identity-Provider.** Kam die bisherige
-Mitgliedschaft aus dem Token (Kapitel 6), entsteht sie beim nächsten Login
-erneut, solange die Gruppe dort im Claim steht. Der entscheidende Admin sieht
-dazu einen Hinweis: der Wechsel muss dann auch beim Provider nachvollzogen
-werden. Die neue Mitgliedschaft wird im Tool gepflegt und vom Abgleich nicht
-angetastet.
+**Wann ein Wechsel nicht geht.** Ein laufender Eintrag wechselt nicht, er ist
+noch nicht fertig. Die Zielgruppe muss eine eigene sein, in der die Person
+Mitglied ist, muss aktiv sein und darf nicht die sein, in der der Eintrag
+schon steht. Ist einer der beiden Zeiträume abgeschlossen (Kapitel 9), ist
+Schluss: in der alten Gruppe verschwände die Zeit aus einem bereits
+abgerechneten Monat, in der neuen entstünde sie dort neu. Geprüft wird das
+beim Antrag und noch einmal bei der zweiten Zustimmung, denn dazwischen
+vergeht Zeit: eine Mitgliedschaft kann enden, eine Tätigkeit wegfallen, der
+Eintrag gelöscht oder von einem anderen Antrag schon verschoben worden sein.
+In all diesen Fällen bleibt nur die Ablehnung.
 
-**Protokoll und Benachrichtigung.** Antrag, jede Zustimmung, jede Ablehnung,
-die Rücknahme und der vollzogene Wechsel stehen im Änderungsprotokoll. Mails
-gehen nur mit `GROUP_CHANGE_EMAILS_ENABLED=true` raus, und zwar immer an die
-Stelle, die am Zug ist: erst an die Admins der bisherigen Gruppe, dann an die
-der neuen, am Ende an den Antragsteller. Ohne Mailserver genügt der Zähler in
-der Navigation neben "Wechselanträge".
+**Protokoll und Benachrichtigung.** Antrag, jede der beiden Zustimmungen,
+eine Ablehnung, die Rücknahme und der vollzogene Wechsel stehen im
+Änderungsprotokoll; beim Wechsel selbst mit alter und neuer Gruppe als Vorher
+und Nachher. Mails laufen über dieselbe Einstellung wie die übrigen
+Korrekturanträge, `CORRECTION_EMAILS_ENABLED`, und gehen immer an die Stelle,
+die am Zug ist: erst an die Admins der bisherigen Gruppe, nach deren
+Zustimmung an die der gewünschten, am Ende an den Antragsteller. Ohne
+Mailserver genügt der Zähler in der Navigation, der beide Stufen mitzählt.

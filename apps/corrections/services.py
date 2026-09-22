@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.audit.models import AuditLog, log
@@ -35,14 +36,35 @@ class CorrectionError(Exception):
 def may_decide(user, request_obj: CorrectionRequest) -> bool:
     """Wer darf entscheiden: ein Admin der Gruppe, aber nicht der Antragsteller.
 
+    Beim Gruppenwechsel wandert diese Zuständigkeit: bis zur ersten Zustimmung
+    entscheidet die bisherige Gruppe des Eintrags, danach die gewünschte.
+
     Hat eine Gruppe nur einen Admin und stellt dieser selbst einen Antrag,
     entscheidet ein System-Admin.
     """
-    if not request_obj.is_pending:
+    group = request_obj.deciding_group
+    if group is None:
         return False
     if user.pk == request_obj.requested_by_id and not user.is_superuser:
         return False
-    return user.is_group_admin(request_obj.group)
+    return user.is_group_admin(group)
+
+
+def decidable_filter(group_ids) -> Q:
+    """Anträge, über die die Admins dieser Gruppen jetzt entscheiden.
+
+    Beim Gruppenwechsel eines Eintrags wandert die Zuständigkeit nach der
+    ersten Zustimmung zur gewünschten Gruppe, deshalb zwei Zweige.
+    """
+    return Q(group_id__in=group_ids, status=CorrectionRequest.Status.PENDING) | Q(
+        proposed_group_id__in=group_ids,
+        status=CorrectionRequest.Status.PENDING_TARGET,
+    )
+
+
+def involved_filter(group_ids) -> Q:
+    """Anträge, die eine dieser Gruppen betreffen, offen oder entschieden."""
+    return Q(group_id__in=group_ids) | Q(proposed_group_id__in=group_ids)
 
 
 def affected_ranges(request_obj: CorrectionRequest, overrides: dict | None = None) -> list:
@@ -61,8 +83,16 @@ def affected_ranges(request_obj: CorrectionRequest, overrides: dict | None = Non
 
 
 def closed_period_lock(request_obj: CorrectionRequest, overrides: dict | None = None):
-    """Der Abschluss, der diesen Antrag blockiert, falls es einen gibt (Issue 5)."""
-    return closing.blocking_lock(request_obj.group, affected_ranges(request_obj, overrides))
+    """Der Abschluss, der diesen Antrag blockiert, falls es einen gibt (Issue 5).
+
+    Beim Gruppenwechsel zählt auch die gewünschte Gruppe: dort entstünde die
+    Zeit neu, ein abgeschlossener Zeitraum verböte das ebenso.
+    """
+    ranges = affected_ranges(request_obj, overrides)
+    lock = closing.blocking_lock(request_obj.group, ranges)
+    if lock is None and request_obj.proposed_group_id:
+        lock = closing.blocking_lock(request_obj.proposed_group, ranges)
+    return lock
 
 
 def _reject_overlap(user, start, end, *, exclude_id=None) -> None:
@@ -81,6 +111,8 @@ def _resolved_overrides(locked: CorrectionRequest, overrides: dict) -> dict:
     """
     if locked.kind == CorrectionRequest.Kind.DELETE:
         raise CorrectionError("Ein Löschantrag kann nicht geändert genehmigt werden.")
+    if locked.kind == CorrectionRequest.Kind.MOVE:
+        raise CorrectionError("Ein Gruppenwechsel kann nicht geändert genehmigt werden.")
 
     resolved = {
         "start": overrides.get("start", locked.proposed_start),
@@ -104,6 +136,115 @@ def _record_applied(locked: CorrectionRequest, overrides: dict) -> None:
     locked.applied_end = overrides["end"]
     locked.applied_activity = overrides["activity"]
     locked.applied_breaks = overrides["breaks"] or []
+
+
+def _check_move_target(user, entry: TimeEntry, target, activity) -> None:
+    """Die Voraussetzungen eines Gruppenwechsels (Issue 37).
+
+    Geprüft wird beim Antrag und noch einmal bei der zweiten Zustimmung:
+    dazwischen kann die Mitgliedschaft enden oder die Tätigkeit wegfallen.
+    """
+    if target is None:
+        raise CorrectionError("Für einen Gruppenwechsel fehlt die gewünschte Gruppe.")
+    if entry is None:
+        raise CorrectionError("Ein Gruppenwechsel braucht einen bestehenden Zeiteintrag.")
+    if entry.end is None:
+        raise CorrectionError("Ein laufender Zeiteintrag kann die Gruppe nicht wechseln.")
+    if target.pk == entry.group_id:
+        raise CorrectionError("Der Zeiteintrag steht bereits in dieser Gruppe.")
+    if not target.is_active:
+        raise CorrectionError("Die gewünschte Gruppe ist nicht aktiv.")
+    # Der Wechsel geht nur zwischen eigenen Gruppen: sonst schöbe jemand seine
+    # Zeit in eine Gruppe, mit der er nichts zu tun hat.
+    if not user.is_group_member(target):
+        raise CorrectionError(f"{user.full_name} ist kein Mitglied von {target.name}.")
+    if activity is not None and activity.group_id != target.pk:
+        raise CorrectionError("Die gewünschte Tätigkeit gehört nicht zur gewünschten Gruppe.")
+
+
+def _locked_entry(locked: CorrectionRequest):
+    """Den Zeiteintrag des Antrags für die Dauer der Transaktion sperren.
+
+    Er kann zwischen Antrag und Entscheidung verschwunden sein, etwa durch
+    einen genehmigten Löschantrag auf denselben Eintrag.
+    """
+    if not locked.time_entry_id:
+        return None
+    return TimeEntry.objects.select_for_update().filter(pk=locked.time_entry_id).first()
+
+
+def _approve_move(locked: CorrectionRequest, decided_by, note: str) -> bool:
+    """Genehmigt einen Gruppenwechsel, je nach Stand als erste oder zweite Zustimmung.
+
+    Der Wechsel betrifft zwei Gruppen, also entscheiden beide: zuerst die
+    Gruppe, in der der Eintrag steht, danach die, in die er soll. Erst die
+    zweite Zustimmung verschiebt ihn wirklich.
+
+    Gibt zurück, ob der Antrag damit fertig entschieden ist.
+    """
+    entry = _locked_entry(locked)
+    if entry is None:
+        raise CorrectionError(
+            "Den Zeiteintrag gibt es nicht mehr. Der Antrag kann nur noch abgelehnt werden."
+        )
+    if entry.group_id != locked.group_id:
+        raise CorrectionError(
+            "Der Zeiteintrag steht inzwischen in einer anderen Gruppe. "
+            "Der Antrag kann nur noch abgelehnt werden."
+        )
+
+    if locked.status == CorrectionRequest.Status.PENDING:
+        locked.source_decided_by = decided_by
+        locked.source_decided_at = timezone.now()
+        locked.source_note = note
+        locked.status = CorrectionRequest.Status.PENDING_TARGET
+        locked.save(
+            update_fields=["source_decided_by", "source_decided_at", "source_note", "status"]
+        )
+        log(
+            AuditLog.Action.CORRECTION_APPROVED,
+            actor=decided_by,
+            target=locked,
+            group=locked.group,
+            subject=locked.requested_by,
+            note=(
+                f"Zustimmung der bisherigen Gruppe. Wartet auf {locked.proposed_group.name}."
+                + (f" {note}" if note else "")
+            ),
+        )
+        # Jetzt ist die gewünschte Gruppe am Zug, also erfahren deren Admins davon.
+        notifications.notify_admins_of_new_request(locked)
+        return False
+
+    # Zweite Zustimmung: die Voraussetzungen von damals gelten heute vielleicht
+    # nicht mehr, deshalb noch einmal prüfen.
+    target = locked.proposed_group
+    _check_move_target(locked.requested_by, entry, target, locked.proposed_activity)
+
+    before = snapshot(entry)
+    entry.group = target
+    entry.activity = locked.proposed_activity
+    entry.source = TimeEntry.Source.CORRECTION
+    try:
+        entry.full_clean(exclude=["user"])
+    except ValidationError as exc:
+        raise CorrectionError(
+            "Der Eintrag passt nicht in die gewünschte Gruppe: " + "; ".join(exc.messages)
+        ) from exc
+    entry.save()
+    log(
+        AuditLog.Action.ENTRY_UPDATED,
+        actor=decided_by,
+        target=entry,
+        group=target,
+        subject=locked.requested_by,
+        changes={
+            "vorher": before | {"gruppe": locked.group.name},
+            "nachher": snapshot(entry) | {"gruppe": target.name},
+        },
+        note="Gruppenwechsel aus Korrekturantrag",
+    )
+    return True
 
 
 @transaction.atomic
@@ -133,7 +274,12 @@ def approve(
             "Die Zeit kann nicht mehr geändert werden."
         )
 
-    if locked.kind == CorrectionRequest.Kind.DELETE:
+    if locked.kind == CorrectionRequest.Kind.MOVE:
+        # Die erste Zustimmung beendet den Ablauf noch nicht: der Antrag
+        # bleibt offen und wandert zur gewünschten Gruppe.
+        if not _approve_move(locked, decided_by, note):
+            return locked
+    elif locked.kind == CorrectionRequest.Kind.DELETE:
         entry = locked.time_entry
         if entry is not None:
             before = snapshot(entry)
@@ -249,6 +395,9 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
     if not note.strip():
         raise CorrectionError("Eine Ablehnung braucht eine Begründung.")
 
+    # Beim Gruppenwechsel kann die Ablehnung aus beiden Gruppen kommen; im
+    # Protokoll soll stehen, welche sie war.
+    deciding_group = locked.deciding_group or locked.group
     locked.status = CorrectionRequest.Status.REJECTED
     locked.decided_by = decided_by
     locked.decided_at = timezone.now()
@@ -260,7 +409,7 @@ def reject(request_obj: CorrectionRequest, decided_by, note: str) -> CorrectionR
         AuditLog.Action.CORRECTION_REJECTED,
         actor=decided_by,
         target=locked,
-        group=locked.group,
+        group=deciding_group,
         subject=locked.requested_by,
         note=note,
     )
@@ -298,6 +447,7 @@ def create_request(
     kind: str,
     reason: str,
     entry: TimeEntry | None = None,
+    proposed_group=None,
     proposed_start=None,
     proposed_end=None,
     proposed_activity=None,
@@ -309,12 +459,19 @@ def create_request(
     # entschiede ein Admin einer fremden Gruppe über fremde Zeiten.
     if entry is not None and entry.group_id != group.pk:
         raise CorrectionError("Ein bestehender Eintrag bleibt in seiner Gruppe.")
+    if kind == CorrectionRequest.Kind.MOVE:
+        if entry is not None and entry.user_id != requested_by.pk:
+            raise CorrectionError("Nur die eigenen Zeiten können die Gruppe wechseln.")
+        _check_move_target(requested_by, entry, proposed_group, proposed_activity)
+    elif proposed_group is not None:
+        raise CorrectionError("Eine gewünschte Gruppe gibt es nur beim Gruppenwechsel.")
 
     correction = CorrectionRequest(
         time_entry=entry,
         requested_by=requested_by,
         group=group,
         kind=kind,
+        proposed_group=proposed_group,
         proposed_start=proposed_start,
         proposed_end=proposed_end,
         proposed_activity=proposed_activity,
@@ -329,7 +486,7 @@ def create_request(
             "Korrekturen sind dort nicht mehr möglich."
         )
 
-    if kind != CorrectionRequest.Kind.DELETE:
+    if kind not in (CorrectionRequest.Kind.DELETE, CorrectionRequest.Kind.MOVE):
         _reject_overlap(
             requested_by,
             proposed_start,

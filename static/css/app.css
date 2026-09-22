@@ -120,7 +120,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-variant-numeric: tabular-nums;
 }
 .badge.pending,
-.badge.pending_source,
 .badge.pending_target { border-color: var(--warn); color: var(--warn); }
 .badge.approved { border-color: var(--ok); color: var(--ok); }
 .badge.rejected { border-color: var(--bad); color: var(--bad); }
