@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Abschluss: {{ group.name }}{% endblock %}
 {% block content %}
-<h1>Abrechnungszeiträume von {{ group.name }}</h1>
-<p>
+<div class="page-head">
+  <h1>Abrechnungszeiträume von {{ group.name }}</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a>
+  </div>
+</div>
+<p class="lead">
   {% if group.month_start_day == 1 %}
     Die Gruppe rechnet nach Kalendermonat ab.
   {% else %}
@@ -10,56 +15,61 @@
   {% endif %}
 </p>
 <div class="card">
-  <table>
-    <tr><th>Zeitraum</th><th>Von</th><th>Bis</th><th>Status</th><th>Bestätigt</th><th></th></tr>
-    {% for row in rows %}
-      <tr>
-        <td>{{ row.period.label }}</td>
-        <td>{{ row.period.start|date:"d.m.Y" }}</td>
-        <td>{{ row.period.end|date:"d.m.Y" }}</td>
-        <td>
-          {% if row.lock %}
-            <span class="badge">abgeschlossen</span>
-            am {{ row.lock.closed_at|date:"d.m.Y" }}
-            {% if row.lock.closed_by %}von {{ row.lock.closed_by.full_name }}{% endif %}
-          {% elif row.is_current %}
-            <span class="badge pending">laufend</span>
-          {% else %}
-            offen
-          {% endif %}
-        </td>
-        <td>
-          {% with stand=row.confirmations %}
-            {% if row.is_current %}
-              <span class="muted">läuft noch</span>
-            {% elif not stand or not stand.members %}
-              <span class="muted">keine Mitglieder</span>
-            {% elif stand.all_confirmed %}
-              alle {{ stand.members }}
-            {% else %}
-              <span class="badge pending">{{ stand.count }} von {{ stand.members }} offen</span>
-              <span class="muted">{{ stand.names }}</span>
-            {% endif %}
-          {% endwith %}
-        </td>
-        <td>
-          {% if row.lock %}
-            {% if may_reopen %}
-              <form method="post" class="inline">{% csrf_token %}
-                <input type="hidden" name="lock" value="{{ row.lock.pk }}">
-                <button type="submit" name="action" value="reopen">Wieder öffnen</button>
-              </form>
-            {% endif %}
-          {% elif may_close and not row.is_current %}
-            <form method="post" class="inline">{% csrf_token %}
-              <input type="hidden" name="period_start" value="{{ row.period.start|date:'Y-m-d' }}">
-              <button class="primary" type="submit" name="action" value="close">Abschließen</button>
-            </form>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Zeitraum</th><th>Von</th><th>Bis</th><th>Status</th><th>Bestätigt</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.period.label }}</td>
+            <td>{{ row.period.start|date:"d.m.Y" }}</td>
+            <td>{{ row.period.end|date:"d.m.Y" }}</td>
+            <td>
+              {% if row.lock %}
+                <span class="badge approved">abgeschlossen</span>
+                <span class="help">am {{ row.lock.closed_at|date:"d.m.Y" }}{% if row.lock.closed_by %} von {{ row.lock.closed_by.full_name }}{% endif %}</span>
+              {% elif row.is_current %}
+                <span class="badge pending">laufend</span>
+              {% else %}
+                <span class="badge">offen</span>
+              {% endif %}
+            </td>
+            <td>
+              {% with stand=row.confirmations %}
+                {% if row.is_current %}
+                  <span class="muted">läuft noch</span>
+                {% elif not stand or not stand.members %}
+                  <span class="muted">keine Mitglieder</span>
+                {% elif stand.all_confirmed %}
+                  alle {{ stand.members }}
+                {% else %}
+                  <span class="badge pending">{{ stand.count }} von {{ stand.members }} offen</span>
+                  <span class="muted">{{ stand.names }}</span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td class="actions-cell">
+              {% if row.lock %}
+                {% if may_reopen %}
+                  <form method="post" class="inline">{% csrf_token %}
+                    <input type="hidden" name="lock" value="{{ row.lock.pk }}">
+                    <button class="quiet" type="submit" name="action" value="reopen">Wieder öffnen</button>
+                  </form>
+                {% endif %}
+              {% elif may_close and not row.is_current %}
+                <form method="post" class="inline">{% csrf_token %}
+                  <input type="hidden" name="period_start" value="{{ row.period.start|date:'Y-m-d' }}">
+                  <button type="submit" name="action" value="close">Abschließen</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   <p class="help">
     Nach dem Abschluss lehnt das System Korrekturanträge für diesen Zeitraum ab.
     Aufheben kann den Abschluss nur ein System-Admin.

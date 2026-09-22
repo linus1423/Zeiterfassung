@@ -19,35 +19,37 @@
     </p>
   </header>
 
-  <table class="sheet-table">
-    <thead>
-      <tr>
-        <th>Datum</th><th>Tag</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in sheet.rows %}
-        <tr{% if row.is_empty %} class="empty"{% endif %}>
-          <td>{{ row.day|date:"d.m.Y" }}</td>
-          <td>{{ row.weekday }}</td>
-          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.start|date:"H:i" }}{% endif %}</td>
-          <td>
-            {% if row.is_empty %}&nbsp;{% else %}{{ row.end|date:"H:i" }}
-              {% if row.is_incomplete %}<span class="badge">unvollständig</span>{% endif %}
-            {% endif %}
-          </td>
-          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.pause|dauer }}{% endif %}</td>
-          <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.work|dauer }}{% endif %}</td>
+  <div class="table-scroll">
+    <table class="sheet-table">
+      <thead>
+        <tr>
+          <th>Datum</th><th>Tag</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th>
         </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      <tr>
-        <th colspan="5">Summe, {{ sheet.days_worked }} Tag{{ sheet.days_worked|pluralize:"e" }}</th>
-        <th>{{ sheet.total|dauer }}</th>
-      </tr>
-    </tfoot>
-  </table>
+      </thead>
+      <tbody>
+        {% for row in sheet.rows %}
+          <tr{% if row.is_empty %} class="empty"{% endif %}>
+            <td>{{ row.day|date:"d.m.Y" }}</td>
+            <td>{{ row.weekday }}</td>
+            <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.start|date:"H:i" }}{% endif %}</td>
+            <td>
+              {% if row.is_empty %}&nbsp;{% else %}{{ row.end|date:"H:i" }}
+                {% if row.is_incomplete %}<span class="badge">unvollständig</span>{% endif %}
+              {% endif %}
+            </td>
+            <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.pause|dauer }}{% endif %}</td>
+            <td>{% if row.is_empty %}&nbsp;{% else %}{{ row.work|dauer }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="5">Summe, {{ sheet.days_worked }} Tag{{ sheet.days_worked|pluralize:"e" }}</th>
+          <th>{{ sheet.total|dauer }}</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
   {% if sheet.open_entries or sheet.has_incomplete %}
     <p class="help">

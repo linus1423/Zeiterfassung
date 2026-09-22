@@ -1,51 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Meine Korrekturanträge{% endblock %}
 {% block content %}
-<h1>Meine Korrekturanträge</h1>
-<p><a class="button" href="{% url 'corrections:create' %}">Vergessene Zeit nachtragen</a></p>
+<div class="page-head">
+  <h1>Meine Korrekturanträge</h1>
+  <div class="page-actions">
+    <a class="button primary" href="{% url 'corrections:create' %}">Vergessene Zeit nachtragen</a>
+  </div>
+</div>
 <div class="card">
   <div class="table-scroll">
     <table>
-      <tr><th>Gestellt am</th><th>Art</th><th>Gruppe</th><th>Gewünscht</th><th>Status</th><th></th></tr>
-      {% for request in requests %}
-        <tr>
-          <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
-          <td>{{ request.get_kind_display }}</td>
-          <td>{{ request.group.name }}</td>
-          <td>
-            {% if request.is_move %}
-              nach {{ request.proposed_group.name }}
-              {% if request.proposed_activity %} · {{ request.proposed_activity.name }}
-              {% else %} · ohne Tätigkeit{% endif %}
-            {% elif request.proposed_start %}
-              {{ request.proposed_start|date:"d.m.Y H:i" }} bis {{ request.proposed_end|date:"H:i" }}
-            {% else %}-{% endif %}
-          </td>
-          <td>
-            <span class="badge {{ request.status }}">{{ request.get_status_display }}</span>
-            {% if request.status == "pending_target" %}
-              <br><span class="help">{{ request.group.name }} hat zugestimmt.</span>
-            {% endif %}
-            {% if request.was_adjusted %}
-              <br><span class="help">
-                Geändert übernommen: {{ request.applied_start|date:"d.m.Y H:i" }} bis
-                {{ request.applied_end|date:"H:i" }}{% if request.applied_activity %} · {{ request.applied_activity.name }}{% endif %}
-                {% for pause in request.applied_break_periods %}
-                  <br>Pause {{ pause.start|date:"H:i" }} bis {{ pause.end|date:"H:i" }}
-                {% empty %}<br>ohne Pause{% endfor %}
-              </span>
-            {% endif %}
-            {% if request.decision_note %}<br><span class="help">{{ request.decision_note }}</span>{% endif %}
-          </td>
-          <td>
-            {% if request.is_pending %}
-              <form method="post" action="{% url 'corrections:withdraw' request.pk %}">{% csrf_token %}
-                <button type="submit">Zurücknehmen</button>
-              </form>
-            {% endif %}
-          </td>
-        </tr>
-      {% empty %}<tr><td colspan="6" class="muted">Noch keine Anträge.</td></tr>{% endfor %}
+      <thead>
+        <tr><th>Gestellt am</th><th>Art</th><th>Gruppe</th><th>Gewünscht</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for request in requests %}
+          <tr>
+            <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ request.get_kind_display }}</td>
+            <td>{{ request.group.name }}</td>
+            <td>
+              {% if request.is_move %}
+                nach {{ request.proposed_group.name }}
+                {% if request.proposed_activity %} · {{ request.proposed_activity.name }}
+                {% else %} · ohne Tätigkeit{% endif %}
+              {% elif request.proposed_start %}
+                {{ request.proposed_start|date:"d.m.Y H:i" }} bis {{ request.proposed_end|date:"H:i" }}
+              {% else %}-{% endif %}
+            </td>
+            <td>
+              <span class="badge {{ request.status }}">{{ request.get_status_display }}</span>
+              {% if request.status == "pending_target" %}
+                <br><span class="help">{{ request.group.name }} hat zugestimmt.</span>
+              {% endif %}
+              {% if request.was_adjusted %}
+                <br><span class="help">
+                  Geändert übernommen: {{ request.applied_start|date:"d.m.Y H:i" }} bis
+                  {{ request.applied_end|date:"H:i" }}{% if request.applied_activity %} · {{ request.applied_activity.name }}{% endif %}
+                  {% for pause in request.applied_break_periods %}
+                    <br>Pause {{ pause.start|date:"H:i" }} bis {{ pause.end|date:"H:i" }}
+                  {% empty %}<br>ohne Pause{% endfor %}
+                </span>
+              {% endif %}
+              {% if request.decision_note %}<br><span class="help">{{ request.decision_note }}</span>{% endif %}
+            </td>
+            <td class="actions-cell">
+              {% if request.is_pending %}
+                <form method="post" action="{% url 'corrections:withdraw' request.pk %}">{% csrf_token %}
+                  <button class="quiet" type="submit">Zurücknehmen</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="empty">Noch keine Anträge.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>

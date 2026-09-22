@@ -2,14 +2,20 @@
 {% load zeit %}
 {% block title %}Meine Zeiten{% endblock %}
 {% block content %}
-<h1>Meine Zeiten</h1>
+<div class="page-head">
+  <h1>Meine Zeiten</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'tracking:confirm_period' %}">Zeitraum bestätigen</a>
+    <a class="button" href="{% url 'corrections:mine' %}">Meine Anträge</a>
+  </div>
+</div>
 
-<div class="card">
-  <div class="actions quick">
-    <a class="badge{% if quick == 'woche' %} count{% endif %}" href="?bereich=woche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Diese Woche</a>
-    <a class="badge{% if quick == 'vorwoche' %} count{% endif %}" href="?bereich=vorwoche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Vorige Woche</a>
-    <a class="badge{% if quick == 'monat' %} count{% endif %}" href="?bereich=monat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Dieser Zeitraum</a>
-    <a class="badge{% if quick == 'vormonat' %} count{% endif %}" href="?bereich=vormonat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Voriger Zeitraum</a>
+<div class="card filters">
+  <div class="chips">
+    <a class="chip{% if quick == 'woche' %} is-active{% endif %}" href="?bereich=woche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Diese Woche</a>
+    <a class="chip{% if quick == 'vorwoche' %} is-active{% endif %}" href="?bereich=vorwoche{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Vorige Woche</a>
+    <a class="chip{% if quick == 'monat' %} is-active{% endif %}" href="?bereich=monat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Dieser Zeitraum</a>
+    <a class="chip{% if quick == 'vormonat' %} is-active{% endif %}" href="?bereich=vormonat{% if activity %}&amp;activity={{ activity.pk }}{% endif %}">Voriger Zeitraum</a>
   </div>
   <form method="get" class="grid two">
     <div>{{ form.start.label_tag }}{{ form.start }}{{ form.start.errors }}</div>
@@ -24,39 +30,47 @@
 </div>
 
 <div class="card">
-  <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}{% if activity %} · {{ activity.name }}{% endif %}</h2>
-  <p><a href="{% url 'reporting:timesheet' user.pk %}?start={{ start_day|date:"Y-m-d" }}&amp;end={{ end_day|date:"Y-m-d" }}">Arbeitszeitnachweis zum Ausdrucken</a></p>
-  <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden)</p>
+  <div class="card-head">
+    <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}{% if activity %} · {{ activity.name }}{% endif %}</h2>
+    <a class="card-note" href="{% url 'reporting:timesheet' user.pk %}?start={{ start_day|date:"Y-m-d" }}&amp;end={{ end_day|date:"Y-m-d" }}">Arbeitszeitnachweis zum Ausdrucken</a>
+  </div>
+  <ul class="stats">
+    <li class="stat"><span class="value">{{ total|dauer }}</span><span class="label">Summe hh:mm</span></li>
+    <li class="stat"><span class="value">{{ total|stunden }}</span><span class="label">Stunden dezimal</span></li>
+  </ul>
   {% if entries %}
     <div class="table-scroll">
       <table>
-        <tr>
-          <th>Datum</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th>
-          <th>Notiz</th><th class="num">Pause</th><th class="num">Arbeitszeit</th><th></th>
-        </tr>
-        {% for entry in entries %}
+        <thead>
           <tr>
-            <td>{{ entry.start|date:"d.m.Y" }}</td>
-            <td>{{ entry.group.name }}</td>
-            <td>{{ entry.activity.name|default:"-" }}</td>
-            <td>{{ entry.start|time:"H:i" }}</td>
-            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
-            <td class="muted">{{ entry.note|default:"" }}</td>
-            <td class="num">{{ entry.break_duration|dauer }}</td>
-            <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
-            <td>
-              {% if entry.end %}
-                <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
-                ·
-                <a href="{% url 'corrections:request_move' entry.pk %}">Gruppe wechseln</a>
-              {% endif %}
-            </td>
+            <th>Datum</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th>
+            <th>Notiz</th><th class="num">Pause</th><th class="num">Arbeitszeit</th><th></th>
           </tr>
-        {% endfor %}
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td>{{ entry.start|date:"d.m.Y" }}</td>
+              <td>{{ entry.group.name }}</td>
+              <td>{{ entry.activity.name|default:"-" }}</td>
+              <td>{{ entry.start|time:"H:i" }}</td>
+              <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}<span class="badge info">läuft</span>{% endif %}</td>
+              <td class="muted">{{ entry.note|default:"" }}</td>
+              <td class="num">{{ entry.break_duration|dauer }}</td>
+              <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
+              <td class="actions-cell">
+                {% if entry.end %}
+                  <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a> ·
+                  <a href="{% url 'corrections:request_move' entry.pk %}">Gruppe wechseln</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   {% else %}
-    <p class="muted">In diesem Zeitraum wurde nichts erfasst.</p>
+    <p class="empty">In diesem Zeitraum wurde nichts erfasst.</p>
   {% endif %}
 </div>
 
@@ -64,26 +78,30 @@
   <div class="card">
     <h2>Wochensummen</h2>
     <table>
-      {% for week in by_week %}
-        <tr>
-          <td>KW {{ week.week }}</td>
-          <td class="muted">{{ week.start|date:"d.m." }} bis {{ week.end|date:"d.m.Y" }}</td>
-          <td class="num">{{ week.total|dauer }} h</td>
-        </tr>
-      {% empty %}
-        <tr><td class="muted">Keine Daten.</td></tr>
-      {% endfor %}
+      <tbody>
+        {% for week in by_week %}
+          <tr>
+            <td>KW {{ week.week }}</td>
+            <td class="muted">{{ week.start|date:"d.m." }} bis {{ week.end|date:"d.m.Y" }}</td>
+            <td class="num">{{ week.total|dauer }} h</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty">Keine Daten.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 
   <div class="card">
     <h2>Tagessummen</h2>
     <table>
-      {% for day, total_day in by_day %}
-        <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
-      {% empty %}
-        <tr><td class="muted">Keine Daten.</td></tr>
-      {% endfor %}
+      <tbody>
+        {% for day, total_day in by_day %}
+          <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
+        {% empty %}
+          <tr><td class="empty">Keine Daten.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>

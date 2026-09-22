@@ -4,7 +4,7 @@
 <h1>Gruppe des Eintrags wechseln</h1>
 <div class="card">
   <p>
-    {{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }},
+    <strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong> ·
     {{ entry.group.name }}{% if entry.activity %} · {{ entry.activity.name }}{% endif %}
   </p>
   {% if form.has_targets %}

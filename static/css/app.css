@@ -1,27 +1,86 @@
+/* Aussehen der Anwendung. Ein einziges Stylesheet, kein Framework und kein
+   JavaScript: die Auswertungsseite wird darauf geprüft, dass nichts
+   nachgeladen und nichts ausgeführt wird.
+
+   Aufbau: erst die Gestaltungsvariablen, dann die Grundlagen, dann die
+   Bausteine (Seitenkopf, Karte, Tabelle, Formular, Knopf, Pille, Chip) und
+   zuletzt das, was nur auf einer Seite vorkommt. */
+
 :root {
-  --bg: #f5f6f8;
+  /* Farben. Die Graustufen haben einen leichten Blaustich, damit sie neben
+     dem Akzentblau nicht schmutzig wirken. */
+  --bg: #f1f3f7;
   --card: #ffffff;
-  --ink: #1d2433;
-  --muted: #5b6577;
-  --line: #dfe3ea;
-  --accent: #1f6feb;
-  --ok: #1a7f37;
-  --warn: #9a6700;
-  --bad: #b42318;
+  --card-sunken: #f7f8fb;
+  --ink: #161d2b;
+  --ink-soft: #3d4658;
+  --muted: #667085;
+  --line: #e2e6ee;
+  --line-strong: #cbd2e0;
+
+  --accent: #1f5fd4;
+  --accent-dark: #17469c;
+  --accent-soft: #e8effc;
+
+  --ok: #14713a;
+  --ok-soft: #e4f4ea;
+  --warn: #8a5a00;
+  --warn-soft: #fdf2dd;
+  --bad: #b32318;
+  --bad-soft: #fdeceb;
+
+  /* Abstände. Alles im Layout greift auf diese Leiter zu, damit die Seiten
+     denselben Rhythmus bekommen. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  --radius-sm: 6px;
   --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 4px 16px rgba(16, 24, 40, 0.05);
+  --ring: 0 0 0 3px rgba(31, 95, 212, 0.28);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 1rem;
   background: var(--bg);
   color: var(--ink);
-  line-height: 1.5;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
 }
 
-a { color: var(--accent); }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent-dark); }
+
+/* Tastaturbedienung muss sichtbar sein; der Ring gilt für alles, was Fokus
+   bekommen kann. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--card-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.05em 0.35em;
+}
+
+hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-5) 0; }
 
 header.site {
   background: var(--card);
@@ -32,7 +91,7 @@ header.site {
 header.site .inner,
 main { max-width: 1100px; margin: 0 auto; }
 
-main { padding: 1rem; }
+main { padding: var(--space-5) var(--space-4) var(--space-6); }
 
 nav.site { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 nav.site .brand { font-weight: 700; margin-right: 0.5rem; }
@@ -40,151 +99,651 @@ nav.site a { text-decoration: none; padding: 0.35rem 0.1rem; }
 nav.site a:hover { text-decoration: underline; }
 nav.site .spacer { flex: 1; }
 
+/* --- Typografie ---------------------------------------------------------- */
+
+h1, h2, h3 { line-height: 1.25; letter-spacing: -0.01em; }
+
+h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 var(--space-4); }
+h2 { font-size: 1.15rem; font-weight: 650; margin: 0 0 var(--space-3); }
+h3 { font-size: 1rem; font-weight: 650; margin: var(--space-4) 0 var(--space-2); }
+
+p { margin: 0 0 var(--space-3); }
+p:last-child { margin-bottom: 0; }
+
+.muted { color: var(--muted); }
+.help { color: var(--muted); font-size: 0.9rem; }
+.lead { color: var(--ink-soft); font-size: 1.02rem; max-width: 70ch; }
+.inline { display: inline; }
+
+/* --- Seitenkopf ---------------------------------------------------------- */
+
+/* Überschrift links, Aktionen rechts. Ohne Aktionen genügt ein nacktes <h1>. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.page-head h1 { margin: 0; }
+.page-head .page-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Die Zeile unter der Überschrift: früher Links mit "·" dazwischen. */
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-1)) 0 var(--space-4);
+}
+.subnav a {
+  text-decoration: none;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-sm);
+}
+.subnav a:hover { border-color: var(--line-strong); color: var(--ink); }
+
+/* --- Karte --------------------------------------------------------------- */
+
 .card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
-h1 { font-size: 1.5rem; margin: 0 0 1rem; }
-h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+/* Kopfzeile einer Karte: Überschrift links, eine Aktion oder ein Hinweis
+   rechts. */
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.card-head h2 { margin: 0; }
+.card-head .card-note { color: var(--muted); font-size: 0.9rem; }
 
-.state { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem; }
-.state small { display: block; font-size: 0.95rem; font-weight: 400; color: var(--muted); }
+.card.warning { border-color: var(--warn); background: var(--warn-soft); }
+.card.warning code { background: #fff; }
 
-.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+/* --- Kennzahlen ---------------------------------------------------------- */
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.stat { min-width: 8rem; }
+.stat .value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.stat .label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* --- Leerzustand --------------------------------------------------------- */
+
+/* Absichtlich eng gefasst: im Arbeitszeitnachweis heisst eine leere
+   Tabellenzeile ebenfalls "empty", die soll aber kein Kasten werden. */
+p.empty {
+  color: var(--muted);
+  background: var(--card-sunken);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin: 0;
+  text-align: center;
+}
+td.empty { color: var(--muted); padding: var(--space-4) var(--space-2); }
+
+/* --- Knöpfe -------------------------------------------------------------- */
 
 button, .button {
   font: inherit;
-  border: 1px solid var(--line);
+  font-weight: 550;
+  border: 1px solid var(--line-strong);
   background: var(--card);
   color: var(--ink);
   border-radius: var(--radius);
-  padding: 0.7rem 1.1rem;
+  padding: 0.55rem 1rem;
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
-button.big { font-size: 1.1rem; padding: 0.9rem 1.4rem; width: 100%; }
+button:hover, .button:hover { background: var(--card-sunken); border-color: var(--muted); color: var(--ink); }
+button:active, .button:active { transform: translateY(1px); }
+button:focus-visible, .button:focus-visible { outline: none; box-shadow: var(--ring); }
+
+button.primary, .button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+button.primary:hover, .button.primary:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: #fff;
+}
+
+button.danger, .button.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+button.danger:hover, .button.danger:hover { background: #8f1c13; border-color: #8f1c13; color: #fff; }
+
+/* Ein Knopf, der wie ein Link aussehen soll: für Nebensächliches in
+   Tabellenzeilen. */
+button.quiet, .button.quiet {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--accent);
+  padding: 0.2rem 0.4rem;
+  font-weight: 500;
+}
+button.quiet:hover, .button.quiet:hover {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-dark);
+}
+button.quiet.danger, .button.quiet.danger { color: var(--bad); }
+button.quiet.danger:hover { background: var(--bad-soft); color: var(--bad); }
+
+button.big { font-size: 1.05rem; padding: 0.85rem 1.4rem; width: 100%; }
 @media (min-width: 640px) { button.big { width: auto; } }
 
-label { display: block; font-weight: 600; margin: 0.6rem 0 0.2rem; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-top: var(--space-4); }
+.actions:first-child { margin-top: 0; }
+.actions form { margin: 0; }
+.actions + p, .actions + .help { margin-top: var(--space-3); }
+
+/* --- Formulare ----------------------------------------------------------- */
+
+label { display: block; font-weight: 600; font-size: 0.92rem; margin: 0 0 var(--space-1); }
+
+/* Django rendert die Formulare mit as_p: ein <p> je Feld. */
+form p { margin: 0 0 var(--space-4); }
+form p.help, form p:last-child { margin-bottom: 0; }
+form p + .actions { margin-top: var(--space-4); }
+
 input, select, textarea {
   font: inherit;
   width: 100%;
-  padding: 0.55rem;
-  border: 1px solid var(--line);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: #fff;
   color: var(--ink);
 }
-.help { color: var(--muted); font-size: 0.9rem; }
-.errorlist { color: var(--bad); margin: 0.25rem 0; padding-left: 1rem; }
+textarea { min-height: 6rem; resize: vertical; }
+/* Bei einer Mehrfachauswahl wuerde die Polsterung die letzte sichtbare Zeile
+   anschneiden. */
+select[multiple] { padding: 0.35rem 0.4rem; }
+select { cursor: pointer; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+input[type="checkbox"], input[type="radio"] { width: auto; margin-right: var(--space-1); accent-color: var(--accent); }
 
-.grid { display: grid; gap: 1rem; }
-@media (min-width: 800px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+/* Ankreuzfelder stehen neben ihrer Beschriftung, nicht darunter. */
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 400;
+}
+
+.helptext { display: block; color: var(--muted); font-size: 0.9rem; margin-top: var(--space-1); }
+
+.errorlist {
+  color: var(--bad);
+  font-size: 0.9rem;
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+}
+
+/* Filterleiste über einer Liste: gehört sichtbar zur Liste, deshalb der
+   ruhigere Untergrund. */
+.filters { background: var(--card-sunken); }
+.filters .actions { align-items: flex-end; }
+
+.grid { display: grid; gap: var(--space-4); }
+@media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+
+/* --- Tabellen ------------------------------------------------------------ */
 
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--line); }
-th { color: var(--muted); font-weight: 600; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--card-sunken);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+th, td { text-align: left; padding: 0.6rem var(--space-2); border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--ink); font-weight: 600; }
+
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--card-sunken); }
+
+tfoot th, tfoot td {
+  border-top: 2px solid var(--line-strong);
+  border-bottom: 0;
+  font-weight: 650;
+  background: var(--card-sunken);
+}
+
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.actions-cell { white-space: nowrap; }
+td.actions-cell form { display: inline; }
+
 .table-scroll { overflow-x: auto; }
 
-.messages { list-style: none; padding: 0; margin: 0 0 1rem; }
+/* Zwei Spalten Beschriftung und Wert, etwa im Profil oder beim Import. */
+table.facts th { width: 40%; color: var(--muted); font-weight: 600; }
+table.facts thead { display: none; }
+
+/* --- Meldungen ----------------------------------------------------------- */
+
+.messages { list-style: none; padding: 0; margin: 0 0 var(--space-4); }
 .messages li {
-  padding: 0.7rem 1rem;
+  padding: 0.7rem var(--space-4);
   border-radius: var(--radius);
   border: 1px solid var(--line);
+  border-left-width: 4px;
   background: var(--card);
-  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-2);
 }
-.messages li.success { border-color: var(--ok); color: var(--ok); }
-.messages li.error { border-color: var(--bad); color: var(--bad); }
-.messages li.warning { border-color: var(--warn); color: var(--warn); }
+.messages li.success { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+.messages li.error { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.messages li.warning { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+
+/* --- Statuspillen -------------------------------------------------------- */
 
 .badge {
   display: inline-block;
   font-size: 0.8rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 0.1rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: var(--card-sunken);
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 .badge.count {
   border-color: var(--warn);
+  background: var(--warn-soft);
   color: var(--warn);
   font-variant-numeric: tabular-nums;
 }
 .badge.pending,
-.badge.pending_target { border-color: var(--warn); color: var(--warn); }
-.badge.approved { border-color: var(--ok); color: var(--ok); }
-.badge.rejected { border-color: var(--bad); color: var(--bad); }
+.badge.pending_target { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.badge.approved { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+.badge.rejected { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.badge.info { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
 
-.checkbox-columns { columns: 2; }
+/* --- Chips (Schnellbereiche) --------------------------------------------- */
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+.chip {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* --- Schmale Seiten (Anmeldung, Notfallzugang) --------------------------- */
+
+.narrow { max-width: 30rem; margin: var(--space-6) auto; }
+
+/* --- Stempeluhr ---------------------------------------------------------- */
+
+.state {
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.3;
+  margin-bottom: var(--space-3);
+}
+.state small { display: block; font-size: 0.95rem; font-weight: 400; color: var(--muted); margin-top: var(--space-1); }
+.state.running { color: var(--ok); }
+.state.paused { color: var(--warn); }
+.state.stopped { color: var(--ink); }
+
+form.switch { margin-top: var(--space-5); border-top: 1px solid var(--line); padding-top: var(--space-4); }
+form.switch .actions { margin-top: var(--space-2); }
+form.switch select { max-width: 20rem; }
+
+/* --- Hinweise ------------------------------------------------------------ */
+
+.reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.reminder:first-child { padding-top: 0; }
+.reminder:last-child { padding-bottom: 0; border-bottom: 0; }
+.reminder .text { flex: 1 1 20rem; }
+.reminder .text p { margin: 0; }
+.reminder .actions { margin-top: 0; }
+
+/* --- Spaltenauswahl des Exports ------------------------------------------ */
+
+.checkbox-columns { columns: 2; column-gap: var(--space-5); }
 .checkbox-columns label { font-weight: 400; }
 .checkbox-columns ul { list-style: none; padding: 0; margin: 0; }
+.checkbox-columns li { break-inside: avoid; }
 @media (min-width: 900px) { .checkbox-columns { columns: 4; } }
 
-.muted { color: var(--muted); }
-.inline { display: inline; }
+/* --- Pausenzeilen in den Anträgen ---------------------------------------- */
 
 table.breaks th { font-weight: 600; }
 table.breaks input { width: 100%; }
+table.breaks tbody tr:hover td { background: none; }
 
-/* Schnellschalter über der eigenen Zeitliste und der Wechsel der Tätigkeit */
-.actions.quick { margin-bottom: 0.5rem; }
-.actions.quick a { text-decoration: none; }
-.actions.quick a.count { background: var(--accent); border-color: var(--accent); color: #fff; }
-form.switch { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.75rem; }
-form.switch .actions { margin-top: 0.25rem; }
-form.switch select { max-width: 20rem; }
+/* --- Genehmigen mit Änderung --------------------------------------------- */
 
-/* Arbeitszeitnachweis zum Ausdrucken (Issue 35) */
-.sheet { margin-bottom: 2rem; }
+details.panel {
+  margin-top: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card-sunken);
+  padding: var(--space-3) var(--space-4);
+}
+details.panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style-position: outside;
+}
+details.panel[open] > summary { margin-bottom: var(--space-3); }
+
+/* --- Arbeitszeitnachweis zum Ausdrucken (Issue 35) ----------------------- */
+
+.sheet {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
 .sheet-head dl {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.1rem 1rem;
-  margin: 0 0 0.5rem;
+  gap: 0.1rem var(--space-4);
+  margin: 0 0 var(--space-2);
 }
 .sheet-head dt { color: var(--muted); }
 .sheet-head dd { margin: 0; }
+.sheet-head .status { color: var(--muted); font-size: 0.9rem; }
 .sheet-table { width: 100%; border-collapse: collapse; }
-.sheet-table th, .sheet-table td { border: 1px solid var(--line); padding: 0.2rem 0.4rem; }
-.sheet-table tr.empty td { height: 1.4rem; }
+.sheet-table th, .sheet-table td {
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.45rem;
+  vertical-align: middle;
+}
+.sheet-table tbody tr:hover td { background: none; }
+.sheet-table tbody tr:last-child td { border-bottom: 1px solid var(--line); }
+.sheet-table tr.empty td { height: 1.4rem; background: none; }
 .sheet-table td:nth-child(n+3), .sheet-table tfoot th:last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.signatures { display: flex; gap: 3rem; margin-top: 2.5rem; color: var(--muted); }
+.signatures { display: flex; flex-wrap: wrap; gap: var(--space-6); margin-top: 2.5rem; color: var(--muted); }
 .signatures .line {
   display: block;
   width: 16rem;
-  border-top: 1px solid var(--line);
+  max-width: 100%;
+  border-top: 1px solid var(--line-strong);
   margin-bottom: 0.2rem;
 }
 
 @media print {
   /* Auf Papier gehören weder Navigation noch Knöpfe hin. */
   header.site, .no-print, .messages { display: none !important; }
-  main { margin: 0; max-width: none; }
-  .sheet { page-break-after: always; }
+  body { background: #fff; }
+  main { margin: 0; max-width: none; padding: 0; }
+  .sheet { box-shadow: none; border: 0; padding: 0; page-break-after: always; }
   .sheet:last-child { page-break-after: auto; }
   .sheet-table { page-break-inside: auto; }
   .sheet-table tr { page-break-inside: avoid; }
+  .sheet-table thead th { background: none; }
   a { text-decoration: none; color: inherit; }
 }
 
-/* Balkendiagramm der Auswertungsseite (Issue 56).
+/* --- Balkendiagramm der Auswertungsseite (Issue 56) ----------------------
    Das SVG wird auf dem Server erzeugt, hier steht nur sein Aussehen. */
-.diagramm { overflow-x: auto; margin-bottom: 1rem; }
+
+.diagramm {
+  overflow-x: auto;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--card-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
 svg.balken { width: 100%; height: auto; min-width: 520px; display: block; }
-svg.balken .achse { stroke: var(--line); stroke-width: 1; }
+svg.balken .achse { stroke: var(--line-strong); stroke-width: 1; }
 svg.balken .balken-flaeche { fill: var(--accent); }
 svg.balken text { font-family: inherit; font-size: 13px; fill: var(--ink); }
 svg.balken .beschriftung { fill: var(--muted); }
 svg.balken .wert { font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   Handy, Tablet, PC (Issue 78)
+
+   Alles ab hier passt die Seiten an die Bildschirmgröße und an die Bedienung
+   mit dem Finger an. Das Aussehen selbst bleibt, wie es ist.
+   ========================================================================== */
+
+/* Nichts soll die Seite seitlich wegschieben. */
+img, svg, video { max-width: 100%; }
+body { overflow-wrap: break-word; }
+.table-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+@media print {
+  /* Auf Papier gibt es nichts zu scrollen, sonst würde der Nachweis abgeschnitten. */
+  .table-scroll { overflow-x: visible; }
+}
+
+/* Ankreuzfelder dürfen nicht über die ganze Breite laufen; die Regel weiter
+   oben gilt für alle input-Elemente. */
+input[type="checkbox"], input[type="radio"] { width: auto; }
+
+/* --- Navigation ---------------------------------------------------------- */
+
+/* Das Ankreuzfeld hinter dem Menü-Knopf ist nicht zu sehen, bleibt aber mit
+   der Tastatur erreichbar: mit der Leertaste klappt das Menü auf. */
+nav.site input.menu-schalter {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.menu-knopf {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-weight: 600;
+  margin: 0;
+  cursor: pointer;
+}
+.menu-knopf::after { content: "\25be"; margin-left: auto; }
+.menu-schalter:checked ~ .menu-knopf::after { content: "\25b4"; }
+.menu-schalter:focus-visible ~ .menu-knopf { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Auf schmalen Geräten: ein Knopf, darunter die Einträge untereinander. */
+@media screen and (max-width: 719.98px) {
+  .menu-knopf { flex: 1 1 100%; }
+  .menu-items { display: none; }
+  .menu-schalter:checked ~ .menu-items {
+    display: flex;
+    flex: 1 1 100%;
+    flex-direction: column;
+    margin-top: 0.5rem;
+  }
+  .menu-items > a {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0.5rem 0.8rem;
+    border-top: 1px solid var(--line);
+  }
+  .menu-items .spacer { display: none; }
+  .menu-items form.inline { display: block; margin-top: 0.5rem; }
+  .menu-items form.inline button { width: 100%; }
+}
+
+/* Ab Tablet steht das Menü als Zeile da, der Knopf verschwindet. */
+@media screen and (min-width: 720px) {
+  .menu-knopf { display: none; }
+  .menu-items {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+  }
+}
+
+/* --- Pausentabelle -------------------------------------------------------- */
+
+/* Zwei Datumsfelder nebeneinander passen auf ein Handy nicht. Dort steht
+   deshalb jedes Feld in einer eigenen Zeile, mit dem Namen darüber; auf
+   breiten Bildschirmen bleibt die Tabelle, wie sie ist. */
+.breaks .feldname { display: none; }
+
+@media screen and (max-width: 599.98px) {
+  table.breaks,
+  table.breaks tbody,
+  table.breaks tr,
+  table.breaks td { display: block; }
+  table.breaks thead { display: none; }
+  table.breaks tr { border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; }
+  table.breaks td { border-bottom: none; padding: 0 0 0.3rem; }
+  .breaks .feldname { display: block; font-weight: 600; margin: 0.4rem 0 0.2rem; }
+}
+
+/* --- Bedienung mit dem Finger -------------------------------------------- */
+
+@media (pointer: coarse) {
+  button, .button { min-height: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { min-height: 44px; }
+  input[type="checkbox"], input[type="radio"] { min-width: 1.15rem; min-height: 1.15rem; }
+  nav.site a { min-height: 44px; display: inline-flex; align-items: center; }
+  /* Links in Tabellen liegen sonst zu dicht beieinander. */
+  td a { display: inline-block; padding: 0.3rem 0; }
+}
+
+/* --- Handy ---------------------------------------------------------------- */
+
+@media screen and (max-width: 719.98px) {
+  /* Kleiner als 16px lässt iOS beim Antippen in das Feld hineinzoomen. */
+  input, select, textarea { font-size: 16px; }
+}
+
+@media screen and (max-width: 599.98px) {
+  /* Knöpfe untereinander statt nebeneinander, damit sie breit genug bleiben.
+     Die Schnellschalter über den Listen sind eigene .chips und bleiben als
+     Zeile stehen. */
+  .actions { flex-direction: column; align-items: stretch; }
+  .actions > form { width: 100%; }
+  .actions button,
+  .actions .button,
+  .actions select { width: 100%; max-width: none; }
+  .actions .button { text-align: center; }
+
+  .checkbox-columns { columns: 1; }
+
+  .signatures { flex-direction: column; gap: 2rem; }
+  .signatures .line { width: 100%; }
+}
+
+@media screen and (max-width: 419.98px) {
+  main { padding: 0.75rem; }
+  header.site { padding: 0.75rem; }
+  .card { padding: 0.75rem; }
+  h1 { font-size: 1.3rem; }
+  table { font-size: 0.9rem; }
+  th, td { padding: 0.4rem; }
+  svg.balken { min-width: 420px; }
+}
+
+/* --- Geräte mit abgerundeten Ecken oder Aussparung ----------------------- */
+
+@supports (padding: max(0px)) {
+  header.site {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  main {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  @media screen and (max-width: 419.98px) {
+    header.site {
+      padding-left: max(0.75rem, env(safe-area-inset-left));
+      padding-right: max(0.75rem, env(safe-area-inset-right));
+    }
+    main {
+      padding-left: max(0.75rem, env(safe-area-inset-left));
+      padding-right: max(0.75rem, env(safe-area-inset-right));
+    }
+  }
+}

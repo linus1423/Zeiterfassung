@@ -2,17 +2,17 @@
 {% block title %}Auffälligkeiten · {{ group.name }}{% endblock %}
 {% block content %}
 <h1>Auffälligkeiten</h1>
-<p>
+<nav class="subnav">
   <a href="{% url 'groups:detail' group.pk %}">{{ group.name }}</a>
-  · <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
-</p>
-<p class="help">
+  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
+</nav>
+<p class="lead">
   Verletzte Regeln des Arbeitszeitgesetzes vom {{ start_day|date:"d.m.Y" }} bis
   {{ end_day|date:"d.m.Y" }}. Gerechnet wird über den ganzen Tag und über alle Einträge
   einer Person zusammen, nicht über den einzelnen Eintrag.
 </p>
 
-<div class="card">
+<div class="card filters">
   <form method="get" class="grid two">
     {{ form.as_p }}
     <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
@@ -21,24 +21,31 @@
 
 <div class="card">
   {% if rows %}
-    <p>{{ rows|length }} Auffälligkeiten bei {{ people }} Personen.</p>
+    <ul class="stats">
+      <li class="stat"><span class="value">{{ rows|length }}</span><span class="label">Auffälligkeiten</span></li>
+      <li class="stat"><span class="value">{{ people }}</span><span class="label">Betroffene Personen</span></li>
+    </ul>
     <div class="table-scroll">
       <table>
-        <tr><th>Person</th><th>Tag</th><th>Regel</th><th>Wert</th></tr>
-        {% for row in rows %}
-          <tr>
-            <td>{{ row.user.full_name }}</td>
-            <td>{{ row.day|date:"d.m.Y" }}</td>
-            <td>{{ row.rule_label }}</td>
-            <td>{{ row.value_text }}</td>
-          </tr>
-        {% endfor %}
+        <thead>
+          <tr><th>Person</th><th>Tag</th><th>Regel</th><th>Wert</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.user.full_name }}</td>
+              <td>{{ row.day|date:"d.m.Y" }}</td>
+              <td>{{ row.rule_label }}</td>
+              <td>{{ row.value_text }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   {% elif not checks_enabled %}
-    <p class="muted">Die Prüfung ist in dieser Installation abgeschaltet.</p>
+    <p class="empty">Die Prüfung ist in dieser Installation abgeschaltet.</p>
   {% else %}
-    <p class="muted">In diesem Zeitraum ist nichts aufgefallen.</p>
+    <p class="empty">In diesem Zeitraum ist nichts aufgefallen.</p>
   {% endif %}
 </div>
 

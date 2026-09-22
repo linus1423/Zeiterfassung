@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Abschlüsse{% endblock %}
 {% block content %}
-<h1>Abschlüsse</h1>
-<p>
+<div class="page-head">
+  <h1>Abschlüsse</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'groups:list' %}">Zu den Gruppen</a>
+  </div>
+</div>
+<p class="lead">
   {% if open_count %}
     {{ open_count }} von {{ rows|length }} Gruppen haben einen abgelaufenen Zeitraum
     noch nicht abgeschlossen.
@@ -14,39 +19,43 @@
   {% if rows %}
     <div class="table-scroll">
       <table>
-        <tr>
-          <th>Gruppe</th>
-          <th>Zuletzt abgeschlossen</th>
-          <th>Offen seit</th>
-          <th class="num">Anträge</th>
-          <th class="num">Unvollständig</th>
-          <th></th>
-        </tr>
-        {% for row in rows %}
+        <thead>
           <tr>
-            <td><a href="{% url 'groups:detail' row.group.pk %}">{{ row.group.name }}</a></td>
-            <td>
-              {% if row.last_lock %}
-                {{ row.last_lock.period.label }}
-                <span class="help">am {{ row.last_lock.closed_at|date:"d.m.Y" }}</span>
-              {% else %}
-                <span class="muted">noch keiner</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if row.pending %}
-                <span class="badge pending">{{ row.pending.label }}</span>
-              {% else %}
-                <span class="muted">nichts offen</span>
-              {% endif %}
-            </td>
-            <td class="num">{% if row.pending %}{{ row.open_requests }}{% else %}–{% endif %}</td>
-            <td class="num">
-              {% if row.pending %}{{ row.incomplete_entries }}{% else %}–{% endif %}
-            </td>
-            <td><a href="{% url 'groups:periods' row.group.pk %}">Abschluss</a></td>
+            <th>Gruppe</th>
+            <th>Zuletzt abgeschlossen</th>
+            <th>Offen seit</th>
+            <th class="num">Anträge</th>
+            <th class="num">Unvollständig</th>
+            <th></th>
           </tr>
-        {% endfor %}
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td><a href="{% url 'groups:detail' row.group.pk %}">{{ row.group.name }}</a></td>
+              <td>
+                {% if row.last_lock %}
+                  {{ row.last_lock.period.label }}
+                  <span class="help">am {{ row.last_lock.closed_at|date:"d.m.Y" }}</span>
+                {% else %}
+                  <span class="muted">noch keiner</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.pending %}
+                  <span class="badge pending">{{ row.pending.label }}</span>
+                {% else %}
+                  <span class="muted">nichts offen</span>
+                {% endif %}
+              </td>
+              <td class="num">{% if row.pending %}{{ row.open_requests }}{% else %}–{% endif %}</td>
+              <td class="num">
+                {% if row.pending %}{{ row.incomplete_entries }}{% else %}–{% endif %}
+              </td>
+              <td class="actions-cell"><a href="{% url 'groups:periods' row.group.pk %}">Abschluss</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
     <p class="help">
@@ -57,7 +66,7 @@
       der Gruppe, die Buchhaltung liest nur mit.
     </p>
   {% else %}
-    <p class="muted">Es gibt keine Gruppe, deren Abschluss du sehen darfst.</p>
+    <p class="empty">Es gibt keine Gruppe, deren Abschluss du sehen darfst.</p>
   {% endif %}
 </div>
 {% endblock %}

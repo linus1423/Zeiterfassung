@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Tätigkeit bearbeiten{% endblock %}
 {% block content %}
-<h1>{{ activity.name }}</h1>
+<div class="page-head">
+  <h1>{{ activity.name }}</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'groups:activities' group.pk %}">Zurück zu den Tätigkeiten</a>
+  </div>
+</div>
 <div class="card">
   <form method="post">{% csrf_token %}{{ form.as_p }}
     <div class="actions">
       <button class="primary" type="submit">Speichern</button>
-      <a class="button" href="{% url 'groups:activities' group.pk %}">Zurück</a>
+      <a class="button" href="{% url 'groups:activities' group.pk %}">Abbrechen</a>
     </div>
   </form>
   <p class="help">Tätigkeiten werden nicht gelöscht, sondern deaktiviert. Alte Zeiten bleiben dadurch auswertbar.</p>

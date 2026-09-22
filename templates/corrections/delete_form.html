@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Löschung beantragen</h1>
 <div class="card">
-  <p>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}, {{ entry.group.name }}</p>
+  <p><strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong> · {{ entry.group.name }}</p>
   <form method="post">{% csrf_token %}{{ form.as_p }}
     <div class="actions">
       <button class="danger" type="submit">Löschung beantragen</button>

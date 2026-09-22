@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Auswertung{% endblock %}
 {% block content %}
-<h1>Auswertung</h1>
+<div class="page-head">
+  <h1>Auswertung</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'reporting:export' %}{% if export_query %}?{{ export_query }}{% endif %}">Exportieren</a>
+  </div>
+</div>
 
-<div class="card">
-  <div class="actions quick">
+<div class="card filters">
+  <div class="chips">
     {% for name, label in quick_ranges %}
-      <a class="badge{% if quick == name %} count{% endif %}" href="?bereich={{ name }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">{{ label }}</a>
+      <a class="chip{% if quick == name %} is-active{% endif %}" href="?bereich={{ name }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">{{ label }}</a>
     {% endfor %}
   </div>
   <form method="get">
@@ -25,17 +30,20 @@
 
 {% if summary %}
   <div class="card">
-    <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}</h2>
-    <p>
-      <strong>Gesamtsumme: {{ summary.hhmm }} Stunden</strong>
-      ({{ summary.hours }} Stunden dezimal, aus {{ summary.entry_count }} Tagesanteilen)
-    </p>
-    <p>
-      <a href="{% url 'reporting:export' %}{% if export_query %}?{{ export_query }}{% endif %}">Diesen Zeitraum und diese Filter exportieren</a>
-      &ndash; dort gibt es Spaltenauswahl, Vorlagen, Excel und CSV.
+    <div class="card-head">
+      <h2>{{ start_day|date:"d.m.Y" }} bis {{ end_day|date:"d.m.Y" }}</h2>
+      <a class="card-note" href="{% url 'reporting:export' %}{% if export_query %}?{{ export_query }}{% endif %}">Diesen Zeitraum und diese Filter exportieren</a>
+    </div>
+    <ul class="stats">
+      <li class="stat"><span class="value">{{ summary.hhmm }}</span><span class="label">Summe hh:mm</span></li>
+      <li class="stat"><span class="value">{{ summary.hours }}</span><span class="label">Stunden dezimal</span></li>
+      <li class="stat"><span class="value">{{ summary.entry_count }}</span><span class="label">Tagesanteile</span></li>
+    </ul>
+    <p class="help">
+      Im Export gibt es Spaltenauswahl, Vorlagen, Excel und CSV.
     </p>
     {% if summary.is_empty %}
-      <p class="muted">In diesem Zeitraum wurde nichts erfasst.</p>
+      <p class="empty">In diesem Zeitraum wurde nichts erfasst.</p>
     {% endif %}
   </div>
 
