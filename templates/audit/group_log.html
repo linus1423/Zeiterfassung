@@ -2,13 +2,15 @@
 {% block title %}Protokoll {{ group.name }}{% endblock %}
 {% block content %}
 <h1>Protokoll {{ group.name }}</h1>
-<p><a href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a></p>
-<p class="help">
+<nav class="subnav">
+  <a href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a>
+</nav>
+<p class="lead">
   Das Protokoll wird nur geschrieben und nie geändert. Vorgänge ohne Gruppe,
   etwa Exporte, stehen nicht in dieser Liste.
 </p>
 
-<div class="card">
+<div class="card filters">
   <form method="get" class="grid two">
     <div>{{ form.person.label_tag }}{{ form.person }}</div>
     <div>{{ form.action.label_tag }}{{ form.action }}</div>
@@ -22,18 +24,22 @@
 </div>
 
 <div class="card">
-  <h2>{{ page.paginator.count }} Einträge</h2>
+  <div class="card-head">
+    <h2>{{ page.paginator.count }} Einträge</h2>
+    {% if page.paginator.num_pages > 1 %}
+      <span class="card-note">Seite {{ page.number }} von {{ page.paginator.num_pages }}</span>
+    {% endif %}
+  </div>
   {% include "audit/_rows.html" %}
   {% if page.paginator.num_pages > 1 %}
-    <p class="help">
+    <div class="actions">
       {% if page.has_previous %}
-        <a href="?{{ query }}&amp;seite={{ page.previous_page_number }}">Neuere</a> ·
+        <a class="button" href="?{{ query }}&amp;seite={{ page.previous_page_number }}">Neuere</a>
       {% endif %}
-      Seite {{ page.number }} von {{ page.paginator.num_pages }}
       {% if page.has_next %}
-        · <a href="?{{ query }}&amp;seite={{ page.next_page_number }}">Ältere</a>
+        <a class="button" href="?{{ query }}&amp;seite={{ page.next_page_number }}">Ältere</a>
       {% endif %}
-    </p>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

@@ -2,7 +2,14 @@
 {% load zeit %}
 {% block title %}Stempeluhr{% endblock %}
 {% block content %}
-<h1>Stempeluhr</h1>
+<div class="page-head">
+  <h1>Stempeluhr</h1>
+  {% if has_groups %}
+    <div class="page-actions">
+      <a class="button" href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
+    </div>
+  {% endif %}
+</div>
 
 {% if not has_groups %}
   <div class="card">
@@ -12,7 +19,7 @@
 {% else %}
 <div class="card">
   {% if state.is_clocked_in %}
-    <div class="state">
+    <div class="state {% if state.is_on_break %}paused{% else %}running{% endif %}">
       {% if state.is_on_break %}
         In Pause seit {{ state.open_break.start|time:"H:i" }}
       {% else %}
@@ -49,7 +56,7 @@
       </form>
     {% endif %}
   {% else %}
-    <div class="state">Ausgestempelt<small>Wähle Gruppe und Tätigkeit, um zu starten.</small></div>
+    <div class="state stopped">Ausgestempelt<small>Wähle Gruppe und Tätigkeit, um zu starten.</small></div>
     <form method="post" action="{% url 'tracking:clock_in' %}">
       {% csrf_token %}
       {{ form.as_p }}
@@ -60,8 +67,8 @@
 {% endif %}
 
 {% if statutory_warnings %}
-<div class="card">
-  <strong>Hinweis zum Arbeitszeitgesetz</strong>
+<div class="card warning">
+  <h2>Hinweis zum Arbeitszeitgesetz</h2>
   <ul>
     {% for warning in statutory_warnings %}<li>{{ warning }}</li>{% endfor %}
   </ul>
@@ -75,28 +82,39 @@
 <div class="card">
   <h2>Heute</h2>
   {% if today_entries %}
+    <ul class="stats">
+      <li class="stat"><span class="value">{{ worked_today|dauer }}</span><span class="label">Arbeitszeit</span></li>
+      <li class="stat"><span class="value">{{ paused_today|dauer }}</span><span class="label">Pause</span></li>
+      <li class="stat"><span class="value">{{ today_entries|length }}</span><span class="label">Einträge</span></li>
+    </ul>
     <div class="table-scroll">
       <table>
-        <tr><th>Beginn</th><th>Ende</th><th>Tätigkeit</th><th>Notiz</th><th class="num">Pause</th><th class="num">Arbeitszeit</th></tr>
-        {% for entry in today_entries %}
+        <thead>
+          <tr><th>Beginn</th><th>Ende</th><th>Tätigkeit</th><th>Notiz</th><th class="num">Pause</th><th class="num">Arbeitszeit</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in today_entries %}
+            <tr>
+              <td>{{ entry.start|time:"H:i" }}</td>
+              <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}<span class="badge info">läuft</span>{% endif %}</td>
+              <td>{{ entry.activity.name|default:"-" }}</td>
+              <td class="muted">{{ entry.note|default:"" }}</td>
+              <td class="num">{{ entry.break_duration|dauer }}</td>
+              <td class="num">{{ entry.duration|dauer }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
           <tr>
-            <td>{{ entry.start|time:"H:i" }}</td>
-            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
-            <td>{{ entry.activity.name|default:"-" }}</td>
-            <td class="muted">{{ entry.note|default:"" }}</td>
-            <td class="num">{{ entry.break_duration|dauer }}</td>
-            <td class="num">{{ entry.duration|dauer }}</td>
+            <th colspan="4">Summe</th>
+            <th class="num">{{ paused_today|dauer }}</th>
+            <th class="num">{{ worked_today|dauer }}</th>
           </tr>
-        {% endfor %}
-        <tr>
-          <th colspan="4">Summe</th>
-          <th class="num">{{ paused_today|dauer }}</th>
-          <th class="num">{{ worked_today|dauer }}</th>
-        </tr>
+        </tfoot>
       </table>
     </div>
   {% else %}
-    <p class="muted">Heute noch nichts gestempelt.</p>
+    <p class="empty">Heute noch nichts gestempelt.</p>
   {% endif %}
 </div>
 
@@ -105,13 +123,15 @@
   <h2>Unvollständige Einträge</h2>
   <p class="help">Diese Einträge wurden automatisch beendet, weil das Ausstempeln vergessen wurde.</p>
   <table>
-    {% for entry in incomplete_entries %}
-      <tr>
-        <td>{{ entry.start|date:"d.m.Y" }}</td>
-        <td>{{ entry.start|time:"H:i" }} bis {{ entry.end|time:"H:i" }}</td>
-        <td><a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur beantragen</a></td>
-      </tr>
-    {% endfor %}
+    <tbody>
+      {% for entry in incomplete_entries %}
+        <tr>
+          <td>{{ entry.start|date:"d.m.Y" }}</td>
+          <td>{{ entry.start|time:"H:i" }} bis {{ entry.end|time:"H:i" }}</td>
+          <td class="actions-cell"><a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur beantragen</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
   </table>
 </div>
 {% endif %}

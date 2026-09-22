@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Notfallzugang{% endblock %}
 {% block content %}
-<div class="card" style="max-width: 32rem; margin: 3rem auto;">
+<div class="card narrow">
   <h1>Notfallzugang</h1>
   <p class="muted">
     Nur für System-Admins und nur für den Fall, dass der Identity-Provider
@@ -13,7 +13,7 @@
     {{ form.as_p }}
     <div class="actions">
       <button class="primary" type="submit">Anmelden</button>
-      <a class="badge" href="{% url 'accounts:login' %}">Zurück zur Anmeldung</a>
+      <a class="button" href="{% url 'accounts:login' %}">Zurück zur Anmeldung</a>
     </div>
   </form>
   <p class="help">
