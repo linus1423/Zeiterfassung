@@ -3,7 +3,7 @@
 {% block title %}Zeiten importieren{% endblock %}
 {% block content %}
 <h1>Zeiten importieren</h1>
-<p class="help">
+<p class="lead">
   Für die Übernahme einer Zeitliste aus einem Altsystem. Die Datei wird zuerst nur
   geprüft; geschrieben wird erst im zweiten Schritt, und nur dann, wenn keine einzige
   Zeile fehlerhaft ist. Alle Zeiten werden als „Importiert“ angelegt und stehen im Protokoll.
@@ -33,17 +33,21 @@
 {% if plan %}
 <div class="card">
   <h2>Ergebnis der Prüfung</h2>
-  <table>
-    <tr><th>Gelesene Zeilen</th><td>{{ plan.row_count }}</td></tr>
-    <tr><th>Zeiten zum Anlegen</th><td>{{ plan.entries|length }}</td></tr>
-    <tr><th>Fehlerhafte Zeilen</th><td>{{ plan.error_count }}</td></tr>
-    <tr><th>Erkannte Nutzer</th>
-      <td>{% for person in plan.users %}{{ person.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
-    <tr><th>Erkannte Gruppen</th>
-      <td>{% for group in plan.groups %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
-    <tr><th>Zeitraum</th>
-      <td>{% if plan.first_day %}{{ plan.first_day|date:"d.m.Y" }} bis {{ plan.last_day|date:"d.m.Y" }}{% else %}—{% endif %}</td></tr>
-    <tr><th>Arbeitszeit gesamt</th><td>{{ plan.total_work|dauer }} h</td></tr>
+  <ul class="stats">
+    <li class="stat"><span class="value">{{ plan.row_count }}</span><span class="label">Gelesene Zeilen</span></li>
+    <li class="stat"><span class="value">{{ plan.entries|length }}</span><span class="label">Zum Anlegen</span></li>
+    <li class="stat"><span class="value">{{ plan.error_count }}</span><span class="label">Fehlerhaft</span></li>
+    <li class="stat"><span class="value">{{ plan.total_work|dauer }}</span><span class="label">Arbeitszeit gesamt</span></li>
+  </ul>
+  <table class="facts">
+    <tbody>
+      <tr><th>Erkannte Nutzer</th>
+        <td>{% for person in plan.users %}{{ person.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
+      <tr><th>Erkannte Gruppen</th>
+        <td>{% for group in plan.groups %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</td></tr>
+      <tr><th>Zeitraum</th>
+        <td>{% if plan.first_day %}{{ plan.first_day|date:"d.m.Y" }} bis {{ plan.last_day|date:"d.m.Y" }}{% else %}—{% endif %}</td></tr>
+    </tbody>
   </table>
 </div>
 
@@ -52,10 +56,12 @@
   <h2>Fehler je Zeile</h2>
   <div class="table-scroll">
     <table>
-      <tr><th>Zeile</th><th>Begründung</th></tr>
-      {% for error in plan.errors %}
-        <tr><td>{{ error.line }}</td><td>{{ error.message }}</td></tr>
-      {% endfor %}
+      <thead><tr><th class="num">Zeile</th><th>Begründung</th></tr></thead>
+      <tbody>
+        {% for error in plan.errors %}
+          <tr><td class="num">{{ error.line }}</td><td>{{ error.message }}</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
   {% if plan.truncated %}
@@ -69,23 +75,25 @@
 <div class="card">
   <h2>Vorschau</h2>
   <div class="table-scroll">
-    <div class="table-scroll">
-      <table>
-        <tr><th>Zeile</th><th>Nutzer</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th></tr>
+    <table>
+      <thead>
+        <tr><th class="num">Zeile</th><th>Nutzer</th><th>Gruppe</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th class="num">Pause</th><th class="num">Arbeitszeit</th></tr>
+      </thead>
+      <tbody>
         {% for item in preview_rows %}
           <tr>
-            <td>{{ item.line }}</td>
+            <td class="num">{{ item.line }}</td>
             <td>{{ item.user.full_name }}</td>
             <td>{{ item.group.name }}</td>
             <td>{% if item.activity %}{{ item.activity.name }}{% else %}<span class="muted">ohne</span>{% endif %}</td>
             <td>{{ item.start|date:"d.m.Y H:i" }}</td>
             <td>{{ item.end|date:"d.m.Y H:i" }}</td>
-            <td>{{ item.break_total|dauer }}</td>
-            <td>{{ item.work|dauer }}</td>
+            <td class="num">{{ item.break_total|dauer }}</td>
+            <td class="num">{{ item.work|dauer }}</td>
           </tr>
         {% endfor %}
-      </table>
-    </div>
+      </tbody>
+    </table>
   </div>
   {% if plan.entries|length > preview_limit %}
     <p class="help">Von {{ plan.entries|length }} Zeiten werden die ersten {{ preview_limit }} angezeigt.</p>

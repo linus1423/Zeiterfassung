@@ -5,17 +5,23 @@
 <div class="card">
   <div class="table-scroll">
     <table>
-      <tr><th>Gestellt am</th><th>Person</th><th>Gruppe</th><th>Art</th><th>Begründung</th><th></th></tr>
-      {% for request in requests %}
-        <tr>
-          <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
-          <td>{{ request.requested_by.full_name }}</td>
-          <td>{{ request.group.name }}</td>
-          <td>{{ request.get_kind_display }}</td>
-          <td>{{ request.reason|truncatechars:80 }}</td>
-          <td><a href="{% url 'corrections:decide' request.pk %}">Ansehen</a></td>
-        </tr>
-      {% empty %}<tr><td colspan="6" class="muted">Keine offenen Anträge.</td></tr>{% endfor %}
+      <thead>
+        <tr><th>Gestellt am</th><th>Person</th><th>Gruppe</th><th>Art</th><th>Begründung</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for request in requests %}
+          <tr>
+            <td>{{ request.created_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ request.requested_by.full_name }}</td>
+            <td>{{ request.group.name }}</td>
+            <td>{{ request.get_kind_display }}</td>
+            <td class="muted">{{ request.reason|truncatechars:80 }}</td>
+            <td class="actions-cell"><a href="{% url 'corrections:decide' request.pk %}">Ansehen</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="empty">Keine offenen Anträge.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>
@@ -23,14 +29,18 @@
   <h2>Zuletzt entschieden</h2>
   <div class="table-scroll">
     <table>
-      {% for request in decided %}
-        <tr>
-          <td>{{ request.decided_at|date:"d.m.Y H:i" }}</td>
-          <td>{{ request.requested_by.full_name }}</td>
-          <td><span class="badge {{ request.status }}">{{ request.get_status_display }}</span></td>
-          <td>{{ request.decided_by.full_name|default:"-" }}</td>
-        </tr>
-      {% empty %}<tr><td class="muted">Noch nichts entschieden.</td></tr>{% endfor %}
+      <tbody>
+        {% for request in decided %}
+          <tr>
+            <td>{{ request.decided_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ request.requested_by.full_name }}</td>
+            <td><span class="badge {{ request.status }}">{{ request.get_status_display }}</span></td>
+            <td class="muted">{{ request.decided_by.full_name|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty">Noch nichts entschieden.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>

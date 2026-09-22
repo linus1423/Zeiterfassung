@@ -2,14 +2,21 @@
 {% load zeit %}
 {% block title %}Zeitraum bestätigen{% endblock %}
 {% block content %}
-<h1>Meinen Zeitraum bestätigen</h1>
+<div class="page-head">
+  <h1>Meinen Zeitraum bestätigen</h1>
+  {% if groups %}
+    <div class="page-actions">
+      <a class="button" href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
+    </div>
+  {% endif %}
+</div>
 
 {% if not groups %}
   <div class="card">
-    <p class="muted">Du gehörst zu keiner Gruppe. Sobald dich ein Admin einer Gruppe zuordnet, kannst du hier deinen Abrechnungszeitraum bestätigen.</p>
+    <p class="empty">Du gehörst zu keiner Gruppe. Sobald dich ein Admin einer Gruppe zuordnet, kannst du hier deinen Abrechnungszeitraum bestätigen.</p>
   </div>
 {% else %}
-  <div class="card">
+  <div class="card filters">
     <form method="get" class="grid two">
       {% if groups|length > 1 %}
         <div>
@@ -21,7 +28,10 @@
           </select>
         </div>
       {% else %}
-        <div><p>Gruppe: <strong>{{ group.name }}</strong></p></div>
+        <div>
+          <p class="help">Gruppe</p>
+          <p><strong>{{ group.name }}</strong></p>
+        </div>
       {% endif %}
       <div>
         <label for="zeitraum">Abrechnungszeitraum</label>
@@ -46,11 +56,19 @@
   </div>
 
   <div class="card">
-    <h2>{{ period.label }} · {{ group.name }}</h2>
-    <p><strong>Summe: {{ total|dauer }} h</strong> ({{ total|stunden }} Stunden) · Zeiteinträge: {{ entry_count }}</p>
+    <div class="card-head">
+      <h2>{{ period.label }} · {{ group.name }}</h2>
+      <a class="card-note" href="{% url 'tracking:my_entries' %}?start={{ period.start|date:"Y-m-d" }}&amp;end={{ period.end|date:"Y-m-d" }}">Einzelne Zeiten dieses Zeitraums ansehen</a>
+    </div>
+
+    <ul class="stats">
+      <li class="stat"><span class="value">{{ total|dauer }}</span><span class="label">Summe hh:mm</span></li>
+      <li class="stat"><span class="value">{{ total|stunden }}</span><span class="label">Stunden dezimal</span></li>
+      <li class="stat"><span class="value">{{ entry_count }}</span><span class="label">Zeiteinträge</span></li>
+    </ul>
 
     {% if state.is_confirmed %}
-      <p><span class="badge">bestätigt</span> am {{ state.confirmation.confirmed_at|date:"d.m.Y H:i" }} Uhr mit {{ state.confirmation.total|dauer }} h.</p>
+      <p><span class="badge approved">bestätigt</span> am {{ state.confirmation.confirmed_at|date:"d.m.Y H:i" }} Uhr mit {{ state.confirmation.total|dauer }} h.</p>
     {% elif state.is_stale %}
       <p>
         <span class="badge pending">Bestätigung verfallen</span>
@@ -82,17 +100,18 @@
         Der Abschluss durch den Gruppen-Admin bleibt davon unberührt, er sieht nur, wer noch nicht bestätigt hat.
       </p>
     {% endif %}
-    <p><a href="{% url 'tracking:my_entries' %}?start={{ period.start|date:"Y-m-d" }}&amp;end={{ period.end|date:"Y-m-d" }}">Einzelne Zeiten dieses Zeitraums ansehen</a></p>
   </div>
 
   <div class="card">
     <h2>Tagessummen</h2>
     <table>
-      {% for day, total_day in by_day %}
-        <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
-      {% empty %}
-        <tr><td class="muted">In diesem Zeitraum wurde nichts erfasst.</td></tr>
-      {% endfor %}
+      <tbody>
+        {% for day, total_day in by_day %}
+          <tr><td>{{ day|date:"D, d.m.Y" }}</td><td class="num">{{ total_day|dauer }} h</td></tr>
+        {% empty %}
+          <tr><td class="empty">In diesem Zeitraum wurde nichts erfasst.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 {% endif %}

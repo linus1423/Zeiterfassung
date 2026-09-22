@@ -1,23 +1,27 @@
 {% comment %}Die Tabelle des Protokolls, in beiden Ansichten gleich.{% endcomment %}
 <div class="table-scroll">
   <table>
-    <tr><th>Zeitpunkt</th><th>Aktion</th><th>Wer</th><th>Betrifft</th><th>Was</th></tr>
-    {% for row in rows %}
-      <tr>
-        <td>{{ row.created_at|date:"d.m.Y H:i" }}</td>
-        <td>{{ row.get_action_display }}</td>
-        <td>{% if row.actor %}{{ row.actor.full_name }}{% else %}<span class="muted">System</span>{% endif %}</td>
-        <td>{% if row.subject %}{{ row.subject.full_name }}{% else %}-{% endif %}</td>
-        <td>
-          {% if row.note %}{{ row.note }}{% endif %}
-          {% for line in row.details %}
-            {% if row.note or not forloop.first %}<br>{% endif %}<span class="muted">{{ line }}</span>
-          {% endfor %}
-          {% if not row.note and not row.details %}<span class="muted">-</span>{% endif %}
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="5" class="muted">Keine Einträge.</td></tr>
-    {% endfor %}
+    <thead>
+      <tr><th>Zeitpunkt</th><th>Aktion</th><th>Wer</th><th>Betrifft</th><th>Was</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ row.get_action_display }}</td>
+          <td>{% if row.actor %}{{ row.actor.full_name }}{% else %}<span class="muted">System</span>{% endif %}</td>
+          <td>{% if row.subject %}{{ row.subject.full_name }}{% else %}-{% endif %}</td>
+          <td>
+            {% if row.note %}{{ row.note }}{% endif %}
+            {% for line in row.details %}
+              {% if row.note or not forloop.first %}<br>{% endif %}<span class="muted">{{ line }}</span>
+            {% endfor %}
+            {% if not row.note and not row.details %}<span class="muted">-</span>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty">Keine Einträge.</td></tr>
+      {% endfor %}
+    </tbody>
   </table>
 </div>

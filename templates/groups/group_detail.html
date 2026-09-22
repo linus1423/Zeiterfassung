@@ -2,19 +2,27 @@
 {% load zeit %}
 {% block title %}{{ group.name }}{% endblock %}
 {% block content %}
-<h1>{{ group.name }}</h1>
-<p>
-  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
-  · <a href="{% url 'audit:group' group.pk %}">Protokoll</a>
-  · <a href="{% url 'reporting:group_timesheets' group.pk %}">Nachweise</a>
-  · <a href="{% url 'groups:anomalies' group.pk %}">Auffälligkeiten</a>
+<div class="page-head">
+  <h1>{{ group.name }}</h1>
   {% if is_admin %}
-    · <a href="{% url 'groups:activities' group.pk %}">Tätigkeiten verwalten</a>
-    · <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
-    · <a href="{% url 'groups:settings' group.pk %}">Einstellungen</a>
-    · <a href="{% url 'groups:entry_create' group.pk %}">Zeit nachtragen</a>
+    <div class="page-actions">
+      <a class="button primary" href="{% url 'groups:entry_create' group.pk %}">Zeit nachtragen</a>
+    </div>
   {% endif %}
-</p>
+</div>
+
+<nav class="subnav">
+  <a href="{% url 'groups:periods' group.pk %}">Abrechnungszeiträume</a>
+  <a href="{% url 'audit:group' group.pk %}">Protokoll</a>
+  <a href="{% url 'reporting:group_timesheets' group.pk %}">Nachweise</a>
+  <a href="{% url 'groups:anomalies' group.pk %}">Auffälligkeiten</a>
+  {% if is_admin %}
+    <a href="{% url 'groups:activities' group.pk %}">Tätigkeiten verwalten</a>
+    <a href="{% url 'groups:members' group.pk %}">Mitglieder verwalten</a>
+    <a href="{% url 'groups:settings' group.pk %}">Einstellungen</a>
+  {% endif %}
+</nav>
+
 <p class="help">
   Aktueller Abrechnungszeitraum: {{ period.label }}
   {% if period_closed %} · <span class="badge">Der angezeigte Zeitraum ist abgeschlossen.</span>{% endif %}
@@ -25,22 +33,24 @@
   {% if currently_working %}
     <div class="table-scroll">
       <table>
-        {% for entry in currently_working %}
-          <tr>
-            <td>{{ entry.user.full_name }}</td>
-            <td>{{ entry.activity.name|default:"-" }}</td>
-            <td>seit {{ entry.start|time:"H:i" }}</td>
-            <td>{% if entry.is_on_break %}<span class="badge pending">in Pause</span>{% endif %}</td>
-          </tr>
-        {% endfor %}
+        <tbody>
+          {% for entry in currently_working %}
+            <tr>
+              <td>{{ entry.user.full_name }}</td>
+              <td>{{ entry.activity.name|default:"-" }}</td>
+              <td>seit {{ entry.start|time:"H:i" }}</td>
+              <td>{% if entry.is_on_break %}<span class="badge pending">in Pause</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   {% else %}
-    <p class="muted">Gerade arbeitet niemand.</p>
+    <p class="empty">Gerade arbeitet niemand.</p>
   {% endif %}
 </div>
 
-<div class="card">
+<div class="card filters">
   <form method="get" class="grid two">
     {{ form.as_p }}
     <div class="actions"><button class="primary" type="submit">Anzeigen</button></div>
@@ -51,18 +61,28 @@
   <div class="card">
     <h2>Summe je Person</h2>
     <table>
-      {% for name, total_user in per_user %}
-        <tr><td>{{ name }}</td><td class="num">{{ total_user|dauer }} h</td></tr>
-      {% empty %}<tr><td class="muted">Keine Daten.</td></tr>{% endfor %}
-      <tr><th>Gesamt</th><th class="num">{{ total|dauer }} h</th></tr>
+      <tbody>
+        {% for name, total_user in per_user %}
+          <tr><td>{{ name }}</td><td class="num">{{ total_user|dauer }} h</td></tr>
+        {% empty %}
+          <tr><td class="empty">Keine Daten.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><th>Gesamt</th><th class="num">{{ total|dauer }} h</th></tr>
+      </tfoot>
     </table>
   </div>
   <div class="card">
     <h2>Summe je Tätigkeit</h2>
     <table>
-      {% for name, total_activity in per_activity %}
-        <tr><td>{{ name }}</td><td class="num">{{ total_activity|dauer }} h</td></tr>
-      {% empty %}<tr><td class="muted">Keine Daten.</td></tr>{% endfor %}
+      <tbody>
+        {% for name, total_activity in per_activity %}
+          <tr><td>{{ name }}</td><td class="num">{{ total_activity|dauer }} h</td></tr>
+        {% empty %}
+          <tr><td class="empty">Keine Daten.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>
@@ -71,22 +91,28 @@
   <h2>Einträge ({{ entry_count }})</h2>
   <div class="table-scroll">
     <table>
-      <tr><th>Datum</th><th>Person</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Notiz</th><th class="num">Arbeitszeit</th><th></th></tr>
-      {% for entry in entries %}
-        <tr>
-          <td>{{ entry.start|date:"d.m.Y" }}</td>
-          <td>{{ entry.user.full_name }}</td>
-          <td>{{ entry.activity.name|default:"-" }}</td>
-          <td>{{ entry.start|time:"H:i" }}</td>
-          <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}läuft{% endif %}</td>
-          <td class="muted">{{ entry.note|default:"" }}</td>
-          <td class="num">{{ entry.duration|dauer }}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
-          <td>
-            {% if is_admin and entry.end %}<a href="{% url 'groups:entry_edit' group.pk entry.pk %}">Ändern</a> · {% endif %}
-            <a href="{% url 'audit:entry' entry.pk %}">Protokoll</a>
-          </td>
-        </tr>
-      {% empty %}<tr><td colspan="8" class="muted">Keine Einträge im Zeitraum.</td></tr>{% endfor %}
+      <thead>
+        <tr><th>Datum</th><th>Person</th><th>Tätigkeit</th><th>Beginn</th><th>Ende</th><th>Notiz</th><th class="num">Arbeitszeit</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr>
+            <td>{{ entry.start|date:"d.m.Y" }}</td>
+            <td>{{ entry.user.full_name }}</td>
+            <td>{{ entry.activity.name|default:"-" }}</td>
+            <td>{{ entry.start|time:"H:i" }}</td>
+            <td>{% if entry.end %}{{ entry.end|time:"H:i" }}{% else %}<span class="badge info">läuft</span>{% endif %}</td>
+            <td class="muted">{{ entry.note|default:"" }}</td>
+            <td class="num">{{ entry.duration|dauer }}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
+            <td class="actions-cell">
+              {% if is_admin and entry.end %}<a href="{% url 'groups:entry_edit' group.pk entry.pk %}">Ändern</a> · {% endif %}
+              <a href="{% url 'audit:entry' entry.pk %}">Protokoll</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="empty">Keine Einträge im Zeitraum.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
   {% if entry_count > 200 %}<p class="help">Es werden die neuesten 200 Einträge angezeigt. Der vollständige Zeitraum steht im Export.</p>{% endif %}

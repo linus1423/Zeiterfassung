@@ -2,7 +2,7 @@
 {% block title %}Hinweise{% endblock %}
 {% block content %}
 <h1>Hinweise</h1>
-<p class="help">
+<p class="lead">
   Hinweise entstehen, bevor ein Fehler entsteht: ein vergessenes Ausstempeln, ein
   liegengebliebener Antrag, ein abgelaufener Zeitraum. Sie verschwinden von selbst,
   sobald der Anlass erledigt ist.
@@ -10,21 +10,23 @@
 <div class="card">
   {% for reminder in reminders %}
     <div class="reminder">
-      <p>
-        <span class="badge {{ reminder.kind }}">{{ reminder.get_kind_display }}</span>
-        {{ reminder.message }}
-      </p>
-      <p class="help">Seit {{ reminder.created_at|date:"d.m.Y H:i" }} Uhr</p>
-      <p>
+      <div class="text">
+        <p>
+          <span class="badge {{ reminder.kind }}">{{ reminder.get_kind_display }}</span>
+          {{ reminder.message }}
+        </p>
+        <p class="help">Seit {{ reminder.created_at|date:"d.m.Y H:i" }} Uhr</p>
+      </div>
+      <div class="actions">
         {% if reminder.url %}<a class="button" href="{{ reminder.url }}">Ansehen</a>{% endif %}
-        <form method="post" action="{% url 'reminders:dismiss' reminder.pk %}" class="inline">
+        <form method="post" action="{% url 'reminders:dismiss' reminder.pk %}">
           {% csrf_token %}
           <button type="submit">Ausblenden</button>
         </form>
-      </p>
+      </div>
     </div>
   {% empty %}
-    <p>Nichts zu tun.</p>
+    <p class="empty">Nichts zu tun.</p>
   {% endfor %}
 </div>
 {% endblock %}

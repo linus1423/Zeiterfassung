@@ -4,7 +4,7 @@
 {% block content %}
 <div class="no-print">
   <h1>{{ title }}</h1>
-  <form method="get" class="card filter">
+  <form method="get" class="card filters">
     {{ form.as_p }}
     <div class="actions">
       <button class="primary" type="submit">Zeitraum anzeigen</button>
@@ -16,6 +16,6 @@
 {% for sheet in sheets %}
   {% include "reporting/_sheet.html" %}
 {% empty %}
-  <p class="no-print">Für diesen Zeitraum gibt es niemanden mit Nachweis.</p>
+  <p class="empty no-print">Für diesen Zeitraum gibt es niemanden mit Nachweis.</p>
 {% endfor %}
 {% endblock %}

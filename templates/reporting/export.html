@@ -1,13 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Export{% endblock %}
 {% block content %}
-<h1>Export</h1>
+<div class="page-head">
+  <h1>Export</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'reporting:summary' %}">Auswertung</a>
+    <a class="button" href="{% url 'reporting:schedules' %}">Geplante Exporte</a>
+  </div>
+</div>
 
-<p><a href="{% url 'reporting:summary' %}">Zurück zur Auswertung mit Summen und Diagramm</a></p>
-
-<p>
-  Eine gespeicherte Vorlage kann auch monatlich von selbst verschickt werden:
-  <a href="{% url 'reporting:schedules' %}">Geplante Exporte</a>.
+<p class="lead">
+  Zeitraum und Filter wählen, Spalten zusammenstellen, als Excel oder CSV herunterladen.
+  Eine gespeicherte Vorlage kann auch monatlich von selbst verschickt werden.
 </p>
 
 {% if profiles %}
@@ -15,20 +19,25 @@
   <h2>Vorlagen</h2>
   <div class="table-scroll">
     <table>
-      {% for item in profiles %}
-        <tr>
-          <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
-          <td>{{ item.get_grouping_display }}</td>
-          <td>{% if item.sharing_label %}geteilt mit {{ item.sharing_label }}{% endif %}</td>
-          <td>
-            {% if item.owner_id == user.pk %}
-              <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
-                {% csrf_token %}<button type="submit">Löschen</button>
-              </form>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
+      <thead>
+        <tr><th>Name</th><th>Verdichtung</th><th>Geteilt</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for item in profiles %}
+          <tr>
+            <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
+            <td>{{ item.get_grouping_display }}</td>
+            <td class="muted">{% if item.sharing_label %}geteilt mit {{ item.sharing_label }}{% else %}–{% endif %}</td>
+            <td class="actions-cell">
+              {% if item.owner_id == user.pk %}
+                <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
+                  {% csrf_token %}<button class="quiet danger" type="submit">Löschen</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>
@@ -77,15 +86,22 @@
 
 {% if columns %}
 <div class="card">
-  <h2>Vorschau ({{ row_count }} Zeilen)</h2>
+  <div class="card-head">
+    <h2>Vorschau</h2>
+    <span class="card-note">{{ row_count }} Zeilen</span>
+  </div>
   <div class="table-scroll">
     <table>
-      <tr>{% for column in columns %}<th>{{ column.label }}</th>{% endfor %}</tr>
-      {% for row in preview_rows %}
-        <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
-      {% empty %}
-        <tr><td colspan="{{ columns|length }}" class="muted">Keine Daten im Zeitraum.</td></tr>
-      {% endfor %}
+      <thead>
+        <tr>{% for column in columns %}<th>{{ column.label }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for row in preview_rows %}
+          <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+        {% empty %}
+          <tr><td colspan="{{ columns|length }}" class="empty">Keine Daten im Zeitraum.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
   {% if row_count > preview_limit %}
@@ -93,6 +109,7 @@
   {% endif %}
 </div>
 {% endif %}
+
 <div class="card">
   <h2>Abgeschlossene Zeiträume</h2>
   <p>

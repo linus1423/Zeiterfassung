@@ -2,8 +2,13 @@
 {% load zeit %}
 {% block title %}{% if entry %}Zeit ändern{% else %}Zeit nachtragen{% endif %}{% endblock %}
 {% block content %}
-<h1>{% if entry %}Zeit ändern{% else %}Zeit nachtragen{% endif %}</h1>
-<p class="help">
+<div class="page-head">
+  <h1>{% if entry %}Zeit ändern{% else %}Zeit nachtragen{% endif %}</h1>
+  <div class="page-actions">
+    <a class="button" href="{% url 'groups:detail' group.pk %}">Zurück zur Gruppe</a>
+  </div>
+</div>
+<p class="lead">
   Gruppe {{ group.name }}. Als Admin änderst du hier direkt, ohne Antrag.
   Jede Änderung steht mit vorher und nachher im Protokoll.
 </p>
@@ -13,7 +18,7 @@
   <h2>Bisher erfasst</h2>
   <p>
     {{ entry.user.full_name }} ·
-    {{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}
+    <strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong>
     {% if entry.activity %} · {{ entry.activity.name }}{% endif %}
     · {{ entry.duration|dauer }} h
   </p>
@@ -28,16 +33,18 @@
       <ul class="messages">{% for error in breaks.non_form_errors %}<li class="error">{{ error }}</li>{% endfor %}</ul>
     {% endif %}
     <table class="breaks">
-      <tr><th>Von</th><th>Bis</th></tr>
-      {% for pause in breaks %}
-        <tr>
-          <td><span class="feldname">Von</span>{{ pause.start }}{{ pause.start.errors }}</td>
-          <td><span class="feldname">Bis</span>{{ pause.end }}{{ pause.end.errors }}</td>
-        </tr>
-        {% if pause.non_field_errors %}
-          <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
-        {% endif %}
-      {% endfor %}
+      <thead><tr><th>Von</th><th>Bis</th></tr></thead>
+      <tbody>
+        {% for pause in breaks %}
+          <tr>
+            <td><span class="feldname">Von</span>{{ pause.start }}{{ pause.start.errors }}</td>
+            <td><span class="feldname">Bis</span>{{ pause.end }}{{ pause.end.errors }}</td>
+          </tr>
+          {% if pause.non_field_errors %}
+            <tr><td colspan="2">{{ pause.non_field_errors }}</td></tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
     </table>
     <p class="help">
       Eine Zeile je Pause, höchstens {{ breaks.max_num }}. Leere Zeilen werden verworfen.
