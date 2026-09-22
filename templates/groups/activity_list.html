@@ -8,23 +8,25 @@
   </div>
 </div>
 <div class="card">
-  <table>
-    <thead>
-      <tr><th>Name</th><th class="num">Reihenfolge</th><th>Status</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for activity in activities %}
-        <tr>
-          <td>{{ activity.name }}</td>
-          <td class="num">{{ activity.sort_order }}</td>
-          <td>{% if activity.is_active %}<span class="badge approved">aktiv</span>{% else %}<span class="badge">deaktiviert</span>{% endif %}</td>
-          <td class="actions-cell"><a href="{% url 'groups:activity_edit' group.pk activity.pk %}">Bearbeiten</a></td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="4" class="empty">Noch keine Tätigkeit angelegt.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Name</th><th class="num">Reihenfolge</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for activity in activities %}
+          <tr>
+            <td>{{ activity.name }}</td>
+            <td class="num">{{ activity.sort_order }}</td>
+            <td>{% if activity.is_active %}<span class="badge approved">aktiv</span>{% else %}<span class="badge">deaktiviert</span>{% endif %}</td>
+            <td class="actions-cell"><a href="{% url 'groups:activity_edit' group.pk activity.pk %}">Bearbeiten</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="empty">Noch keine Tätigkeit angelegt.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 <div class="card">
   <h2>Neue Tätigkeit</h2>

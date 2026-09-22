@@ -27,19 +27,21 @@
 </div>
 <div class="card">
   <h2>Zuletzt entschieden</h2>
-  <table>
-    <tbody>
-      {% for request in decided %}
-        <tr>
-          <td>{{ request.decided_at|date:"d.m.Y H:i" }}</td>
-          <td>{{ request.requested_by.full_name }}</td>
-          <td><span class="badge {{ request.status }}">{{ request.get_status_display }}</span></td>
-          <td class="muted">{{ request.decided_by.full_name|default:"-" }}</td>
-        </tr>
-      {% empty %}
-        <tr><td class="empty">Noch nichts entschieden.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <tbody>
+        {% for request in decided %}
+          <tr>
+            <td>{{ request.decided_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ request.requested_by.full_name }}</td>
+            <td><span class="badge {{ request.status }}">{{ request.get_status_display }}</span></td>
+            <td class="muted">{{ request.decided_by.full_name|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty">Noch nichts entschieden.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
