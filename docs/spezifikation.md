@@ -202,6 +202,27 @@ setzt dessen `source` auf `correction`. Der Antrag bleibt als Beleg erhalten.
 
 Damit muss die Buchhaltung ihre Spaltenauswahl nicht jeden Monat neu zusammenklicken.
 
+**SiteSettings** (Kopf- und Fußzeile, genau eine Zeile)
+
+| Feld | Typ | Bemerkung |
+|---|---|---|
+| `site_title` | Text | Name der Anwendung in Kopfzeile und Fenstertitel |
+| `company_name` | Text, optional | Firma, in Kopf- und Fußzeile |
+| `logo_data`, `logo_content_type`, `logo_filename` | Binär/Text, optional | Logo in der Datenbank, geprüft beim Hochladen |
+| `logo_updated_at` | Zeitpunkt, optional | steht in der Adresse des Logos, damit Browser ein neues Bild holen |
+| `logo_alt_text` | Text, optional | Beschreibung des Logos; leer: Firma, sonst Name der Anwendung |
+| `footer_text` | Text, optional | Freitext des Betreibers in der Fußzeile |
+| `imprint_text`, `privacy_text` | Text, optional | eigene Seite im Tool, ohne Anmeldung lesbar |
+| `imprint_url`, `privacy_url` | Adresse, optional | Verweis auf eine bestehende Seite; geht dem Text vor |
+
+**FooterLink** (weitere Verweise in der Fußzeile)
+
+| Feld | Typ | Bemerkung |
+|---|---|---|
+| `label` | Text | Beschriftung, z. B. "Kontakt" |
+| `url` | Adresse | nur `http` und `https` |
+| `position` | Zahl | Reihenfolge, kleinere Zahlen zuerst |
+
 **AuditLog** (Änderungsprotokoll)
 
 Wer hat wann welchen Zeiteintrag wie geändert. Enthält Nutzer, Zeitpunkt, Objekt,
@@ -319,6 +340,18 @@ sortiert. Die Tabelle zeigt eine Vorschau der ersten Zeilen, darunter liegen die
 "Als Excel herunterladen" und "Als CSV herunterladen". Die aktuelle Zusammenstellung
 lässt sich als Vorlage speichern und beim nächsten Mal mit einem Klick laden.
 
+**Kopf- und Fußzeile (auf allen Seiten)**
+Die Kopfzeile trägt Logo, Namen der Anwendung und Firma, daneben die Navigation. Die
+Fußzeile trägt Firma, einen Freitext des Betreibers sowie die Verweise auf Impressum,
+Datenschutz und weitere frei benannte Seiten. Alle diese Angaben pflegt ein System-Admin
+unter "Darstellung"; nichts davon steht im Code oder in der Konfiguration. Impressum und
+Datenschutz sind ohne Anmeldung lesbar, entweder als Text im Tool oder als Verweis auf
+eine bestehende Seite.
+
+**Darstellung (nur System-Admins)**
+Freitextfelder für Kopf- und Fußzeile, Hochladen des Logos (PNG, JPEG, GIF oder WebP bis
+512 KB, geprüft am Dateiinhalt) und eine Liste weiterer Verweise für die Fußzeile.
+
 ---
 
 ## 8. Auswertung und Export
@@ -434,6 +467,7 @@ apps/
   tracking/             TimeEntry, BreakEntry, Stempel-Logik
   corrections/          CorrectionRequest, Workflow
   reporting/            Auswertung, Export
+  siteconfig/           Kopf- und Fußzeile, Impressum, Datenschutz
 templates/
 static/
 tests/
