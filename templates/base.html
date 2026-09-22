@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Zeiterfassung{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
@@ -12,6 +12,14 @@
     <nav class="site">
       <span class="brand">Zeiterfassung</span>
       {% if user.is_authenticated %}
+      {% comment %}
+        Auf schmalen Geräten klappt das Menü auf, ab Tablet steht es als Zeile da
+        (Issue 78). Der Schalter ist ein Ankreuzfeld, damit dafür kein JavaScript
+        nötig ist.
+      {% endcomment %}
+      <input type="checkbox" id="menu-schalter" class="menu-schalter">
+      <label class="menu-knopf" for="menu-schalter">Menü</label>
+      <div class="menu-items">
         <a href="{% url 'tracking:clock' %}">Stempeluhr</a>
         <a href="{% url 'tracking:my_entries' %}">Meine Zeiten</a>
         <a href="{% url 'tracking:confirm_period' %}">Zeitraum bestätigen</a>
@@ -36,6 +44,7 @@
           {% csrf_token %}
           <button type="submit">Abmelden</button>
         </form>
+      </div>
       {% endif %}
     </nav>
   </div>

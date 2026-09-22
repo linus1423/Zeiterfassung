@@ -3,17 +3,19 @@
 {% block content %}
 <h1>Tätigkeiten in {{ group.name }}</h1>
 <div class="card">
-  <table>
-    <tr><th>Name</th><th>Reihenfolge</th><th>Status</th><th></th></tr>
-    {% for activity in activities %}
-      <tr>
-        <td>{{ activity.name }}</td>
-        <td class="num">{{ activity.sort_order }}</td>
-        <td>{% if activity.is_active %}aktiv{% else %}<span class="muted">deaktiviert</span>{% endif %}</td>
-        <td><a href="{% url 'groups:activity_edit' group.pk activity.pk %}">Bearbeiten</a></td>
-      </tr>
-    {% empty %}<tr><td colspan="4" class="muted">Noch keine Tätigkeit angelegt.</td></tr>{% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Name</th><th>Reihenfolge</th><th>Status</th><th></th></tr>
+      {% for activity in activities %}
+        <tr>
+          <td>{{ activity.name }}</td>
+          <td class="num">{{ activity.sort_order }}</td>
+          <td>{% if activity.is_active %}aktiv{% else %}<span class="muted">deaktiviert</span>{% endif %}</td>
+          <td><a href="{% url 'groups:activity_edit' group.pk activity.pk %}">Bearbeiten</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="4" class="muted">Noch keine Tätigkeit angelegt.</td></tr>{% endfor %}
+    </table>
+  </div>
 </div>
 <div class="card">
   <h2>Neue Tätigkeit</h2>

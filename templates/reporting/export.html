@@ -13,22 +13,24 @@
 {% if profiles %}
 <div class="card">
   <h2>Vorlagen</h2>
-  <table>
-    {% for item in profiles %}
-      <tr>
-        <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
-        <td>{{ item.get_grouping_display }}</td>
-        <td>{% if item.sharing_label %}geteilt mit {{ item.sharing_label }}{% endif %}</td>
-        <td>
-          {% if item.owner_id == user.pk %}
-            <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
-              {% csrf_token %}<button type="submit">Löschen</button>
-            </form>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table>
+      {% for item in profiles %}
+        <tr>
+          <td><a href="{% url 'reporting:export_profile' item.pk %}">{{ item.name }}</a></td>
+          <td>{{ item.get_grouping_display }}</td>
+          <td>{% if item.sharing_label %}geteilt mit {{ item.sharing_label }}{% endif %}</td>
+          <td>
+            {% if item.owner_id == user.pk %}
+              <form method="post" action="{% url 'reporting:profile_delete' item.pk %}" class="inline">
+                {% csrf_token %}<button type="submit">Löschen</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
 </div>
 {% endif %}
 
