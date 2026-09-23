@@ -147,13 +147,23 @@ def test_ambiguous_group_names_are_refused(member, group, activity):
     assert 3 not in problems
 
 
-def test_windows_encoding_is_read(member, group):
-    data = csv_bytes(row(activity=""), encoding="cp1252")
+def test_windows_encoding_is_read(member, group, activity):
+    # Der Kopf trägt Umlaute ("Tätigkeit"), daran hängt die Erkennung.
+    data = csv_bytes(row(), encoding="cp1252")
 
     plan = csv_import.prepare(data)
 
     assert plan.ok
-    assert plan.entries[0].activity is None
+    assert plan.entries[0].activity == activity
+
+
+def test_a_row_without_an_activity_is_refused(member, group, activity):
+    """Ohne Tätigkeit entsteht kein Eintrag mehr (Issue 83)."""
+    plan = csv_import.prepare(csv_bytes(row(activity="")))
+
+    assert not plan.ok
+    assert messages_by_line(plan)[2] == "Die Tätigkeit fehlt."
+    assert plan.entries == []
 
 
 def test_import_is_logged(member, group, activity, superuser):

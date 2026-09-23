@@ -74,20 +74,22 @@ def update_entry(
     reason: str,
     start,
     end,
-    activity=None,
+    activity,
     note: str = "",
     breaks: list[dict] | None = None,
 ) -> TimeEntry:
-    """Ändert einen bestehenden Eintrag. Die Begründung ist Pflicht."""
+    """Ändert einen bestehenden Eintrag. Begründung und Tätigkeit sind Pflicht."""
     if not reason.strip():
         raise EntryEditError("Eine Änderung braucht eine Begründung.")
+    if activity is None:
+        raise EntryEditError("Ein Zeiteintrag braucht eine Tätigkeit.")
 
     locked = TimeEntry.objects.select_for_update().select_related("group").get(pk=entry.pk)
     _require_admin(editor, locked.group)
     lock_user(locked.user)
     if locked.is_open:
         raise EntryEditError("Ein laufender Eintrag kann nicht geändert werden.")
-    if activity is not None and activity.group_id != locked.group_id:
+    if activity.group_id != locked.group_id:
         raise EntryEditError("Die Tätigkeit gehört zu einer anderen Gruppe.")
 
     # Der bisherige und der gewünschte Zeitraum, jeder ganz: der Eintrag kann
@@ -132,19 +134,21 @@ def create_entry(
     reason: str,
     start,
     end,
-    activity=None,
+    activity,
     note: str = "",
     breaks: list[dict] | None = None,
 ) -> TimeEntry:
     """Trägt eine fehlende Zeit für ein Mitglied nach."""
     if not reason.strip():
         raise EntryEditError("Ein Nachtrag braucht eine Begründung.")
+    if activity is None:
+        raise EntryEditError("Ein Zeiteintrag braucht eine Tätigkeit.")
 
     _require_admin(editor, group)
     lock_user(user)
     if not user.is_group_member(group):
         raise EntryEditError("Die Person ist kein Mitglied dieser Gruppe.")
-    if activity is not None and activity.group_id != group.pk:
+    if activity.group_id != group.pk:
         raise EntryEditError("Die Tätigkeit gehört zu einer anderen Gruppe.")
 
     _require_open_period(group, [local_day_range(start, end)])

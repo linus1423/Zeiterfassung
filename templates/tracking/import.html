@@ -22,7 +22,7 @@
     Spalten: <strong>Personalnummer</strong> oder <strong>E-Mail</strong>, <strong>Gruppe</strong>,
     <strong>Tätigkeit</strong>, <strong>Datum</strong>, <strong>Beginn</strong>,
     <strong>Ende</strong>, <strong>Pausen</strong>, <strong>Notiz</strong>.
-    Gruppe, Beginn und Ende sind Pflicht, dazu eine Spalte zur Person.
+    Gruppe, Tätigkeit, Beginn und Ende sind Pflicht, dazu eine Spalte zur Person.
     Beginn und Ende dürfen „TT.MM.JJJJ HH:MM“ heißen oder nur „HH:MM“, wenn es eine
     Spalte Datum gibt; ein Ende vor dem Beginn zählt dann als Folgetag.
     Pausen sind entweder eine Dauer („30“ oder „0:30“, sie wird mittig gelegt) oder
@@ -85,7 +85,7 @@
             <td class="num">{{ item.line }}</td>
             <td>{{ item.user.full_name }}</td>
             <td>{{ item.group.name }}</td>
-            <td>{% if item.activity %}{{ item.activity.name }}{% else %}<span class="muted">ohne</span>{% endif %}</td>
+            <td>{{ item.activity.name }}</td>
             <td>{{ item.start|date:"d.m.Y H:i" }}</td>
             <td>{{ item.end|date:"d.m.Y H:i" }}</td>
             <td class="num">{{ item.break_total|dauer }}</td>

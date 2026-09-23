@@ -63,9 +63,10 @@ def clock(request):
         user=request.user, is_incomplete=True, start__gte=timezone.now() - timedelta(days=30)
     ).order_by("-start")[:5]
 
+    form = ClockInForm(request.user)
     context = {
         "state": state,
-        "form": ClockInForm(request.user),
+        "form": form,
         "switch_form": SwitchActivityForm(state.entry) if state.entry is not None else None,
         "today_entries": today_entries,
         "worked_today": worked_today,
@@ -74,6 +75,7 @@ def clock(request):
         "statutory_warnings": services.statutory_warnings(request.user, today, today),
         "incomplete_entries": incomplete,
         "has_groups": bool(request.user.member_group_ids()),
+        "has_activities": form.has_activities,
     }
     return render(request, "tracking/clock.html", context)
 

@@ -14,14 +14,10 @@ from dataclasses import dataclass, field
 from . import charts
 from .services import aggregate, to_hhmm, to_hours
 
-# Leere Werte werden benannt statt weggelassen: sonst wäre die Summe der
-# Tabelle kleiner als die Gesamtsumme, ohne dass man sähe warum.
-NO_ACTIVITY_LABEL = "ohne Tätigkeit"
-
 
 def _activity_label(row: dict) -> str:
     """Tätigkeiten gehören je einer Gruppe, deshalb steht die Gruppe davor."""
-    return f"{row['group']} · {row['activity'] or NO_ACTIVITY_LABEL}"
+    return f"{row['group']} · {row['activity']}"
 
 
 def _user_label(row: dict) -> str:

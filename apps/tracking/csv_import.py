@@ -166,7 +166,7 @@ class PlannedEntry:
     line: int
     user: object
     group: Group
-    activity: Activity | None
+    activity: Activity
     start: datetime
     end: datetime
     breaks: list[tuple[datetime, datetime]]
@@ -849,28 +849,30 @@ def build_plan(rows: list[RawRow], *, users: UserIndex | None = None) -> ImportP
             )
             continue
 
-        activity = None
-        if item.activity_name:
-            index = activities.get(item.group.pk)
-            activity, ambiguous = index.find(item.activity_name) if index else (None, False)
-            if ambiguous:
-                errors.append(
-                    RowError(
-                        item.line,
-                        f"Der Name „{item.activity_name}“ passt in der Gruppe "
-                        f"{item.group.name} auf mehrere Tätigkeiten.",
-                    )
+        # Ohne Tätigkeit entsteht kein Zeiteintrag mehr (Issue 83).
+        if not item.activity_name:
+            errors.append(RowError(item.line, "Die Tätigkeit fehlt."))
+            continue
+        index = activities.get(item.group.pk)
+        activity, ambiguous = index.find(item.activity_name) if index else (None, False)
+        if ambiguous:
+            errors.append(
+                RowError(
+                    item.line,
+                    f"Der Name „{item.activity_name}“ passt in der Gruppe "
+                    f"{item.group.name} auf mehrere Tätigkeiten.",
                 )
-                continue
-            if activity is None:
-                errors.append(
-                    RowError(
-                        item.line,
-                        f"Die Tätigkeit „{item.activity_name}“ gibt es in der Gruppe "
-                        f"{item.group.name} nicht.",
-                    )
+            )
+            continue
+        if activity is None:
+            errors.append(
+                RowError(
+                    item.line,
+                    f"Die Tätigkeit „{item.activity_name}“ gibt es in der Gruppe "
+                    f"{item.group.name} nicht.",
                 )
-                continue
+            )
+            continue
 
         days = local_day_range(item.start, item.end)
         label = locks.blocking(item.group.pk, *days)

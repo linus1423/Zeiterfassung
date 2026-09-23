@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.groups import closing
-from apps.groups.models import GroupMembership
+from apps.groups.models import Activity, GroupMembership
 from apps.reporting import timesheet
 from apps.tracking.models import BreakEntry, TimeEntry
 
@@ -20,9 +20,11 @@ def _at(day: date, hour: int, minute: int = 0):
 
 
 def _entry(user, group, day, start_hour, hours, *, pause=None, incomplete=False):
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     entry = TimeEntry.objects.create(
         user=user,
         group=group,
+        activity=activity,
         start=_at(day, start_hour),
         end=_at(day, start_hour) + timedelta(hours=hours),
         is_incomplete=incomplete,
@@ -73,10 +75,11 @@ def test_the_gap_between_two_entries_counts_as_a_break(member, group):
     assert (row.end - row.start) - row.pause == row.work
 
 
-def test_a_night_shift_lands_on_both_days(member, group):
+def test_a_night_shift_lands_on_both_days(member, group, activity):
     TimeEntry.objects.create(
         user=member,
         group=group,
+        activity=activity,
         start=_at(date(2026, 6, 4), 22),
         end=_at(date(2026, 6, 5), 6),
     )
@@ -97,9 +100,11 @@ def test_the_total_counts_only_the_period(member, group):
     assert sheet.days_worked == 1
 
 
-def test_a_running_entry_is_named_but_not_counted(member, group):
+def test_a_running_entry_is_named_but_not_counted(member, group, activity):
     today = timezone.localdate()
-    TimeEntry.objects.create(user=member, group=group, start=timezone.now() - timedelta(hours=2))
+    TimeEntry.objects.create(
+        user=member, group=group, activity=activity, start=timezone.now() - timedelta(hours=2)
+    )
 
     sheet = timesheet.build(member, today, today)
 
