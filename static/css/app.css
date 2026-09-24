@@ -50,6 +50,10 @@
 
 * { box-sizing: border-box; }
 
+/* Kopfzeile, Inhalt und Fußzeile stehen untereinander und füllen zusammen
+   mindestens das ganze Fenster. Damit sitzt die Fußzeile bei kurzen Seiten am
+   unteren Bildschirmrand statt direkt unter dem Inhalt (Issue 82). `dvh` zählt
+   auf dem Handy die Leisten des Browsers mit, `vh` bleibt als Rückfall. */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -58,6 +62,10 @@ body {
   color: var(--ink);
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
@@ -92,7 +100,9 @@ header.site .inner,
 footer.site .inner,
 main { max-width: 1100px; margin: 0 auto; }
 
-main { padding: var(--space-5) var(--space-4) var(--space-6); }
+/* Der Inhalt nimmt den Platz ein, der zwischen Kopf- und Fußzeile übrig
+   bleibt, wird dabei aber nie kleiner als er selbst ist. */
+main { padding: var(--space-5) var(--space-4) var(--space-6); flex: 1 0 auto; }
 
 nav.site { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 nav.site .brand {
@@ -557,7 +567,7 @@ details.panel[open] > summary { margin-bottom: var(--space-3); }
 @media print {
   /* Auf Papier gehören weder Navigation noch Knöpfe hin. */
   header.site, footer.site, .no-print, .messages { display: none !important; }
-  body { background: #fff; }
+  body { background: #fff; display: block; min-height: 0; }
   main { margin: 0; max-width: none; padding: 0; }
   .sheet { box-shadow: none; border: 0; padding: 0; page-break-after: always; }
   .sheet:last-child { page-break-after: auto; }
