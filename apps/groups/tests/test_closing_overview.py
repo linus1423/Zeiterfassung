@@ -8,16 +8,18 @@ from django.utils import timezone
 
 from apps.corrections.models import CorrectionRequest
 from apps.groups import closing, overview
-from apps.groups.models import GroupMembership
+from apps.groups.models import Activity, GroupMembership
 from apps.tracking.models import TimeEntry
 from apps.tracking.utils import day_bounds
 
 
 def _entry(user, group, day, *, hours=8, incomplete=False):
     start, _ = day_bounds(day)
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     return TimeEntry.objects.create(
         user=user,
         group=group,
+        activity=activity,
         start=start + timedelta(hours=8),
         end=start + timedelta(hours=8 + hours),
         is_incomplete=incomplete,

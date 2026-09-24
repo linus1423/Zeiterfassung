@@ -68,15 +68,16 @@ def _open_entry_for_update(user) -> TimeEntry:
 
 
 @transaction.atomic
-def clock_in(user, group, activity=None, *, note: str = "") -> TimeEntry:
-    """Startet einen Zeiteintrag."""
+def clock_in(user, group, activity, *, note: str = "") -> TimeEntry:
+    """Startet einen Zeiteintrag. Die Tätigkeit ist Pflicht (Issue 83)."""
     if not user.is_group_member(group):
         raise ClockError("Du bist kein Mitglied dieser Gruppe.")
-    if activity is not None:
-        if activity.group_id != group.pk:
-            raise ClockError("Die Tätigkeit gehört zu einer anderen Gruppe.")
-        if not activity.is_active:
-            raise ClockError("Diese Tätigkeit ist nicht mehr wählbar.")
+    if activity is None:
+        raise ClockError("Ohne Tätigkeit lässt sich nicht einstempeln.")
+    if activity.group_id != group.pk:
+        raise ClockError("Die Tätigkeit gehört zu einer anderen Gruppe.")
+    if not activity.is_active:
+        raise ClockError("Diese Tätigkeit ist nicht mehr wählbar.")
 
     now = timezone.now()
     if TimeEntry.objects.overlapping(user, now).exists():

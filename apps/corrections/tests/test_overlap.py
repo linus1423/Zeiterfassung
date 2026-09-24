@@ -21,13 +21,14 @@ def workday(member, group, activity):
     )
 
 
-def test_nachtrag_inside_an_existing_entry_is_refused(workday, member, group):
+def test_nachtrag_inside_an_existing_entry_is_refused(workday, member, group, activity):
     with pytest.raises(services.CorrectionError):
         services.create_request(
             requested_by=member,
             group=group,
             kind=CorrectionRequest.Kind.CREATE,
             reason="Stempeln vergessen.",
+            proposed_activity=activity,
             proposed_start=workday.start + timedelta(hours=1),
             proposed_end=workday.start + timedelta(hours=7),
         )
@@ -35,12 +36,13 @@ def test_nachtrag_inside_an_existing_entry_is_refused(workday, member, group):
     assert not CorrectionRequest.objects.exists()
 
 
-def test_nachtrag_next_to_an_existing_entry_works(workday, member, group):
+def test_nachtrag_next_to_an_existing_entry_works(workday, member, group, activity):
     correction = services.create_request(
         requested_by=member,
         group=group,
         kind=CorrectionRequest.Kind.CREATE,
         reason="Stempeln vergessen.",
+        proposed_activity=activity,
         proposed_start=workday.end,
         proposed_end=workday.end + timedelta(hours=2),
     )
@@ -48,19 +50,23 @@ def test_nachtrag_next_to_an_existing_entry_works(workday, member, group):
     assert correction.is_pending
 
 
-def test_approval_refuses_an_overlap_that_appeared_later(workday, member, group, group_admin):
+def test_approval_refuses_an_overlap_that_appeared_later(
+    workday, member, group, group_admin, activity
+):
     """Zwischen Antrag und Entscheidung kann eine neue Zeit dazugekommen sein."""
     correction = services.create_request(
         requested_by=member,
         group=group,
         kind=CorrectionRequest.Kind.CREATE,
         reason="Stempeln vergessen.",
+        proposed_activity=activity,
         proposed_start=workday.end + timedelta(hours=1),
         proposed_end=workday.end + timedelta(hours=3),
     )
     TimeEntry.objects.create(
         user=member,
         group=group,
+        activity=activity,
         start=workday.end + timedelta(hours=2),
         end=workday.end + timedelta(hours=4),
     )
@@ -73,13 +79,14 @@ def test_approval_refuses_an_overlap_that_appeared_later(workday, member, group,
     assert TimeEntry.objects.filter(user=member).count() == 2
 
 
-def test_editing_an_entry_does_not_clash_with_itself(workday, member, group, group_admin):
+def test_editing_an_entry_does_not_clash_with_itself(workday, member, group, group_admin, activity):
     correction = services.create_request(
         requested_by=member,
         group=group,
         kind=CorrectionRequest.Kind.EDIT,
         reason="Ich habe zu spät ausgestempelt.",
         entry=workday,
+        proposed_activity=activity,
         proposed_start=workday.start,
         proposed_end=workday.start + timedelta(hours=7),
     )
@@ -106,6 +113,7 @@ def test_editing_into_another_entry_is_refused(workday, member, group, activity)
             kind=CorrectionRequest.Kind.EDIT,
             reason="Ich habe zu spät ausgestempelt.",
             entry=workday,
+            proposed_activity=activity,
             proposed_start=workday.start,
             proposed_end=later.start + timedelta(minutes=30),
         )

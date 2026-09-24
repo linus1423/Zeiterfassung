@@ -26,11 +26,12 @@ def entry(member, group, activity):
     )
 
 
-def _form_data(start, end, **extra):
+def _form_data(start, end, activity, **extra):
     """Formularfelder inklusive der leeren Pausenzeilen."""
     data = {
         "start": timezone.localtime(start).strftime("%Y-%m-%dT%H:%M"),
         "end": timezone.localtime(end).strftime("%Y-%m-%dT%H:%M"),
+        "activity": activity.pk,
         "reason": "Mia hat vergessen auszustempeln.",
         "pausen-TOTAL_FORMS": "6",
         "pausen-INITIAL_FORMS": "0",
@@ -44,13 +45,13 @@ def _form_data(start, end, **extra):
     return data
 
 
-def test_admin_changes_an_entry(client, group_admin, group, entry, member):
+def test_admin_changes_an_entry(client, group_admin, group, entry, member, activity):
     client.force_login(group_admin)
     new_end = entry.start + timedelta(hours=7)
 
     response = client.post(
         reverse("groups:entry_edit", args=[group.pk, entry.pk]),
-        _form_data(entry.start, new_end, note="Feierabend früher"),
+        _form_data(entry.start, new_end, activity, note="Feierabend früher"),
     )
 
     assert response.status_code == 302
@@ -69,7 +70,7 @@ def test_admin_adds_a_missing_entry_with_breaks(client, group_admin, group, memb
     start = _minute(timezone.now() - timedelta(days=1, hours=9))
     end = start + timedelta(hours=8)
 
-    data = _form_data(start, end, user=member.pk, activity=activity.pk)
+    data = _form_data(start, end, activity, user=member.pk)
     data["pausen-0-start"] = timezone.localtime(start + timedelta(hours=4)).strftime(
         "%Y-%m-%dT%H:%M"
     )
@@ -104,9 +105,9 @@ def test_accounting_may_not_change_times(client, accountant, group, entry):
     assert entry_editing.may_edit(accountant, group) is False
 
 
-def test_reason_is_required(client, group_admin, group, entry):
+def test_reason_is_required(client, group_admin, group, entry, activity):
     client.force_login(group_admin)
-    data = _form_data(entry.start, entry.end, reason="")
+    data = _form_data(entry.start, entry.end, activity, reason="")
 
     response = client.post(reverse("groups:entry_edit", args=[group.pk, entry.pk]), data)
 
@@ -127,6 +128,7 @@ def test_a_closed_period_blocks_the_change(group_admin, group, member, activity)
         entry_editing.update_entry(
             old_entry,
             editor=group_admin,
+            activity=activity,
             reason="Korrektur",
             start=old_entry.start,
             end=old_entry.start + timedelta(hours=7),
@@ -135,16 +137,21 @@ def test_a_closed_period_blocks_the_change(group_admin, group, member, activity)
     assert "abgeschlossen" in str(exc.value)
 
 
-def test_an_overlapping_time_is_refused(group_admin, group, member, entry):
+def test_an_overlapping_time_is_refused(group_admin, group, member, entry, activity):
     other_start = entry.end + timedelta(hours=1)
     TimeEntry.objects.create(
-        user=member, group=group, start=other_start, end=other_start + timedelta(hours=2)
+        user=member,
+        group=group,
+        activity=activity,
+        start=other_start,
+        end=other_start + timedelta(hours=2),
     )
 
     with pytest.raises(entry_editing.EntryEditError) as exc:
         entry_editing.update_entry(
             entry,
             editor=group_admin,
+            activity=activity,
             reason="Korrektur",
             start=entry.start,
             end=other_start + timedelta(minutes=30),
@@ -153,9 +160,9 @@ def test_an_overlapping_time_is_refused(group_admin, group, member, entry):
     assert "überschneidet" in str(exc.value)
 
 
-def test_a_running_entry_cannot_be_changed(client, group_admin, group, member):
+def test_a_running_entry_cannot_be_changed(client, group_admin, group, member, activity):
     running = TimeEntry.objects.create(
-        user=member, group=group, start=timezone.now() - timedelta(hours=1)
+        user=member, group=group, activity=activity, start=timezone.now() - timedelta(hours=1)
     )
     client.force_login(group_admin)
 
@@ -165,7 +172,7 @@ def test_a_running_entry_cannot_be_changed(client, group_admin, group, member):
     assert response["Location"] == reverse("groups:detail", args=[group.pk])
 
 
-def test_only_members_of_the_group_can_be_backdated(group_admin, group, make_user):
+def test_only_members_of_the_group_can_be_backdated(group_admin, group, make_user, activity):
     stranger = make_user("fremd@example.com")
     start = timezone.now() - timedelta(hours=5)
 
@@ -174,6 +181,7 @@ def test_only_members_of_the_group_can_be_backdated(group_admin, group, make_use
             editor=group_admin,
             user=stranger,
             group=group,
+            activity=activity,
             reason="Nachtrag",
             start=start,
             end=start + timedelta(hours=2),
@@ -193,7 +201,7 @@ def test_a_deactivated_activity_stays_on_the_entry(client, group_admin, group, e
 
     response = client.post(
         reverse("groups:entry_edit", args=[group.pk, entry.pk]),
-        _form_data(entry.start, entry.end - timedelta(minutes=30), activity=activity.pk),
+        _form_data(entry.start, entry.end - timedelta(minutes=30), activity),
     )
 
     assert response.status_code == 302
@@ -201,10 +209,10 @@ def test_a_deactivated_activity_stays_on_the_entry(client, group_admin, group, e
     assert entry.activity == activity
 
 
-def test_the_log_shows_a_changed_break(client, group_admin, group, entry):
+def test_the_log_shows_a_changed_break(client, group_admin, group, entry, activity):
     """Ändert sich nur die Pause, muss das Protokoll den Unterschied zeigen."""
     client.force_login(group_admin)
-    data = _form_data(entry.start, entry.end)
+    data = _form_data(entry.start, entry.end, activity)
     pause_start = entry.start + timedelta(hours=4)
     data["pausen-0-start"] = timezone.localtime(pause_start).strftime("%Y-%m-%dT%H:%M")
     data["pausen-0-end"] = timezone.localtime(pause_start + timedelta(minutes=30)).strftime(
@@ -218,7 +226,7 @@ def test_the_log_shows_a_changed_break(client, group_admin, group, entry):
     assert len(log_entry.changes["nachher"]["breaks"]) == 1
 
 
-def test_a_closed_period_inside_the_entry_blocks_it(group_admin, group, member):
+def test_a_closed_period_inside_the_entry_blocks_it(group_admin, group, member, activity):
     """Der Abschluss zählt auch, wenn er zwischen Beginn und Ende liegt."""
     closed = period_for(timezone.localdate(), group.month_start_day).previous()
     closing.close_period(group, closed, group_admin, "")
@@ -230,6 +238,7 @@ def test_a_closed_period_inside_the_entry_blocks_it(group_admin, group, member):
             editor=group_admin,
             user=member,
             group=group,
+            activity=activity,
             reason="Nachtrag über mehrere Wochen",
             start=start,
             end=end,

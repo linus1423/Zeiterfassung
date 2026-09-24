@@ -93,7 +93,9 @@ def _resolved_overrides(locked: CorrectionRequest, overrides: dict) -> dict:
     if resolved["end"] <= resolved["start"]:
         raise CorrectionError("Das Ende muss nach dem Beginn liegen.")
     activity = resolved["activity"]
-    if activity is not None and activity.group_id != locked.group_id:
+    if activity is None:
+        raise CorrectionError("Für die Übernahme mit Änderung fehlt die Tätigkeit.")
+    if activity.group_id != locked.group_id:
         raise CorrectionError("Die Tätigkeit gehört zu einer anderen Gruppe.")
     return resolved
 
@@ -152,6 +154,12 @@ def approve(
         end = overrides["end"] if overrides else locked.proposed_end
         activity = overrides["activity"] if overrides else locked.proposed_activity
         breaks = overrides["breaks"] if overrides else locked.proposed_breaks
+        if activity is None:
+            # Möglich nur bei Anträgen aus der Zeit vor Issue 83.
+            raise CorrectionError(
+                "Dem Antrag fehlt die Tätigkeit. Bitte mit Änderung genehmigen "
+                "und dabei eine Tätigkeit wählen."
+            )
         lock_user(locked.requested_by)
         _reject_overlap(locked.requested_by, start, end)
         with overlap_guard(CorrectionError):
@@ -309,6 +317,10 @@ def create_request(
     # entschiede ein Admin einer fremden Gruppe über fremde Zeiten.
     if entry is not None and entry.group_id != group.pk:
         raise CorrectionError("Ein bestehender Eintrag bleibt in seiner Gruppe.")
+    # Ein Löschantrag braucht keine, jeder andere schon: aus ihm entsteht ein
+    # Zeiteintrag, und der hat immer eine Tätigkeit (Issue 83).
+    if kind != CorrectionRequest.Kind.DELETE and proposed_activity is None:
+        raise CorrectionError("Für Änderung und Nachtrag ist eine Tätigkeit nötig.")
 
     correction = CorrectionRequest(
         time_entry=entry,

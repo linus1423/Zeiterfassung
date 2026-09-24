@@ -52,13 +52,13 @@ class TimeEntry(models.Model):
         on_delete=models.PROTECT,
         related_name="time_entries",
     )
+    # Pflicht wie die Gruppe: ohne Tätigkeit ist eine Zeit nicht auswertbar
+    # (Issue 83). Bestandsdaten hat die Migration 0005 versorgt.
     activity = models.ForeignKey(
         "groups.Activity",
         verbose_name="Tätigkeit",
         on_delete=models.PROTECT,
         related_name="time_entries",
-        null=True,
-        blank=True,
     )
     start = models.DateTimeField("Beginn")
     end = models.DateTimeField("Ende", null=True, blank=True)
@@ -102,7 +102,7 @@ class TimeEntry(models.Model):
     def clean(self):
         if self.end and self.end <= self.start:
             raise ValidationError({"end": "Das Ende muss nach dem Beginn liegen."})
-        if self.activity and self.activity.group_id != self.group_id:
+        if self.activity_id and self.activity.group_id != self.group_id:
             raise ValidationError({"activity": "Die Tätigkeit gehört zu einer anderen Gruppe."})
 
     @property

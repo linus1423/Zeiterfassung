@@ -141,7 +141,7 @@ auswertbar bleiben.
 |---|---|---|
 | `user` | FK | |
 | `group` | FK | die Gruppe, für die gestempelt wurde |
-| `activity` | FK, optional | siehe Rückfrage 5 |
+| `activity` | FK | Pflicht, siehe Rückfrage 5 und Issue 83 |
 | `start` | Zeitpunkt | |
 | `end` | Zeitpunkt, leer solange laufend | |
 | `note` | Text, optional | |
@@ -151,6 +151,8 @@ auswertbar bleiben.
 Abgeleitet, nicht gespeichert: `duration` = `end` − `start` − Summe der Pausen.
 
 Regeln:
+- Jeder Eintrag hat eine Tätigkeit, auf allen Wegen: Stempeln, Korrekturantrag,
+  direkte Änderung durch den Admin und Einfuhr aus einer Datei.
 - Pro Nutzer darf höchstens ein Eintrag ohne `end` existieren (Datenbank-Constraint).
 - `end` muss nach `start` liegen.
 - Überlappende Einträge desselben Nutzers sind nicht erlaubt.

@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.corrections.models import CorrectionRequest
 from apps.groups import closing
+from apps.groups.models import Activity
 from apps.reminders import jobs
 from apps.reminders.models import Reminder
 from apps.tracking.models import TimeEntry
@@ -20,9 +21,11 @@ def last_period(group):
 
 def _entry_in(period, user, group, *, incomplete=False):
     start = timezone.make_aware(datetime.combine(period.start + timedelta(days=1), time(8, 0)))
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     return TimeEntry.objects.create(
         user=user,
         group=group,
+        activity=activity,
         start=start,
         end=start + timedelta(hours=8),
         is_incomplete=incomplete,

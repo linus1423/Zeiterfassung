@@ -6,6 +6,7 @@ import pytest
 from django.utils import timezone
 
 from apps.groups import closing
+from apps.groups.models import Activity
 from apps.reporting import services
 from apps.reporting.columns import resolve
 from apps.tracking.models import TimeEntry
@@ -14,9 +15,11 @@ from apps.tracking.utils import day_bounds
 
 def _entry(user, group, day: date, hours: int = 8) -> TimeEntry:
     start, _ = day_bounds(day)
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     return TimeEntry.objects.create(
         user=user,
         group=group,
+        activity=activity,
         start=start + timedelta(hours=8),
         end=start + timedelta(hours=8 + hours),
     )
