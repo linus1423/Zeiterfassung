@@ -12,8 +12,10 @@ from apps.tracking.models import TimeEntry
 
 
 @pytest.fixture
-def reminder(member, group):
-    TimeEntry.objects.create(user=member, group=group, start=timezone.now() - timedelta(hours=12))
+def reminder(member, group, activity):
+    TimeEntry.objects.create(
+        user=member, group=group, activity=activity, start=timezone.now() - timedelta(hours=12)
+    )
     jobs.remind_open_entries(hours=10)
     return Reminder.objects.get()
 

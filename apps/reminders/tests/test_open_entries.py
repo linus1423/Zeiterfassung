@@ -6,6 +6,7 @@ import pytest
 from django.core import mail
 from django.utils import timezone
 
+from apps.groups.models import Activity
 from apps.reminders import jobs, services
 from apps.reminders.models import Reminder
 from apps.tracking import services as tracking
@@ -20,8 +21,12 @@ def emails_on(settings):
 
 
 def _open_entry(member, group, hours):
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     return TimeEntry.objects.create(
-        user=member, group=group, start=timezone.now() - timedelta(hours=hours)
+        user=member,
+        group=group,
+        activity=activity,
+        start=timezone.now() - timedelta(hours=hours),
     )
 
 

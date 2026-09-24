@@ -38,11 +38,12 @@ def pending_request(entry, member, group, activity):
     )
 
 
-def _post_data(start, end, **extra):
+def _post_data(start, end, activity, **extra):
     data = {
         "action": "approve_adjusted",
         "start": timezone.localtime(start).strftime("%Y-%m-%dT%H:%M"),
         "end": timezone.localtime(end).strftime("%Y-%m-%dT%H:%M"),
+        "activity": activity.pk,
         "note": "Eine Viertelstunde weniger, so steht es im Werkstattbuch.",
         "pausen-TOTAL_FORMS": "6",
         "pausen-INITIAL_FORMS": "0",
@@ -56,13 +57,15 @@ def _post_data(start, end, **extra):
     return data
 
 
-def test_admin_approves_an_edit_with_changed_times(client, group_admin, pending_request, entry):
+def test_admin_approves_an_edit_with_changed_times(
+    client, group_admin, pending_request, entry, activity
+):
     client.force_login(group_admin)
     applied_end = pending_request.proposed_end - timedelta(minutes=15)
 
     response = client.post(
         reverse("corrections:decide", args=[pending_request.pk]),
-        _post_data(pending_request.proposed_start, applied_end),
+        _post_data(pending_request.proposed_start, applied_end, activity),
     )
 
     assert response.status_code == 302
@@ -130,10 +133,16 @@ def test_a_deletion_cannot_be_approved_with_changes(member, group, group_admin, 
         )
 
 
-def test_changed_times_are_checked_for_overlap(group_admin, member, group, pending_request, entry):
+def test_changed_times_are_checked_for_overlap(
+    group_admin, member, group, activity, pending_request, entry
+):
     later_start = entry.end + timedelta(hours=1)
     TimeEntry.objects.create(
-        user=member, group=group, start=later_start, end=later_start + timedelta(hours=2)
+        user=member,
+        group=group,
+        activity=activity,
+        start=later_start,
+        end=later_start + timedelta(hours=2),
     )
 
     with pytest.raises(services.CorrectionError) as exc:

@@ -23,10 +23,12 @@ def _old_account(make_user, group, email="alt@example.com"):
     return user
 
 
-def test_an_account_without_recent_entries_is_a_candidate(make_user, group):
+def test_an_account_without_recent_entries_is_a_candidate(make_user, group, activity):
     user = _old_account(make_user, group)
     start = _long_ago()
-    TimeEntry.objects.create(user=user, group=group, start=start, end=start + timedelta(hours=8))
+    TimeEntry.objects.create(
+        user=user, group=group, activity=activity, start=start, end=start + timedelta(hours=8)
+    )
 
     found = retention.candidates()
 
@@ -39,10 +41,12 @@ def test_a_fresh_account_without_entries_is_left_alone(make_user, group):
     assert retention.candidates() == []
 
 
-def test_a_recent_entry_protects_the_account(make_user, group):
+def test_a_recent_entry_protects_the_account(make_user, group, activity):
     user = _old_account(make_user, group)
     start = timezone.now() - timedelta(days=3)
-    TimeEntry.objects.create(user=user, group=group, start=start, end=start + timedelta(hours=8))
+    TimeEntry.objects.create(
+        user=user, group=group, activity=activity, start=start, end=start + timedelta(hours=8)
+    )
 
     assert retention.candidates() == []
 
@@ -105,10 +109,12 @@ def test_an_anonymized_account_is_not_picked_up_twice(make_user, group):
     assert retention.candidates() == []
 
 
-def test_the_retention_period_is_configurable(make_user, group, settings):
+def test_the_retention_period_is_configurable(make_user, group, activity, settings):
     user = _old_account(make_user, group)
     start = timezone.now() - timedelta(days=100)
-    TimeEntry.objects.create(user=user, group=group, start=start, end=start + timedelta(hours=8))
+    TimeEntry.objects.create(
+        user=user, group=group, activity=activity, start=start, end=start + timedelta(hours=8)
+    )
 
     assert retention.candidates() == []
     assert [candidate.user for candidate in retention.candidates(months=3)] == [user]

@@ -5,7 +5,7 @@ from datetime import date, datetime, time
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.groups.models import GroupMembership
+from apps.groups.models import Activity, GroupMembership
 from apps.tracking.models import TimeEntry
 
 MONDAY = date(2026, 5, 11)
@@ -18,7 +18,10 @@ def at(day: date, hour: int):
 
 def long_day(user, group, day=MONDAY):
     """Elf Stunden ohne Pause: Höchstarbeitszeit und Pause zugleich verletzt."""
-    return TimeEntry.objects.create(user=user, group=group, start=at(day, 6), end=at(day, 17))
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
+    return TimeEntry.objects.create(
+        user=user, group=group, activity=activity, start=at(day, 6), end=at(day, 17)
+    )
 
 
 def url(group, **params):
@@ -76,8 +79,10 @@ def test_the_period_filter_narrows_the_list(client, group, group_admin, member):
     assert {row.day for row in response.context["rows"]} == {TUESDAY}
 
 
-def test_an_empty_period_says_so(client, group, group_admin, member):
-    TimeEntry.objects.create(user=member, group=group, start=at(MONDAY, 8), end=at(MONDAY, 12))
+def test_an_empty_period_says_so(client, group, group_admin, member, activity):
+    TimeEntry.objects.create(
+        user=member, group=group, activity=activity, start=at(MONDAY, 8), end=at(MONDAY, 12)
+    )
     client.force_login(group_admin)
 
     response = client.get(url(group))

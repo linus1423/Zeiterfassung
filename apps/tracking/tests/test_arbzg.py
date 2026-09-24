@@ -9,7 +9,7 @@ from datetime import date, datetime, time, timedelta
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.groups.models import GroupMembership
+from apps.groups.models import Activity, GroupMembership
 from apps.tracking import arbzg, services, views
 from apps.tracking.models import BreakEntry, TimeEntry
 
@@ -26,7 +26,8 @@ def entry(user, group, day, start_hour, end_hour, *, end_day=None, pause_minutes
     """Ein Eintrag mit fester Uhrzeit, wahlweise mit einer Pause in der Mitte."""
     start = at(day, start_hour)
     end = at(end_day or day, end_hour)
-    item = TimeEntry.objects.create(user=user, group=group, start=start, end=end)
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
+    item = TimeEntry.objects.create(user=user, group=group, activity=activity, start=start, end=end)
     if pause_minutes:
         pause_start = start + (end - start) / 2
         BreakEntry.objects.create(
@@ -169,8 +170,8 @@ def test_the_rest_is_measured_over_the_change_to_summer_time(member, group):
     assert found[0].value == timedelta(hours=10)
 
 
-def test_a_running_entry_does_not_break_the_check(member, group):
-    TimeEntry.objects.create(user=member, group=group, start=timezone.now())
+def test_a_running_entry_does_not_break_the_check(member, group, activity):
+    TimeEntry.objects.create(user=member, group=group, activity=activity, start=timezone.now())
 
     today = timezone.localdate()
 

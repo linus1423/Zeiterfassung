@@ -16,7 +16,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
-from apps.groups.models import GroupMembership
+from apps.groups.models import Activity, GroupMembership
 from apps.reporting import schedules as jobs
 from apps.reporting.models import ExportProfile, ExportRun, ExportSchedule
 from apps.tracking.models import TimeEntry
@@ -36,8 +36,13 @@ def mailversand_an(settings):
 
 def _eintrag(user, group, tag: date, stunden: int = 8):
     start = timezone.make_aware(datetime.combine(tag, time(8, 0)))
+    activity, _ = Activity.objects.get_or_create(group=group, name="Montage")
     return TimeEntry.objects.create(
-        user=user, group=group, start=start, end=start + timedelta(hours=stunden)
+        user=user,
+        group=group,
+        activity=activity,
+        start=start,
+        end=start + timedelta(hours=stunden),
     )
 
 

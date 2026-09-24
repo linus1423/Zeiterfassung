@@ -141,7 +141,7 @@ auswertbar bleiben.
 |---|---|---|
 | `user` | FK | |
 | `group` | FK | die Gruppe, für die gestempelt wurde |
-| `activity` | FK, optional | siehe Rückfrage 5 |
+| `activity` | FK | Pflicht, siehe Rückfrage 5 und Issue 83 |
 | `start` | Zeitpunkt | |
 | `end` | Zeitpunkt, leer solange laufend | |
 | `note` | Text, optional | |
@@ -151,6 +151,8 @@ auswertbar bleiben.
 Abgeleitet, nicht gespeichert: `duration` = `end` − `start` − Summe der Pausen.
 
 Regeln:
+- Jeder Eintrag hat eine Tätigkeit, auf allen Wegen: Stempeln, Korrekturantrag,
+  direkte Änderung durch den Admin und Einfuhr aus einer Datei.
 - Pro Nutzer darf höchstens ein Eintrag ohne `end` existieren (Datenbank-Constraint).
 - `end` muss nach `start` liegen.
 - Überlappende Einträge desselben Nutzers sind nicht erlaubt.
@@ -1011,9 +1013,9 @@ nicht entstehen, denn geprüft wird sie je Person, nicht je Gruppe.
 **Die Tätigkeit dagegen schon.** Eine Tätigkeit gehört immer genau einer
 Gruppe (Kapitel 4), die alte passt nach dem Wechsel also nicht mehr. Deshalb
 wählt man schon im Antrag die neue aus den Tätigkeiten der Zielgruppe, und
-zwar verpflichtend: ein Zeiteintrag ohne Tätigkeit soll es nicht geben. Eine
-Gruppe ohne aktive Tätigkeit steht darum gar nicht erst zur Wahl, sonst wäre
-der Antrag nicht abschickbar. Geprüft wird die Tätigkeit auch bei der zweiten
+zwar verpflichtend: ein Zeiteintrag ohne Tätigkeit gibt es nicht (Kapitel 3,
+Issue 83). Eine Gruppe ohne aktive Tätigkeit steht darum gar nicht erst zur
+Wahl, sonst wäre der Antrag nicht abschickbar. Geprüft wird die Tätigkeit auch bei der zweiten
 Zustimmung noch einmal.
 
 **Wann ein Wechsel nicht geht.** Ein laufender Eintrag wechselt nicht, er ist

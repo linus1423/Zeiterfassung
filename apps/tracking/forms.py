@@ -55,6 +55,9 @@ class ClockInForm(forms.Form):
 
         self.fields["group"].queryset = groups
         self.fields["activity"].queryset = activity_queryset
+        # Ohne Tätigkeit geht kein Eintrag mehr (Issue 83). Gibt es in keiner
+        # Gruppe eine, sagt die Seite das, statt eine leere Auswahl zu zeigen.
+        self.has_activities = bool(activities)
 
         # Wer nur einer Gruppe angehört, soll sie nicht jedes Mal auswählen.
         group_list = list(groups)

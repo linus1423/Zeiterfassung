@@ -110,7 +110,7 @@ def group_detail(request, group_id):
     for part in parts:
         entry = part.entry
         per_user[entry.user.full_name] = per_user.get(entry.user.full_name, timedelta()) + part.work
-        label = entry.activity.name if entry.activity else "ohne Tätigkeit"
+        label = entry.activity.name
         per_activity[label] = per_activity.get(label, timedelta()) + part.work
 
     context = {

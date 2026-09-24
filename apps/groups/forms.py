@@ -107,9 +107,7 @@ class AdminEntryForm(forms.Form):
     user = forms.ModelChoiceField(
         queryset=User.objects.none(), label="Person", empty_label=None, required=False
     )
-    activity = forms.ModelChoiceField(
-        queryset=Activity.objects.none(), label="Tätigkeit", required=False
-    )
+    activity = forms.ModelChoiceField(queryset=Activity.objects.none(), label="Tätigkeit")
     start = forms.DateTimeField(label="Beginn", widget=DateTimeLocalInput())
     end = forms.DateTimeField(label="Ende", widget=DateTimeLocalInput())
     note = forms.CharField(label="Notiz", required=False, max_length=500)

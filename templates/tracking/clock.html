@@ -55,6 +55,13 @@
         <p class="help">Die laufende Zeit wird beendet und sofort mit der neuen Tätigkeit fortgesetzt.</p>
       </form>
     {% endif %}
+  {% elif not has_activities %}
+    <div class="state stopped">Ausgestempelt<small>Es fehlt noch eine Tätigkeit.</small></div>
+    <p><strong>In deiner Gruppe ist noch keine Tätigkeit angelegt.</strong></p>
+    <p class="help">
+      Jede Zeit gehört zu einer Tätigkeit, deshalb lässt sich erst danach stempeln.
+      Bitte einen Admin deiner Gruppe, eine anzulegen.
+    </p>
   {% else %}
     <div class="state stopped">Ausgestempelt<small>Wähle Gruppe und Tätigkeit, um zu starten.</small></div>
     <form method="post" action="{% url 'tracking:clock_in' %}">

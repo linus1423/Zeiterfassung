@@ -26,9 +26,7 @@ class CorrectionRequestForm(forms.Form):
     """Antrag auf Änderung oder Nachtrag eines Zeiteintrags."""
 
     group = forms.ModelChoiceField(queryset=Group.objects.none(), label="Gruppe", empty_label=None)
-    activity = forms.ModelChoiceField(
-        queryset=Activity.objects.none(), label="Tätigkeit", required=False
-    )
+    activity = forms.ModelChoiceField(queryset=Activity.objects.none(), label="Tätigkeit")
     start = forms.DateTimeField(label="Beginn", widget=DateTimeLocalInput())
     end = forms.DateTimeField(label="Ende", widget=DateTimeLocalInput())
     reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
@@ -166,9 +164,7 @@ class ApprovalAdjustForm(forms.Form):
 
     start = forms.DateTimeField(label="Beginn", widget=DateTimeLocalInput())
     end = forms.DateTimeField(label="Ende", widget=DateTimeLocalInput())
-    activity = forms.ModelChoiceField(
-        queryset=Activity.objects.none(), label="Tätigkeit", required=False
-    )
+    activity = forms.ModelChoiceField(queryset=Activity.objects.none(), label="Tätigkeit")
     note = forms.CharField(
         label="Begründung der Änderung", required=False, widget=forms.Textarea(attrs={"rows": 2})
     )

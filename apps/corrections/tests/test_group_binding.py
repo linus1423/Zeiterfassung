@@ -30,6 +30,7 @@ def _post_data(entry, group_id):
     start = timezone.localtime(entry.start)
     return {
         "group": group_id,
+        "activity": entry.activity_id,
         "start": start.strftime("%Y-%m-%dT%H:%M"),
         "end": (start + timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M"),
         "reason": "Ich habe zu spät ausgestempelt.",
@@ -94,6 +95,7 @@ def test_admin_of_another_group_cannot_decide(member_of_both, entry, other_group
         kind=CorrectionRequest.Kind.EDIT,
         reason="Ich habe zu spät ausgestempelt.",
         entry=entry,
+        proposed_activity=entry.activity,
         proposed_start=entry.start,
         proposed_end=entry.start + timedelta(hours=12),
     )

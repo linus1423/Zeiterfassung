@@ -180,9 +180,11 @@ def test_an_activity_of_another_group_is_refused(member, group, entry, target_gr
 
 
 def test_a_running_entry_cannot_change_group(
-    member, group, target_group, target_activity, yesterday_morning
+    member, group, activity, target_group, target_activity, yesterday_morning
 ):
-    running = TimeEntry.objects.create(user=member, group=group, start=yesterday_morning, end=None)
+    running = TimeEntry.objects.create(
+        user=member, group=group, activity=activity, start=yesterday_morning, end=None
+    )
     with pytest.raises(services.CorrectionError, match="laufender"):
         services.create_request(
             requested_by=member,

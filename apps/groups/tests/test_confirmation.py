@@ -79,7 +79,7 @@ def test_the_audit_note_keeps_the_dates_of_an_own_cycle(member, group, activity)
 
 
 def test_a_change_afterwards_voids_the_confirmation(
-    member, group_admin, group, last_period, own_entries
+    member, group_admin, group, last_period, own_entries, activity
 ):
     confirmation.confirm(member, group, last_period)
     first, _ = own_entries
@@ -87,6 +87,7 @@ def test_a_change_afterwards_voids_the_confirmation(
     entry_editing.update_entry(
         first,
         editor=group_admin,
+        activity=activity,
         reason="Beginn war früher.",
         start=at(last_period.start, 7),
         end=at(last_period.start, 12),
@@ -106,6 +107,7 @@ def test_an_added_entry_voids_the_confirmation(
         editor=group_admin,
         user=member,
         group=group,
+        activity=activity,
         reason="Nachtrag.",
         start=at(last_period.start + timedelta(days=2), 8),
         end=at(last_period.start + timedelta(days=2), 10),
@@ -133,6 +135,7 @@ def test_a_change_in_another_period_leaves_the_confirmation_alone(
         editor=group_admin,
         user=member,
         group=group,
+        activity=activity,
         reason="Nachtrag im Zeitraum davor.",
         start=at(before.start + timedelta(days=1), 8),
         end=at(before.start + timedelta(days=1), 10),
@@ -142,13 +145,14 @@ def test_a_change_in_another_period_leaves_the_confirmation_alone(
 
 
 def test_confirming_again_refreshes_the_confirmation(
-    member, group_admin, group, last_period, own_entries
+    member, group_admin, group, last_period, own_entries, activity
 ):
     first_time = confirmation.confirm(member, group, last_period)
     first, _ = own_entries
     entry_editing.update_entry(
         first,
         editor=group_admin,
+        activity=activity,
         reason="Ende war später.",
         start=at(last_period.start, 8),
         end=at(last_period.start, 13),
@@ -257,13 +261,14 @@ def test_confirming_through_the_web(client, member, group, last_period, own_entr
 
 
 def test_the_page_shows_a_voided_confirmation(
-    client, member, group_admin, group, last_period, own_entries
+    client, member, group_admin, group, last_period, own_entries, activity
 ):
     confirmation.confirm(member, group, last_period)
     first, _ = own_entries
     entry_editing.update_entry(
         first,
         editor=group_admin,
+        activity=activity,
         reason="Beginn war früher.",
         start=at(last_period.start, 7),
         end=at(last_period.start, 12),

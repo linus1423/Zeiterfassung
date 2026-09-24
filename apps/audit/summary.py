@@ -32,6 +32,8 @@ def _time_only(value: str | None) -> str:
 def describe_snapshot(snapshot: dict) -> str:
     """Eine Momentaufnahme eines Zeiteintrags als ein Satz."""
     parts = [f"{_moment(snapshot.get('start'))} bis {_time_only(snapshot.get('end'))}"]
+    # Momentaufnahmen sind Geschichte: vor Issue 83 angelegte Einträge hatten
+    # keine Tätigkeit, und das Protokoll gibt sie unverändert wieder.
     activity = snapshot.get("activity")
     parts.append(activity if activity else "ohne Tätigkeit")
 

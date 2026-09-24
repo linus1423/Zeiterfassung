@@ -129,26 +129,28 @@ def test_guard_passes_other_database_errors_on():
 
 
 @pytest.mark.django_db
-def test_clock_in_names_the_conflicting_time(monkeypatch, member, group):
+def test_clock_in_names_the_conflicting_time(monkeypatch, member, group, activity):
     def refuse(**kwargs):
         raise IntegrityError(f'... "{OVERLAP_CONSTRAINT}" ...')
 
     monkeypatch.setattr(TimeEntry.objects, "create", refuse)
 
     with pytest.raises(services.ClockError) as excinfo:
-        services.clock_in(member, group)
+        services.clock_in(member, group, activity)
 
     assert "bereits eine Zeit erfasst" in str(excinfo.value)
 
 
 @pytest.mark.django_db
-def test_clock_in_still_reports_a_second_click_as_already_clocked_in(monkeypatch, member, group):
+def test_clock_in_still_reports_a_second_click_as_already_clocked_in(
+    monkeypatch, member, group, activity
+):
     def refuse(**kwargs):
         raise IntegrityError('... "unique_open_time_entry_per_user" ...')
 
     monkeypatch.setattr(TimeEntry.objects, "create", refuse)
 
     with pytest.raises(services.ClockError) as excinfo:
-        services.clock_in(member, group)
+        services.clock_in(member, group, activity)
 
     assert "bereits eingestempelt" in str(excinfo.value)
