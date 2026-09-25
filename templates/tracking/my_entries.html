@@ -60,7 +60,8 @@
               <td class="num">{{ entry.duration|dauer }}{% if entry.is_incomplete %} <span class="badge pending">unvollständig</span>{% endif %}{% if entry.spans_days %} <span class="badge">über Mitternacht</span>{% endif %}</td>
               <td class="actions-cell">
                 {% if entry.end %}
-                  <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a>
+                  <a href="{% url 'corrections:create_for_entry' entry.pk %}">Korrektur</a> ·
+                  <a href="{% url 'corrections:request_move' entry.pk %}">Gruppe wechseln</a>
                 {% endif %}
               </td>
             </tr>

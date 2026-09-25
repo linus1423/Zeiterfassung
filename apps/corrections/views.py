@@ -14,6 +14,7 @@ from .forms import (
     CorrectionRequestForm,
     DecisionForm,
     DeleteRequestForm,
+    MoveRequestForm,
     break_formset,
     validate_breaks_within,
 )
@@ -25,7 +26,12 @@ def my_requests(request):
     requests = list(
         CorrectionRequest.objects.filter(requested_by=request.user)
         .select_related(
-            "group", "time_entry", "proposed_activity", "applied_activity", "decided_by"
+            "group",
+            "proposed_group",
+            "time_entry",
+            "proposed_activity",
+            "applied_activity",
+            "decided_by",
         )
         .order_by("-created_at")
     )
@@ -123,6 +129,42 @@ def request_delete(request, entry_id):
     return render(request, "corrections/delete_form.html", {"form": form, "entry": entry})
 
 
+@login_required
+def request_move(request, entry_id):
+    """Antrag, einen Eintrag in eine andere eigene Gruppe zu verschieben (Issue 37)."""
+    entry = get_object_or_404(TimeEntry.objects.select_related("group", "activity"), pk=entry_id)
+    if entry.user_id != request.user.pk:
+        raise PermissionDenied("Du kannst nur eigene Zeiten korrigieren lassen.")
+    if entry.is_open:
+        messages.error(request, "Ein laufender Eintrag kann die Gruppe nicht wechseln.")
+        return redirect("tracking:my_entries")
+
+    form = MoveRequestForm(request.user, entry, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            services.create_request(
+                requested_by=request.user,
+                group=entry.group,
+                kind=CorrectionRequest.Kind.MOVE,
+                reason=form.cleaned_data["reason"],
+                entry=entry,
+                proposed_group=form.cleaned_data["target_group"],
+                proposed_activity=form.cleaned_data.get("activity"),
+            )
+        except services.CorrectionError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request,
+                "Antrag gestellt. Erst stimmt ein Admin von "
+                f"{entry.group.name} zu, danach einer von "
+                f"{form.cleaned_data['target_group'].name}.",
+            )
+            return redirect("corrections:mine")
+
+    return render(request, "corrections/move_form.html", {"form": form, "entry": entry})
+
+
 @require_POST
 @login_required
 def request_withdraw(request, request_id):
@@ -140,16 +182,16 @@ def inbox(request):
     """Offene Anträge der Gruppen, in denen der Nutzer Admin ist."""
     group_ids = request.user.administrated_group_ids()
     requests = (
-        CorrectionRequest.objects.filter(
-            group_id__in=group_ids, status=CorrectionRequest.Status.PENDING
+        CorrectionRequest.objects.filter(services.decidable_filter(group_ids))
+        .select_related(
+            "group", "proposed_group", "requested_by", "time_entry", "proposed_activity"
         )
-        .select_related("group", "requested_by", "time_entry", "proposed_activity")
         .order_by("created_at")
     )
     decided = (
-        CorrectionRequest.objects.filter(group_id__in=group_ids)
-        .exclude(status=CorrectionRequest.Status.PENDING)
-        .select_related("group", "requested_by", "decided_by")
+        CorrectionRequest.objects.filter(services.involved_filter(group_ids))
+        .exclude(status__in=CorrectionRequest.OPEN_STATUSES)
+        .select_related("group", "proposed_group", "requested_by", "decided_by")
         .order_by("-decided_at")[:20]
     )
     return render(request, "corrections/inbox.html", {"requests": requests, "decided": decided})
@@ -160,11 +202,15 @@ def decide(request, request_id):
     """Einen Antrag ansehen und entscheiden."""
     correction = get_object_or_404(
         CorrectionRequest.objects.select_related(
-            "group", "requested_by", "time_entry", "proposed_activity"
+            "group", "proposed_group", "requested_by", "time_entry", "proposed_activity"
         ),
         pk=request_id,
     )
-    if not request.user.is_group_admin(correction.group):
+    # Beim Gruppenwechsel liegt die Zuständigkeit nach der ersten Zustimmung
+    # bei der gewünschten Gruppe. Ein entschiedener Antrag hat keine mehr;
+    # dann darf ihn ansehen, wer eine der beteiligten Gruppen verwaltet.
+    involved = [correction.group] + ([correction.proposed_group] if correction.is_move else [])
+    if not any(request.user.is_group_admin(group) for group in involved if group):
         raise PermissionDenied("Nur Admins dieser Gruppe dürfen Anträge entscheiden.")
 
     # Zwei Formulare auf einer Seite: die schlichte Entscheidung und die
@@ -190,8 +236,15 @@ def decide(request, request_id):
             note = form.cleaned_data["note"]
             try:
                 if action == "approve":
-                    services.approve(correction, request.user, note)
-                    messages.success(request, "Antrag genehmigt, die Zeit wurde geändert.")
+                    decided = services.approve(correction, request.user, note)
+                    if decided.status == CorrectionRequest.Status.PENDING_TARGET:
+                        messages.success(
+                            request,
+                            "Zugestimmt. Der Antrag liegt jetzt bei "
+                            f"{decided.proposed_group.name}.",
+                        )
+                    else:
+                        messages.success(request, "Antrag genehmigt, die Zeit wurde geändert.")
                 elif action == "reject":
                     services.reject(correction, request.user, note)
                     messages.success(request, "Antrag abgelehnt.")
@@ -211,7 +264,8 @@ def decide(request, request_id):
             "adjust_form": adjust_form,
             "adjust_breaks": adjust_breaks,
             "adjusting": adjusting,
-            "may_adjust": correction.kind != CorrectionRequest.Kind.DELETE,
+            "may_adjust": correction.kind
+            not in (CorrectionRequest.Kind.DELETE, CorrectionRequest.Kind.MOVE),
             "may_decide": services.may_decide(request.user, correction),
             "period_lock": services.closed_period_lock(correction),
         },

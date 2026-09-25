@@ -89,6 +89,71 @@ class CorrectionRequestForm(forms.Form):
         return cleaned
 
 
+class MoveRequestForm(forms.Form):
+    """Antrag, einen Zeiteintrag in eine andere eigene Gruppe zu verschieben (Issue 37).
+
+    Die Zeiten bleiben, nur die Gruppe wechselt. Eine Tätigkeit gehört immer
+    genau einer Gruppe, die alte passt danach also nicht mehr; deshalb wird
+    hier gleich die neue gewählt. Sie ist Pflicht: ein Zeiteintrag ohne
+    Tätigkeit soll es nicht geben.
+    """
+
+    target_group = forms.ModelChoiceField(
+        queryset=Group.objects.none(),
+        label="Gewünschte Gruppe",
+        empty_label=None,
+        help_text="Nur Gruppen, in denen du selbst Mitglied bist.",
+    )
+    activity = forms.ModelChoiceField(
+        queryset=Activity.objects.none(),
+        label="Tätigkeit in der neuen Gruppe",
+        help_text="Die alte Tätigkeit gehört zur alten Gruppe und passt danach nicht mehr.",
+    )
+    reason = forms.CharField(label="Begründung", widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, user, entry, *args, **kwargs):
+        self.user = user
+        self.entry = entry
+        super().__init__(*args, **kwargs)
+        target_ids = [
+            group_id for group_id in user.member_group_ids() if group_id != entry.group_id
+        ]
+        # Ohne wählbare Tätigkeit wäre der Wechsel dorthin nicht abschickbar,
+        # also steht eine solche Gruppe gar nicht erst zur Wahl.
+        self.fields["target_group"].queryset = Group.objects.filter(
+            pk__in=target_ids, is_active=True, activities__is_active=True
+        ).distinct()
+        self.fields["activity"].queryset = Activity.objects.filter(
+            group_id__in=target_ids, is_active=True
+        ).select_related("group")
+
+    @property
+    def has_targets(self) -> bool:
+        """Ohne zweite Gruppe mit Tätigkeiten gibt es nichts zu wechseln."""
+        return self.fields["target_group"].queryset.exists()
+
+    def clean(self):
+        cleaned = super().clean()
+        target, activity = cleaned.get("target_group"), cleaned.get("activity")
+        if activity and target and activity.group_id != target.pk:
+            self.add_error("activity", "Diese Tätigkeit gehört nicht zur gewünschten Gruppe.")
+        if target:
+            # Gesperrt ist der Wechsel, sobald einer der beiden Zeiträume
+            # abgeschlossen ist: in der alten Gruppe verschwände die Zeit, in
+            # der neuen entstünde sie.
+            ranges = [local_day_range(self.entry.start, self.entry.end)]
+            for group in (self.entry.group, target):
+                lock = closing.blocking_lock(group, ranges)
+                if lock is not None:
+                    self.add_error(
+                        None,
+                        f"Der Zeitraum {lock.period.label} ist in {group.name} abgeschlossen. "
+                        "Ein Wechsel ist dort nicht mehr möglich.",
+                    )
+                    break
+        return cleaned
+
+
 class ApprovalAdjustForm(forms.Form):
     """Genehmigen mit Änderung (Issue 31).
 

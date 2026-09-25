@@ -20,12 +20,17 @@
             <td>{{ request.get_kind_display }}</td>
             <td>{{ request.group.name }}</td>
             <td>
-              {% if request.proposed_start %}
+              {% if request.is_move %}
+                nach {{ request.proposed_group.name }} · {{ request.proposed_activity.name }}
+              {% elif request.proposed_start %}
                 {{ request.proposed_start|date:"d.m.Y H:i" }} bis {{ request.proposed_end|date:"H:i" }}
               {% else %}-{% endif %}
             </td>
             <td>
               <span class="badge {{ request.status }}">{{ request.get_status_display }}</span>
+              {% if request.status == "pending_target" %}
+                <br><span class="help">{{ request.group.name }} hat zugestimmt.</span>
+              {% endif %}
               {% if request.was_adjusted %}
                 <br><span class="help">
                   Geändert übernommen: {{ request.applied_start|date:"d.m.Y H:i" }} bis

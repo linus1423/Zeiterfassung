@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Gruppe des Eintrags wechseln{% endblock %}
+{% block content %}
+<h1>Gruppe des Eintrags wechseln</h1>
+<div class="card">
+  <p>
+    <strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong> ·
+    {{ entry.group.name }}{% if entry.activity %} · {{ entry.activity.name }}{% endif %}
+  </p>
+  {% if form.has_targets %}
+    <p class="help">
+      Die Zeit bleibt wie erfasst, nur die Gruppe wechselt. Zustimmen müssen beide
+      Seiten: erst ein Admin von {{ entry.group.name }}, danach einer der gewünschten
+      Gruppe. Bis dahin bleibt der Eintrag, wo er ist.
+    </p>
+    <form method="post">{% csrf_token %}{{ form.as_p }}
+      <div class="actions">
+        <button class="primary" type="submit">Wechsel beantragen</button>
+        <a class="button" href="{% url 'tracking:my_entries' %}">Abbrechen</a>
+      </div>
+    </form>
+  {% else %}
+    <p>
+      Es gibt keine Gruppe, in die dieser Eintrag wechseln könnte. Dafür brauchst du
+      eine zweite eigene Gruppe, und die muss eine Tätigkeit haben, auf die der
+      Eintrag danach läuft.
+    </p>
+    <p><a class="button" href="{% url 'tracking:my_entries' %}">Zurück</a></p>
+  {% endif %}
+</div>
+{% endblock %}

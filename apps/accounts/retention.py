@@ -59,8 +59,10 @@ def candidates(months: int | None = None, today: date | None = None) -> list[Can
     cutoff = retention_cutoff(months, today)
     cutoff_start, _ = day_bounds(cutoff)
 
+    # Offen sind auch Anträge, die erst eine von zwei Zustimmungen haben
+    # (Gruppenwechsel eines Eintrags, Issue 37).
     pending_user_ids = set(
-        CorrectionRequest.objects.filter(status=CorrectionRequest.Status.PENDING).values_list(
+        CorrectionRequest.objects.filter(status__in=CorrectionRequest.OPEN_STATUSES).values_list(
             "requested_by_id", flat=True
         )
     )

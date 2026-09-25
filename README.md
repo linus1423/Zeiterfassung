@@ -12,8 +12,8 @@ Die vollständige fachliche Beschreibung steht in
 
 | Rolle | Darf |
 |---|---|
-| Mitarbeitende | eigene Zeit stempeln, eigene Zeiten sehen, Korrektur beantragen |
-| Gruppen-Admin | zusätzlich Tätigkeiten und Mitglieder der eigenen Gruppe pflegen, Zeiten der Gruppe sehen, Korrekturanträge entscheiden |
+| Mitarbeitende | eigene Zeit stempeln, eigene Zeiten sehen, Korrektur und Gruppenwechsel beantragen |
+| Gruppen-Admin | zusätzlich Tätigkeiten und Mitglieder der eigenen Gruppe pflegen, Zeiten der Gruppe sehen, Korrektur- und Wechselanträge entscheiden |
 | Buchhaltung | alle Gruppen lesen und nach Excel oder CSV exportieren, mit frei wählbaren Spalten; ändert nichts |
 | System-Admin | Gruppen anlegen, Rollen vergeben, Django-Adminoberfläche |
 
@@ -169,6 +169,26 @@ und die Zahl der offenen Korrekturanträge und unvollständigen Einträge in gen
 diesem Zeitraum. Das ist die Liste für den Monatslauf. Gruppen-Admins sehen dort
 ihre Gruppen, die Buchhaltung und System-Admins alle; verlinkt ist die Seite
 auch aus der Auswertung. Abschließen darf weiterhin nur ein Admin der Gruppe.
+
+## Gruppe eines Eintrags wechseln
+
+Wer in mehreren Gruppen arbeitet, stempelt gelegentlich auf die falsche. Unter
+**Meine Zeiten** steht deshalb bei jedem abgeschlossenen Eintrag *Gruppe
+wechseln*. Der Antrag braucht zwei Zustimmungen: zuerst entscheidet ein Admin
+der Gruppe, in der der Eintrag steht, danach einer der gewünschten Gruppe.
+Erst dann wandert er. Bis dahin bleibt er unverändert, wo er ist, und zählt
+dort in die Auswertung.
+
+Die Zeiten ändern sich beim Wechsel nicht, nur die Gruppe. Weil eine Tätigkeit
+immer genau einer Gruppe gehört, wählt man im Antrag gleich die neue aus der
+Zielgruppe. Sie ist Pflicht, denn ein Zeiteintrag ohne Tätigkeit gibt es
+nicht; eine Gruppe ohne Tätigkeiten steht deshalb nicht zur Wahl.
+
+Nicht möglich ist der Wechsel bei einem laufenden Eintrag, in eine Gruppe, in
+der man nicht selbst Mitglied ist, und wenn einer der beiden Zeiträume schon
+abgeschlossen ist. Die Anträge laufen in denselben Eingang wie die übrigen
+Korrekturen, mit Zähler in der Navigation; eine Mail dazu gibt es nur mit
+`CORRECTION_EMAILS_ENABLED=true`.
 
 ## Arbeitszeitnachweis
 

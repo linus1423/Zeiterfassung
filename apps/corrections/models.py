@@ -22,18 +22,27 @@ class CorrectionRequest(models.Model):
 
     Nutzer ändern ihre Zeiten nie selbst. Sie beantragen die Änderung, ein
     Admin der Gruppe entscheidet darüber.
+
+    Eine Sonderform ist der Gruppenwechsel eines Eintrags (Issue 37): er
+    betrifft zwei Gruppen und braucht deshalb zwei Zustimmungen, erst aus der
+    bisherigen Gruppe des Eintrags, dann aus der gewünschten.
     """
 
     class Kind(models.TextChoices):
         EDIT = "edit", "Änderung"
         CREATE = "create", "Nachtrag"
         DELETE = "delete", "Löschung"
+        MOVE = "move", "Gruppenwechsel"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Offen"
+        PENDING_TARGET = "pending_target", "Wartet auf die neue Gruppe"
         APPROVED = "approved", "Genehmigt"
         REJECTED = "rejected", "Abgelehnt"
         WITHDRAWN = "withdrawn", "Zurückgezogen"
+
+    #: Anträge, über die noch entschieden wird.
+    OPEN_STATUSES = (Status.PENDING, Status.PENDING_TARGET)
 
     time_entry = models.ForeignKey(
         "tracking.TimeEntry",
@@ -58,6 +67,15 @@ class CorrectionRequest(models.Model):
         related_name="correction_requests",
     )
     kind = models.CharField("Art", max_length=10, choices=Kind.choices)
+    proposed_group = models.ForeignKey(
+        "groups.Group",
+        verbose_name="Gewünschte Gruppe",
+        on_delete=models.PROTECT,
+        related_name="incoming_correction_requests",
+        null=True,
+        blank=True,
+        help_text="Nur beim Gruppenwechsel: die Gruppe, in die der Eintrag soll.",
+    )
     proposed_start = models.DateTimeField("Gewünschter Beginn", null=True, blank=True)
     proposed_end = models.DateTimeField("Gewünschtes Ende", null=True, blank=True)
     proposed_activity = models.ForeignKey(
@@ -85,8 +103,22 @@ class CorrectionRequest(models.Model):
     )
     applied_breaks = models.JSONField("Übernommene Pausen", default=list, blank=True)
     status = models.CharField(
-        "Status", max_length=10, choices=Status.choices, default=Status.PENDING
+        "Status", max_length=20, choices=Status.choices, default=Status.PENDING
     )
+    # Beim Gruppenwechsel die erste der beiden Zustimmungen: die der Gruppe,
+    # in der der Eintrag bisher steht.
+    source_decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Zugestimmt von (bisherige Gruppe)",
+        on_delete=models.SET_NULL,
+        related_name="first_decided_corrections",
+        null=True,
+        blank=True,
+    )
+    source_decided_at = models.DateTimeField(
+        "Zugestimmt am (bisherige Gruppe)", null=True, blank=True
+    )
+    source_note = models.TextField("Bemerkung der bisherigen Gruppe", blank=True)
     decided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="Entschieden von",
@@ -109,14 +141,34 @@ class CorrectionRequest(models.Model):
         verbose_name = "Korrekturantrag"
         verbose_name_plural = "Korrekturanträge"
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["status", "group"])]
+        indexes = [
+            models.Index(fields=["status", "group"]),
+            models.Index(fields=["status", "proposed_group"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.get_kind_display()} von {self.requested_by} ({self.get_status_display()})"
 
     @property
     def is_pending(self) -> bool:
-        return self.status == self.Status.PENDING
+        return self.status in self.OPEN_STATUSES
+
+    @property
+    def is_move(self) -> bool:
+        return self.kind == self.Kind.MOVE
+
+    @property
+    def deciding_group(self):
+        """Die Gruppe, deren Admins jetzt entscheiden.
+
+        Beim Gruppenwechsel ist das nach der ersten Zustimmung die gewünschte
+        Gruppe, sonst immer die Gruppe des Antrags.
+        """
+        if self.status == self.Status.PENDING_TARGET:
+            return self.proposed_group
+        if self.is_pending:
+            return self.group
+        return None
 
     @property
     def is_decided(self) -> bool:

@@ -969,3 +969,71 @@ auf `/readyz`, sichert die Datenbank und spielt sie zurück; danach werden
 (Rückfrage 19 bleibt damit beantwortet: keine API), ein Sammelantrag über
 mehrere Tage, das Runden von Zeiten und die englische Oberfläche über
 Djangos Übersetzungsmechanismus (Rückfrage 20 bleibt offen).
+
+---
+
+## 16. Gruppenwechsel eines Zeiteintrags (Issue 37)
+
+Gemeint ist nicht der Wechsel der eigenen Gruppenzugehörigkeit, sondern der
+eines einzelnen Zeiteintrags: Wer in mehreren Gruppen arbeitet, stempelt
+gelegentlich auf die falsche. Der Eintrag soll dann von der einen eigenen
+Gruppe in die andere wandern.
+
+Das ist eine vierte Art des Korrekturantrags aus Kapitel 5, neben Änderung,
+Nachtrag und Löschung. Sie unterscheidet sich in einem Punkt: der Wechsel
+betrifft zwei Gruppen, also entscheiden auch beide.
+
+**Der Ablauf.**
+
+1. Unter "Meine Zeiten" wählt die Person bei ihrem Eintrag "Gruppe wechseln",
+   sucht die gewünschte Gruppe aus, wählt dort eine Tätigkeit und begründet
+   den Antrag.
+2. Zuerst entscheidet ein Admin der Gruppe, **in der der Eintrag steht**. Er
+   gibt die Zeit ab oder lehnt ab.
+3. Danach entscheidet ein Admin der **gewünschten** Gruppe. Er nimmt sie an
+   oder lehnt ab.
+4. Erst mit der zweiten Zustimmung wechselt der Eintrag. Bis dahin steht er
+   unverändert in seiner alten Gruppe und zählt dort in die Auswertung.
+
+Der Antrag kennt dafür einen Zustand mehr als die anderen Arten: nach der
+ersten Zustimmung steht er auf "Wartet auf die neue Gruppe". Solange er offen
+ist, kann der Antragsteller ihn zurücknehmen, auch nach der ersten
+Zustimmung. Eine Ablehnung aus einer der beiden Gruppen beendet den Antrag.
+
+**Wer entscheidet.** Ein Admin der Gruppe, die gerade an der Reihe ist, aber
+nie der Antragsteller selbst. Ist er der einzige Admin, entscheidet ein
+System-Admin, wie beim übrigen Korrekturantrag (Rückfrage 10). Im Eingang
+steht deshalb eine Spalte "Zuständig": sie nennt die Gruppe, die jetzt am Zug
+ist, und darunter die Richtung des Wechsels.
+
+**Die Zeiten ändern sich nicht.** Beginn, Ende und Pausen bleiben, wie sie
+erfasst wurden; es wechselt nur die Gruppe. Eine Überschneidung kann dadurch
+nicht entstehen, denn geprüft wird sie je Person, nicht je Gruppe.
+
+**Die Tätigkeit dagegen schon.** Eine Tätigkeit gehört immer genau einer
+Gruppe (Kapitel 4), die alte passt nach dem Wechsel also nicht mehr. Deshalb
+wählt man schon im Antrag die neue aus den Tätigkeiten der Zielgruppe, und
+zwar verpflichtend: ein Zeiteintrag ohne Tätigkeit gibt es nicht (Kapitel 3,
+Issue 83). Eine Gruppe ohne aktive Tätigkeit steht darum gar nicht erst zur
+Wahl, sonst wäre der Antrag nicht abschickbar. Geprüft wird die Tätigkeit auch bei der zweiten
+Zustimmung noch einmal.
+
+**Wann ein Wechsel nicht geht.** Ein laufender Eintrag wechselt nicht, er ist
+noch nicht fertig. Die Zielgruppe muss eine eigene sein, in der die Person
+Mitglied ist, muss aktiv sein, muss eine Tätigkeit haben und darf nicht die
+sein, in der der Eintrag schon steht. Ist einer der beiden Zeiträume abgeschlossen (Kapitel 9), ist
+Schluss: in der alten Gruppe verschwände die Zeit aus einem bereits
+abgerechneten Monat, in der neuen entstünde sie dort neu. Geprüft wird das
+beim Antrag und noch einmal bei der zweiten Zustimmung, denn dazwischen
+vergeht Zeit: eine Mitgliedschaft kann enden, eine Tätigkeit wegfallen, der
+Eintrag gelöscht oder von einem anderen Antrag schon verschoben worden sein.
+In all diesen Fällen bleibt nur die Ablehnung.
+
+**Protokoll und Benachrichtigung.** Antrag, jede der beiden Zustimmungen,
+eine Ablehnung, die Rücknahme und der vollzogene Wechsel stehen im
+Änderungsprotokoll; beim Wechsel selbst mit alter und neuer Gruppe als Vorher
+und Nachher. Mails laufen über dieselbe Einstellung wie die übrigen
+Korrekturanträge, `CORRECTION_EMAILS_ENABLED`, und gehen immer an die Stelle,
+die am Zug ist: erst an die Admins der bisherigen Gruppe, nach deren
+Zustimmung an die der gewünschten, am Ende an den Antragsteller. Ohne
+Mailserver genügt der Zähler in der Navigation, der beide Stufen mitzählt.

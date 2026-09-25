@@ -4,14 +4,17 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"nav": {}}
 
+    from apps.corrections import services as correction_services
     from apps.corrections.models import CorrectionRequest
     from apps.reminders import services as reminder_services
 
     admin_group_ids = user.administrated_group_ids()
     pending = 0
     if admin_group_ids:
+        # Beim Gruppenwechsel eines Eintrags zählt auch, was auf die
+        # Zustimmung der eigenen Gruppe als Zielgruppe wartet (Issue 37).
         pending = CorrectionRequest.objects.filter(
-            group_id__in=admin_group_ids, status=CorrectionRequest.Status.PENDING
+            correction_services.decidable_filter(admin_group_ids)
         ).count()
 
     # Entscheidungen zu eigenen Anträgen, die der Nutzer noch nicht gesehen

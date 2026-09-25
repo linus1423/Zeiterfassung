@@ -7,7 +7,11 @@
 <div class="card">
   <div class="card-head">
     <h2>Bisher erfasst</h2>
-    <a class="card-note" href="{% url 'corrections:request_delete' entry.pk %}">Stattdessen Löschung beantragen</a>
+    <span class="card-note">
+      Stattdessen
+      <a href="{% url 'corrections:request_delete' entry.pk %}">Löschung beantragen</a> ·
+      <a href="{% url 'corrections:request_move' entry.pk %}">Gruppe wechseln</a>
+    </span>
   </div>
   <p>
     <strong>{{ entry.start|date:"d.m.Y H:i" }} bis {{ entry.end|date:"H:i" }}</strong> ·

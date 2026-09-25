@@ -429,7 +429,8 @@ table.facts thead { display: none; }
   color: var(--warn);
   font-variant-numeric: tabular-nums;
 }
-.badge.pending { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.badge.pending,
+.badge.pending_target { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
 .badge.approved { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
 .badge.rejected { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
 .badge.info { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
