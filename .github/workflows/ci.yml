@@ -27,6 +27,9 @@ jobs:
       - name: Linting
         run: ruff check .
 
+      - name: Installationsskript prüfen
+        run: shellcheck install-dnf.sh
+
       - name: Formatierung
         run: ruff format --check .
 
