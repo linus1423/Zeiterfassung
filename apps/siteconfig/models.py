@@ -1,4 +1,4 @@
-from django.core.validators import URLValidator
+from django.core.validators import DomainNameValidator, URLValidator
 from django.db import models
 from django.urls import reverse
 
@@ -163,3 +163,34 @@ class FooterLink(models.Model):
 
     def __str__(self) -> str:
         return self.label
+
+
+class MailDomain(models.Model):
+    """Eine Mail-Domäne der Organisation, etwa "firma.de".
+
+    Beim Hinzufügen zu einer Gruppe steht die Domäne in einer Auswahl, so
+    dass nur der Teil vor dem @ getippt werden muss. Ist keine Domäne
+    hinterlegt, bleibt es bei der Eingabe der ganzen Adresse.
+    """
+
+    domain = models.CharField(
+        "Domäne",
+        max_length=253,
+        unique=True,
+        validators=[DomainNameValidator(accept_idna=False)],
+        help_text="Nur der Teil nach dem @, zum Beispiel firma.de.",
+    )
+
+    class Meta:
+        verbose_name = "Mail-Domäne"
+        verbose_name_plural = "Mail-Domänen"
+        ordering = ["domain"]
+
+    def __str__(self) -> str:
+        return self.domain
+
+    def save(self, *args, **kwargs):
+        # Adressen werden ohne Rücksicht auf Groß- und Kleinschreibung
+        # verglichen; "Firma.de" und "firma.de" wären sonst zwei Einträge.
+        self.domain = self.domain.strip().lower()
+        super().save(*args, **kwargs)

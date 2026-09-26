@@ -6,8 +6,8 @@ from django.shortcuts import redirect, render
 
 from apps.audit.models import AuditLog, log
 
-from .forms import FooterLinkFormSet, SiteSettingsForm
-from .models import FooterLink, SiteSettings
+from .forms import FooterLinkFormSet, MailDomainFormSet, SiteSettingsForm
+from .models import FooterLink, MailDomain, SiteSettings
 
 # Ein Logo ändert sich selten, und die Adresse trägt den Zeitpunkt der letzten
 # Änderung (siehe SiteSettings.logo_version). Der Browser darf es deshalb
@@ -57,6 +57,39 @@ def site_settings(request):
             "fuss_felder": FUSS_FELDER,
         },
     )
+
+
+@login_required
+def mail_domains(request):
+    """Erlaubte Mail-Domänen pflegen. Nur für System-Admins.
+
+    Die Domänen stehen beim Hinzufügen zu einer Gruppe in einer Auswahl
+    (siehe apps.groups.forms.EmailWithDomainField).
+    """
+    if not request.user.is_superuser:
+        raise PermissionDenied("Nur System-Admins dürfen die Mail-Domänen ändern.")
+
+    formset = MailDomainFormSet(
+        request.POST or None, queryset=MailDomain.objects.all(), prefix="domains"
+    )
+
+    if request.method == "POST" and formset.is_valid():
+        vorher = set(MailDomain.objects.values_list("domain", flat=True))
+        formset.save()
+        nachher = set(MailDomain.objects.values_list("domain", flat=True))
+        if vorher != nachher:
+            log(
+                AuditLog.Action.MAIL_DOMAINS_UPDATED,
+                actor=request.user,
+                changes={
+                    "hinzugefuegt": sorted(nachher - vorher),
+                    "entfernt": sorted(vorher - nachher),
+                },
+            )
+        messages.success(request, "Die Mail-Domänen sind gespeichert.")
+        return redirect("siteconfig:mail_domains")
+
+    return render(request, "siteconfig/mail_domains.html", {"formset": formset})
 
 
 def logo(request):
