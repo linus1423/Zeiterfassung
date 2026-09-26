@@ -172,8 +172,11 @@ pruefe_pfad() {
 }
 pruefe_pfad_leer() { [ -z "$1" ] || pruefe_pfad "$1"; }
 pruefe_port() {
-    [[ "$1" =~ ^[0-9]{4,5}$ ]] && [ "$1" -ge 1024 ] && [ "$1" -le 65535 ] ||
-        { warnung "Port zwischen 1024 und 65535 erwartet."; return 1; }
+    if [[ "$1" =~ ^[0-9]{4,5}$ ]] && [ "$1" -ge 1024 ] && [ "$1" -le 65535 ]; then
+        return 0
+    fi
+    warnung "Port zwischen 1024 und 65535 erwartet."
+    return 1
 }
 pruefe_domain() {
     [[ "$1" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] ||
@@ -354,8 +357,9 @@ argumente() {
 voraussetzungen() {
     schritt "Voraussetzungen prüfen"
     [ "$(id -u)" -eq 0 ] || fehler "Bitte mit sudo aufrufen: sudo $0"
-    [ -f "$QUELLVERZEICHNIS/Dockerfile" ] && [ -d "$QUELLVERZEICHNIS/deploy/quadlet" ] ||
+    if [ ! -f "$QUELLVERZEICHNIS/Dockerfile" ] || [ ! -d "$QUELLVERZEICHNIS/deploy/quadlet" ]; then
         fehler "Das Skript muss im geklonten Repository liegen ($QUELLVERZEICHNIS)."
+    fi
     command -v dnf >/dev/null || fehler "dnf nicht gefunden. Dieses Skript ist für Fedora und AlmaLinux."
 
     # shellcheck disable=SC1091
