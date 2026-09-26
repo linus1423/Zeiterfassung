@@ -10,6 +10,7 @@ urlpatterns = [
     path("profil/", views.profile, name="profile"),
     path("nutzer/", views.user_list, name="user_list"),
     path("nutzer/<int:user_id>/", views.user_edit, name="user_edit"),
+    path("nutzer/<int:user_id>/gruppen/", views.user_groups, name="user_groups"),
 ]
 
 # Der Notfallzugang existiert nur, wenn er ausdrücklich eingeschaltet ist

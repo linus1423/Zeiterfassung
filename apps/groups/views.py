@@ -24,6 +24,7 @@ from .forms import (
     GroupSettingsForm,
     MembershipForm,
 )
+from .membership import removal_blocker, role_change_blocker
 from .models import Activity, GroupMembership, PeriodLock
 from .periods import period_for
 from .permissions import readable_groups, require_group_admin, require_group_read
@@ -311,16 +312,13 @@ def member_role(request, group_id, membership_id):
     group = require_group_admin(request.user, group_id)
     membership = get_object_or_404(GroupMembership, pk=membership_id, group=group)
 
-    if (
-        membership.is_admin
-        and group.memberships.filter(role=GroupMembership.Role.ADMIN).count() == 1
-    ):
-        messages.error(request, "Die Gruppe braucht mindestens einen Admin.")
+    role = GroupMembership.Role.MEMBER if membership.is_admin else GroupMembership.Role.ADMIN
+    blocker = role_change_blocker(membership, role)
+    if blocker:
+        messages.error(request, blocker)
         return redirect("groups:members", group_id=group.pk)
 
-    membership.role = (
-        GroupMembership.Role.MEMBER if membership.is_admin else GroupMembership.Role.ADMIN
-    )
+    membership.role = role
     membership.save(update_fields=["role"])
     messages.success(request, f"Rolle von {membership.user} geändert.")
     return redirect("groups:members", group_id=group.pk)
@@ -332,17 +330,9 @@ def member_remove(request, group_id, membership_id):
     group = require_group_admin(request.user, group_id)
     membership = get_object_or_404(GroupMembership, pk=membership_id, group=group)
 
-    if TimeEntry.objects.open().filter(user=membership.user, group=group).exists():
-        messages.error(
-            request, "Der Nutzer ist gerade eingestempelt und kann nicht entfernt werden."
-        )
-        return redirect("groups:members", group_id=group.pk)
-
-    if (
-        membership.is_admin
-        and group.memberships.filter(role=GroupMembership.Role.ADMIN).count() == 1
-    ):
-        messages.error(request, "Die Gruppe braucht mindestens einen Admin.")
+    blocker = removal_blocker(membership)
+    if blocker:
+        messages.error(request, blocker)
         return redirect("groups:members", group_id=group.pk)
 
     user = membership.user
