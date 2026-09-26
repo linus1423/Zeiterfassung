@@ -52,4 +52,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["python", "/app/docker/healthcheck.py"]
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
-CMD ["gunicorn", "zeiterfassung.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# gunicorn 26 legt sonst einen Steuer-Socket unter $HOME/.gunicorn/ an. Das
+# scheitert im schreibgeschützten Container und wird nicht gebraucht.
+CMD ["gunicorn", "zeiterfassung.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--no-control-socket"]
