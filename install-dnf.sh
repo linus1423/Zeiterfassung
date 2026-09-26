@@ -163,8 +163,10 @@ ja_nein() {
 # Werte landen in Unit-Dateien, in der env-Datei (ohne Anführungszeichen) und
 # in der nginx-Konfiguration. Deshalb eng prüfen statt später zu maskieren.
 pruefe_benutzer() {
-    [[ "$1" =~ ^[a-z_][a-z0-9_-]{0,30}$ && "$1" != root ]] ||
-        { warnung "Nur Kleinbuchstaben, Ziffern, _ und -, nicht root."; return 1; }
+    # Ein Punkt ist erlaubt, aber nicht am Anfang oder Ende (vorn wäre die
+    # Datei versteckt, hinten stolpern manche Werkzeuge darüber).
+    [[ "$1" =~ ^[a-z_][a-z0-9_-]*(\.[a-z0-9_-]+)?$ && ${#1} -le 32 && "$1" != root ]] ||
+        { warnung "Nur Kleinbuchstaben, Ziffern, _ und -, dazu ein Punkt in der Mitte; nicht root."; return 1; }
 }
 pruefe_pfad() {
     [[ "$1" =~ ^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$ && "$1" != *..* ]] ||
@@ -546,7 +548,8 @@ dienstbenutzer() {
 
     local neu_zugeteilt=false datei start
     for datei in /etc/subuid /etc/subgid; do
-        if ! grep -q "^${BENUTZER}:" "$datei" 2>/dev/null; then
+        # awk statt grep: ein Punkt im Namen wäre für grep ein Platzhalter.
+        if ! awk -F: -v u="$BENUTZER" '$1 == u { f = 1 } END { exit !f }' "$datei" 2>/dev/null; then
             # Hinter dem höchsten vergebenen Bereich weitermachen.
             start="$(awk -F: 'BEGIN { m = 100000 } { e = $2 + $3; if (e > m) m = e } END { print m }' \
                 "$datei" 2>/dev/null || echo 100000)"
