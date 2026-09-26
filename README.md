@@ -323,7 +323,29 @@ zusätzliches Volume.
 
 ## Betrieb
 
-### Docker Compose
+### Podman mit Quadlet (Standard)
+
+Der vorgesehene Betrieb: rootless Podman, gestartet von systemd über Quadlet. Die Unit-Dateien liegen in
+`deploy/quadlet/`, die Anleitung in
+[docs/podman-quadlet.md](docs/podman-quadlet.md). Docker Compose (unten) benutzt
+dasselbe Image und denselben Einstiegspunkt.
+
+Auf Fedora, AlmaLinux, Rocky oder RHEL erledigt `install-dnf.sh` die ganze
+Anleitung in einem Durchgang: Pakete, Dienstbenutzer, Image, Geheimnisse,
+Konfiguration, Units, Timer und auf Wunsch nginx mit HTTPS.
+
+```bash
+git clone https://github.com/linus1423/Zeiterfassung.git
+cd Zeiterfassung
+sudo ./install-dnf.sh
+```
+
+Einzelheiten unter [Installation mit
+install-dnf.sh](docs/podman-quadlet.md#installation-mit-install-dnfsh).
+
+### Docker Compose (Alternative)
+
+Für Entwicklung und für Hosts ohne Podman und systemd.
 
 ```bash
 docker compose up --build
@@ -338,26 +360,6 @@ Die Migrationen legen unter PostgreSQL die Erweiterung `btree_gist` an; das
 Datenbankkonto muss das dürfen (Eigentümer der Datenbank oder Superuser). Sie
 trägt die Bedingung, dass sich die Zeiten einer Person nicht überschneiden
 dürfen.
-
-### Podman mit Quadlet
-
-Derselbe Aufbau läuft rootless unter systemd. Die Unit-Dateien liegen in
-`deploy/quadlet/`, die Anleitung in
-[docs/podman-quadlet.md](docs/podman-quadlet.md). Beide Wege benutzen dasselbe
-Image und denselben Einstiegspunkt.
-
-Auf Fedora, AlmaLinux, Rocky oder RHEL erledigt `install-dnf.sh` die ganze
-Anleitung in einem Durchgang: Pakete, Dienstbenutzer, Image, Geheimnisse,
-Konfiguration, Units, Timer und auf Wunsch nginx mit HTTPS.
-
-```bash
-git clone https://github.com/linus1423/Zeiterfassung.git
-cd Zeiterfassung
-sudo ./install-dnf.sh
-```
-
-Einzelheiten unter [Installation mit
-install-dnf.sh](docs/podman-quadlet.md#installation-mit-install-dnfsh).
 
 ### Zustand prüfen
 

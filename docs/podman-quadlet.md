@@ -1,7 +1,8 @@
 # Betrieb mit Podman und Quadlet
 
-Die Zeiterfassung läuft mit Docker Compose (`docker compose up --build`) und
-mit rootless Podman unter systemd. Beide Wege benutzen dasselbe Image und
+Der Standardbetrieb der Zeiterfassung ist rootless Podman unter systemd, mit
+Quadlet-Units. Docker Compose (`docker compose up --build`) bleibt als
+Alternative, etwa für die Entwicklung. Beide Wege benutzen dasselbe Image und
 denselben Einstiegspunkt, es gibt also keine zweite Variante des Codes.
 
 Die Unit-Dateien liegen in [`deploy/quadlet/`](../deploy/quadlet).
