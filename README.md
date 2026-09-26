@@ -323,7 +323,29 @@ zusätzliches Volume.
 
 ## Betrieb
 
-### Docker Compose
+### Podman mit Quadlet (Standard)
+
+Der vorgesehene Betrieb: rootless Podman, gestartet von systemd über Quadlet. Die Unit-Dateien liegen in
+`deploy/quadlet/`, die Anleitung in
+[docs/podman-quadlet.md](docs/podman-quadlet.md). Docker Compose (unten) benutzt
+dasselbe Image und denselben Einstiegspunkt.
+
+Auf Fedora, AlmaLinux, Rocky oder RHEL erledigt `install-dnf.sh` die ganze
+Anleitung in einem Durchgang: Pakete, Dienstbenutzer, Image, Geheimnisse,
+Konfiguration, Units, Timer und auf Wunsch nginx mit HTTPS.
+
+```bash
+git clone https://github.com/linus1423/Zeiterfassung.git
+cd Zeiterfassung
+sudo ./install-dnf.sh
+```
+
+Einzelheiten unter [Installation mit
+install-dnf.sh](docs/podman-quadlet.md#installation-mit-install-dnfsh).
+
+### Docker Compose (Alternative)
+
+Für Entwicklung und für Hosts ohne Podman und systemd.
 
 ```bash
 docker compose up --build
@@ -338,13 +360,6 @@ Die Migrationen legen unter PostgreSQL die Erweiterung `btree_gist` an; das
 Datenbankkonto muss das dürfen (Eigentümer der Datenbank oder Superuser). Sie
 trägt die Bedingung, dass sich die Zeiten einer Person nicht überschneiden
 dürfen.
-
-### Podman mit Quadlet
-
-Derselbe Aufbau läuft rootless unter systemd. Die Unit-Dateien liegen in
-`deploy/quadlet/`, die Anleitung in
-[docs/podman-quadlet.md](docs/podman-quadlet.md). Beide Wege benutzen dasselbe
-Image und denselben Einstiegspunkt.
 
 ### Zustand prüfen
 
@@ -493,7 +508,8 @@ benutzt es einmal wirklich: er startet es gegen ein frisches PostgreSQL,
 wartet auf `/readyz`, sichert die Datenbank und spielt sie zurück. Damit ist
 belegt, dass `pg_dump` und `psql` im Image liegen und der Weg hin und zurück
 funktioniert. Anschließend werden `docker-compose.yml` und die Quadlet-Units
-aus `deploy/quadlet/` geprüft.
+aus `deploy/quadlet/` geprüft. `install-dnf.sh` prüft der erste Auftrag mit
+`shellcheck`.
 
 ## Aufbau
 
@@ -509,6 +525,7 @@ apps/siteconfig/    Kopf- und Fußzeile: Firma, Logo, Impressum, Datenschutz
 templates/          Oberfläche (Django-Templates)
 docker/             Einstiegspunkt und Healthcheck des Containers
 deploy/quadlet/     systemd-Units für den Betrieb mit Podman
+install-dnf.sh      Installation auf Fedora und AlmaLinux (Podman und Quadlet)
 ```
 
 Die Regeln stehen in `services.py` der jeweiligen App, nicht in den Views.

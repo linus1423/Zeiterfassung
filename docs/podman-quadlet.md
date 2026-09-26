@@ -1,10 +1,75 @@
 # Betrieb mit Podman und Quadlet
 
-Die Zeiterfassung läuft mit Docker Compose (`docker compose up --build`) und
-mit rootless Podman unter systemd. Beide Wege benutzen dasselbe Image und
+Der Standardbetrieb der Zeiterfassung ist rootless Podman unter systemd, mit
+Quadlet-Units. Docker Compose (`docker compose up --build`) bleibt als
+Alternative, etwa für die Entwicklung. Beide Wege benutzen dasselbe Image und
 denselben Einstiegspunkt, es gibt also keine zweite Variante des Codes.
 
 Die Unit-Dateien liegen in [`deploy/quadlet/`](../deploy/quadlet).
+
+## Installation mit install-dnf.sh
+
+Auf Fedora, AlmaLinux, Rocky und RHEL macht `install-dnf.sh` im Wurzelverzeichnis
+des Repositorys alle Schritte dieser Anleitung in einem Durchgang:
+
+```bash
+git clone https://github.com/linus1423/Zeiterfassung.git
+cd Zeiterfassung
+sudo ./install-dnf.sh
+```
+
+Das Skript fragt zuerst alles ab, zeigt eine Zusammenfassung und legt erst
+nach der Bestätigung los:
+
+| Frage | Vorgabe |
+|---|---|
+| Dienstbenutzer | `zeiterfassung` |
+| Verzeichnis für die Quellen | `~/zeiterfassung` des Dienstbenutzers |
+| Verzeichnis für die Sicherungen | `~/zeiterfassung-sicherungen` |
+| Verzeichnis für die Datenbank | leer, also das Volume `zeiterfassung-pgdata` |
+| lokaler Port | `8000`, nur an `127.0.0.1` |
+| öffentlicher Hostname | `hostname -f` |
+| Keycloak, Entra ID | Client-ID, Realm-URL bzw. Tenant-ID; leer heißt aus |
+| Mailversand | aus; sonst Server, Port, Benutzer, Absender |
+| nginx mit HTTPS | ja; Zertifikat und Schlüssel, leer erzeugt ein selbstsigniertes |
+
+Danach installiert es mit `dnf` Podman (mindestens 4.7), `openssl`, `curl`
+und auf Wunsch nginx, legt den Dienstbenutzer mit Subuid-Bereich und
+Lingering an, kopiert die Quellen in dessen Verzeichnis und baut dort das
+Image. Das Datenbankpasswort und `DJANGO_SECRET_KEY` erzeugt es selbst, die
+Client-Secrets von Keycloak und Entra ID und das Mailpasswort fragt es verdeckt
+ab. Alle landen als `podman secret` beim Dienstbenutzer und werden als Datei in
+die Container gehängt (siehe unten); das Skript hängt die nötigen
+`Secret=`-Zeilen selbst an die Units. Zum Schluss startet es Datenbank,
+Webdienst und die beiden Timer, wartet auf `/readyz`, richtet nginx mit
+SELinux-Schalter und Firewall ein und bietet an, gleich ein System-Admin-Konto
+anzulegen.
+
+**Erneut aufrufen spielt eine neue Version ein.** Nach `git pull` einfach
+`sudo ./install-dnf.sh` wiederholen: die Antworten des letzten Laufs stehen in
+`/etc/zeiterfassung/install.conf` und werden als Vorgabe angeboten, eigene
+Zeilen in der `zeiterfassung.env` bleiben stehen (die alte Fassung liegt als
+`.bak` daneben), vorhandene Geheimnisse ebenso. Ein leeres Client-Secret heißt
+„bisheriges behalten“. Das Datenbankpasswort ersetzt das Skript nie, weil es
+nicht mehr zur bestehenden Datenbank passen würde.
+
+**Ohne Rückfragen**, etwa aus Ansible: `--ja`. Die Vorgaben lassen sich dann
+über Umgebungsvariablen setzen, die Liste zeigt `./install-dnf.sh --hilfe`:
+
+```bash
+sudo ZE_DOMAIN=zeit.example.org \
+     KEYCLOAK_CLIENT_ID=zeiterfassung \
+     KEYCLOAK_SERVER_URL=https://keycloak.example.org/realms/verein \
+     KEYCLOAK_CLIENT_SECRET="$(cat keycloak-secret)" \
+     ./install-dnf.sh --ja
+```
+
+Das Quellverzeichnis wird bei jedem Lauf geleert und neu befüllt. Deshalb
+lehnt das Skript ein Verzeichnis ab, das schon etwas anderes enthält, und
+eines, in dem Home, Sicherungen oder Datenbank liegen.
+
+Die Abschnitte unten beschreiben dieselben Schritte von Hand, für andere
+Distributionen und für alle, die wissen wollen, was das Skript tut.
 
 ## Was Quadlet anders macht als Compose
 
@@ -123,16 +188,20 @@ Ob die Units fehlerfrei übersetzt wurden, zeigt:
 ### 5. Starten
 
 ```bash
-systemctl --user enable --now zeiterfassung-db.service zeiterfassung-web.service
+systemctl --user start zeiterfassung-db.service zeiterfassung-web.service
 systemctl --user enable --now zeiterfassung-scheduler.timer
 
 systemctl --user status zeiterfassung-web.service
 podman ps
 ```
 
-`enable --now` statt `start`: `WantedBy=default.target` in den Units wirkt erst,
-wenn die Unit auch eingeschaltet ist. Sonst laufen die Dienste zwar jetzt, aber
-nach einem Neustart des Servers nicht mehr, auch mit Lingering nicht.
+Die Dienste mit `start`, die Timer mit `enable --now`. Die Dienste erzeugt
+Quadlet, und erzeugte Units lehnt `systemctl enable` ab („Unit … is transient
+or generated“). Das Einschalten übernimmt dort der Abschnitt `[Install]` mit
+`WantedBy=default.target` in der `.container`-Datei: Quadlet legt die
+Verknüpfung beim `daemon-reload` selbst an, mit Lingering starten die Dienste
+dann auch nach einem Neustart des Servers. Die Timer sind gewöhnliche Units und
+brauchen `enable`.
 
 Der erste Start dauert länger: der Webcontainer wartet auf die Datenbank und
 wendet die Migrationen an (`journalctl --user -u zeiterfassung-web -f`).
