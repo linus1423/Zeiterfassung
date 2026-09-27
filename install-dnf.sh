@@ -258,6 +258,13 @@ fuege_nach() {
     rm -f "$tmp"
 }
 
+# git im Klon, aus dem installiert wird. Der Klon gehört oft einem anderen
+# Benutzer als root; ohne safe.directory lehnt git ihn dann ab.
+git_im_klon() {
+    command -v git >/dev/null || return 1
+    git -c safe.directory="$QUELLVERZEICHNIS" -C "$QUELLVERZEICHNIS" "$@" 2>/dev/null
+}
+
 zufall() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$1" || true; }
 
 # version_ab IST MINDESTENS
@@ -520,7 +527,8 @@ EOF
 
 pakete() {
     schritt "Pakete installieren"
-    local liste=(podman tar openssl curl)
+    # git braucht erst update.sh, um neue Versionen zu holen.
+    local liste=(podman tar openssl curl git)
     $NGINX && liste+=(nginx)
     dnf install -y "${liste[@]}"
 
@@ -588,12 +596,15 @@ image_bauen() {
     # root liest den Klon (der oft unter /root liegt), ausgepackt wird als
     # Dienstbenutzer in das geleerte Verzeichnis. Lokale Daten wie .env, eine
     # SQLite-Datenbank oder eine virtuelle Umgebung kommen nicht mit.
-    # shellcheck disable=SC2016 # $1 und $2 gehören der inneren Shell.
+    # In der Marke steht die eingespielte Version, update.sh vergleicht damit.
+    local version
+    version="$(git_im_klon rev-parse HEAD || echo unbekannt)"
+    # shellcheck disable=SC2016 # $1 bis $3 gehören der inneren Shell.
     tar -C "$QUELLVERZEICHNIS" -cf - \
         --exclude=./.git --exclude=./.env --exclude=./.venv --exclude=./venv \
         --exclude='./*.sqlite3' --exclude=./backups --exclude=./staticfiles . |
-        als_dienst sh -c 'find "$1" -mindepth 1 -delete && tar -C "$1" --no-same-owner -xf - && touch "$1/$2"' \
-            auspacken "$ZE_QUELLEN" "$QUELLEN_MARKE"
+        als_dienst sh -c 'find "$1" -mindepth 1 -delete && tar -C "$1" --no-same-owner -xf - && printf "%s\n" "$3" >"$1/$2"' \
+            auspacken "$ZE_QUELLEN" "$QUELLEN_MARKE" "$version"
     ok "nach $ZE_QUELLEN kopiert"
 
     info "Der erste Bau lädt Python, die PostgreSQL-Werkzeuge und die Abhängigkeiten,"
@@ -715,6 +726,16 @@ konfiguration() {
     schreibe_als_dienst "$ENV_DATEI" 600 <"$f"
     rm -f "$f"
     ok "geschrieben"
+
+    # Woher update.sh neue Versionen holt: derselbe Klon, derselbe Branch.
+    local repo ref
+    repo="$(git_im_klon remote get-url origin || true)"
+    ref="$(git_im_klon symbolic-ref --short HEAD || true)"
+    [[ "$repo" =~ ^[^[:space:]\"\'\\]+$ ]] || repo="https://github.com/linus1423/Zeiterfassung.git"
+    [[ "$ref" =~ ^[A-Za-z0-9._/-]+$ && "$ref" != -* ]] || ref="main"
+    printf '# Von install-dnf.sh, gelesen von update.sh.\nREPO_URL=%s\nREF=%s\n' "$repo" "$ref" |
+        schreibe_als_dienst "$(dirname "$ENV_DATEI")/update.conf" 644
+    ok "update.conf: $repo ($ref)"
 }
 
 datenverzeichnisse() {
@@ -915,7 +936,9 @@ abschluss() {
     info "Befehle als Dienstbenutzer, zum Beispiel:"
     info "  $als journalctl --user -u zeiterfassung-web -f"
     info "  $als podman exec -it zeiterfassung-web python manage.py createsuperuser"
-    info "Neue Version: im geklonten Repository git pull, dann sudo ./install-dnf.sh."
+    info "Neue Version ohne root:"
+    info "  sudo -u $BENUTZER $ZE_QUELLEN/update.sh"
+    info "Nach Änderungen an Paketen oder nginx weiterhin sudo ./install-dnf.sh."
     printf '\n'
     warnung "Die erzeugten Geheimnisse liegen nur in Podman. Ohne DJANGO_SECRET_KEY und"
     warnung "Datenbankpasswort taugt eine Sicherung nur halb; was zusätzlich gesichert"

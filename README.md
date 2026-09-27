@@ -340,8 +340,15 @@ cd Zeiterfassung
 sudo ./install-dnf.sh
 ```
 
+Neue Versionen spielt danach `update.sh` ohne root ein, als Dienstbenutzer:
+
+```bash
+sudo -u zeiterfassung ~zeiterfassung/zeiterfassung/update.sh
+```
+
 Einzelheiten unter [Installation mit
-install-dnf.sh](docs/podman-quadlet.md#installation-mit-install-dnfsh).
+install-dnf.sh](docs/podman-quadlet.md#installation-mit-install-dnfsh) und
+[Update mit update.sh](docs/podman-quadlet.md#update-mit-updatesh).
 
 ### Docker Compose (Alternative)
 
@@ -508,8 +515,8 @@ benutzt es einmal wirklich: er startet es gegen ein frisches PostgreSQL,
 wartet auf `/readyz`, sichert die Datenbank und spielt sie zurück. Damit ist
 belegt, dass `pg_dump` und `psql` im Image liegen und der Weg hin und zurück
 funktioniert. Anschließend werden `docker-compose.yml` und die Quadlet-Units
-aus `deploy/quadlet/` geprüft. `install-dnf.sh` prüft der erste Auftrag mit
-`shellcheck`.
+aus `deploy/quadlet/` geprüft. `install-dnf.sh` und `update.sh` prüft der erste
+Auftrag mit `shellcheck`.
 
 ## Aufbau
 
@@ -526,6 +533,7 @@ templates/          Oberfläche (Django-Templates)
 docker/             Einstiegspunkt und Healthcheck des Containers
 deploy/quadlet/     systemd-Units für den Betrieb mit Podman
 install-dnf.sh      Installation auf Fedora und AlmaLinux (Podman und Quadlet)
+update.sh           neue Version einspielen, ohne root
 ```
 
 Die Regeln stehen in `services.py` der jeweiligen App, nicht in den Views.

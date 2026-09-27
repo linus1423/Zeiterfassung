@@ -45,9 +45,11 @@ Webdienst und die beiden Timer, wartet auf `/readyz`, richtet nginx mit
 SELinux-Schalter und Firewall ein und bietet an, gleich ein System-Admin-Konto
 anzulegen.
 
-**Erneut aufrufen spielt eine neue Version ein.** Nach `git pull` einfach
-`sudo ./install-dnf.sh` wiederholen: die Antworten des letzten Laufs stehen in
-`/etc/zeiterfassung/install.conf` und werden als Vorgabe angeboten, eigene
+**Erneut aufrufen ändert die Installation.** Für eine neue Version reicht
+`update.sh` ohne root (nächster Abschnitt). `sudo ./install-dnf.sh` braucht es
+wieder für andere Antworten, neue Pakete oder nginx. Die Antworten des letzten
+Laufs stehen in `/etc/zeiterfassung/install.conf` und werden als Vorgabe
+angeboten, eigene
 Zeilen in der `zeiterfassung.env` bleiben stehen (die alte Fassung liegt als
 `.bak` daneben), vorhandene Geheimnisse ebenso. Ein leeres Client-Secret heißt
 „bisheriges behalten“. Das Datenbankpasswort ersetzt das Skript nie, weil es
@@ -67,6 +69,53 @@ sudo ZE_DOMAIN=zeit.example.org \
 Das Quellverzeichnis wird bei jedem Lauf geleert und neu befüllt. Deshalb
 lehnt das Skript ein Verzeichnis ab, das schon etwas anderes enthält, und
 eines, in dem Home, Sicherungen oder Datenbank liegen.
+
+## Update mit update.sh
+
+`install-dnf.sh` legt `update.sh` mit den Quellen beim Dienstbenutzer ab. Das
+Skript läuft ohne root, weil dem Dienstbenutzer alles gehört, was ein Update
+anfasst:
+
+```bash
+sudo -u zeiterfassung ~zeiterfassung/zeiterfassung/update.sh
+```
+
+Als root aufgerufen wechselt es selbst zum Dienstbenutzer aus
+`/etc/zeiterfassung/install.conf`. Es holt die neue Version mit git aus dem
+Repository und Branch, aus dem installiert wurde (eingetragen in
+`~/.config/zeiterfassung/update.conf`), und zeigt die laufende und die neue
+Version. Läuft die neue schon, endet es ohne Änderung. Sonst, nach einer
+Rückfrage:
+
+1. Die neuen Units vorbereiten und mit Quadlet prüfen. Die Anpassungen der
+   Installation bleiben: Port, Verzeichnisse für Sicherungen und Datenbank,
+   die zusätzlichen `Secret=`-Zeilen für Keycloak, Entra ID und Mail. Ist
+   etwas nicht übersetzbar, endet das Skript hier, ohne etwas zu ändern.
+2. Die Datenbank sichern (`zeiterfassung-backup.service`), denn Migrationen
+   lassen sich nicht zurücknehmen.
+3. Quellen ersetzen und das Image bauen. Das bisherige Image bleibt als
+   `localhost/zeiterfassung:vorher`.
+4. Die Units einsetzen, den Webdienst neu starten und auf `/readyz` warten.
+   Scheduler und Sicherung nehmen das neue Image beim nächsten Lauf.
+
+Kommt der Webdienst nicht hoch, nennt das Skript den Weg zurück: `podman tag
+localhost/zeiterfassung:vorher localhost/zeiterfassung:latest` und neu starten;
+haben die Migrationen die Datenbank schon verändert, zusätzlich die Sicherung
+von eben zurückspielen. Kennt die neue Version Einstellungen, die in der
+`zeiterfassung.env` fehlen, listet es sie zum Schluss auf (es gilt ihre
+Vorgabe).
+
+| Option | Bedeutung |
+|---|---|
+| `--quelle DIR` | neue Version aus einem Verzeichnis statt mit git |
+| `--ref REF` | anderer Branch oder Tag |
+| `--ohne-sicherung` | vorher nicht sichern |
+| `--erzwingen` | auch bauen, wenn die Version schon läuft |
+| `--ja` | keine Rückfrage |
+
+Was root braucht, macht `update.sh` nicht: Podman und andere Pakete
+aktualisiert `dnf`, nginx und neue Fragen der Installation erledigt weiterhin
+`sudo ./install-dnf.sh`.
 
 Die Abschnitte unten beschreiben dieselben Schritte von Hand, für andere
 Distributionen und für alle, die wissen wollen, was das Skript tut.
@@ -289,7 +338,7 @@ podman healthcheck run zeiterfassung-web
 podman inspect --format '{{.State.Health.Status}}' zeiterfassung-db
 ```
 
-**Neue Version einspielen**
+**Neue Version einspielen** geht mit `update.sh` (siehe oben), von Hand so:
 
 ```bash
 git pull
