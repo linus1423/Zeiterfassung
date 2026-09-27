@@ -14,13 +14,6 @@
     <tbody>
       <tr><th>Name</th><td>{{ person.full_name }}</td></tr>
       <tr><th>E-Mail</th><td>{{ person.email }}</td></tr>
-      <tr><th>Gruppen</th>
-        <td>
-          {% for membership in memberships %}
-            {{ membership.group.name }} ({{ membership.get_role_display }}){% if not forloop.last %}, {% endif %}
-          {% empty %}keine{% endfor %}
-        </td>
-      </tr>
     </tbody>
   </table>
   <p class="help">Name und E-Mail kommen aus dem Identity-Provider und lassen sich hier nicht ändern.</p>
@@ -36,5 +29,21 @@
       <a class="button" href="{% url 'accounts:user_list' %}">Abbrechen</a>
     </div>
   </form>
+</div>
+
+<div class="card">
+  <h2>Gruppen</h2>
+  {% if groups_form.fields %}
+    <form method="post" action="{% url 'accounts:user_groups' person.pk %}">
+      {% csrf_token %}
+      {{ groups_form.as_p }}
+      <div class="actions">
+        <button class="primary" type="submit">Gruppen speichern</button>
+      </div>
+    </form>
+    <p class="help">Wer gerade eingestempelt ist, kann aus dieser Gruppe nicht entfernt werden, und jede Gruppe behält mindestens einen Admin.</p>
+  {% else %}
+    <p class="empty">Es gibt noch keine aktive Gruppe.</p>
+  {% endif %}
 </div>
 {% endblock %}

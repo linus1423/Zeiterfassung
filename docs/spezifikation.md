@@ -697,6 +697,15 @@ weiterhin aus dem Identity-Provider und sind nicht änderbar. Jede Änderung
 steht im Protokoll (`user_updated`). Die Mitgliederliste einer Gruppe zeigt die
 Personalnummer mit, damit ein Gruppen-Admin sieht, wo sie fehlt.
 
+Seit dem 26.09.2026 setzt der System-Admin auf derselben Seite auch die
+Gruppenzugehörigkeit: je aktiver Gruppe "Kein Mitglied", "Mitglied" oder
+"Gruppen-Admin". Es gelten die Regeln der Mitgliederseite einer Gruppe
+(`apps/groups/membership.py`): wer eingestempelt ist, bleibt in der Gruppe,
+und jede Gruppe behält mindestens einen Admin. Verletzt eine Auswahl das,
+wird nichts gespeichert. Neue Mitgliedschaften gelten als "Im Tool
+zugeordnet"; die Änderung steht als `user_updated` mit vorher/nachher im
+Protokoll.
+
 **Tätigkeit wechseln** (Issue 30, Rückfrage 8). Im Zustand "arbeitet" gibt es
 auf der Stempeluhr die Auswahl "Tätigkeit wechseln". Der laufende Eintrag wird
 beendet und im selben Moment ein neuer mit der neuen Tätigkeit begonnen, ohne

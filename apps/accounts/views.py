@@ -8,6 +8,7 @@ from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,7 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.audit.models import AuditLog, log
 
-from .forms import EmergencyLoginForm, UserSearchForm, UserStammdatenForm
+from .forms import EmergencyLoginForm, UserGroupsForm, UserSearchForm, UserStammdatenForm
 
 User = get_user_model()
 
@@ -115,12 +116,53 @@ def user_edit(request, user_id):
         messages.success(request, f"Stammdaten von {person.full_name} gespeichert.")
         return redirect("accounts:user_list")
 
-    memberships = person.memberships().select_related("group").order_by("group__name")
+    return _render_user_form(request, person, form=form)
+
+
+def _render_user_form(request, person, form=None, groups_form=None):
     return render(
         request,
         "accounts/user_form.html",
-        {"form": form, "person": person, "memberships": memberships},
+        {
+            "person": person,
+            "form": form or UserStammdatenForm(instance=person),
+            "groups_form": groups_form or UserGroupsForm(person),
+        },
     )
+
+
+@require_http_methods(["POST"])
+@login_required
+def user_groups(request, user_id):
+    """Gruppenzugehörigkeit eines Kontos setzen, für System-Admins.
+
+    Neue Mitgliedschaften entstehen als "Im Tool zugeordnet", wie auf der
+    Mitgliederseite einer Gruppe; "Mitglied seit" ist der Zeitpunkt des
+    Speicherns.
+    """
+    _require_system_admin(request.user)
+
+    person = get_object_or_404(User, pk=user_id)
+    with transaction.atomic():
+        # Die Zeile des Kontos sperren, damit zwei gleichzeitige Speichervorgänge
+        # nicht beide gegen denselben alten Stand prüfen.
+        User.objects.select_for_update().filter(pk=person.pk).first()
+        form = UserGroupsForm(person, request.POST)
+        if not form.is_valid():
+            return _render_user_form(request, person, groups_form=form)
+        changes = form.save()
+        if changes:
+            log(
+                AuditLog.Action.USER_UPDATED,
+                actor=request.user,
+                target=person,
+                subject=person,
+                changes=changes,
+                note="Gruppenzugehörigkeit geändert.",
+            )
+
+    messages.success(request, f"Gruppenzugehörigkeit von {person.full_name} gespeichert.")
+    return redirect("accounts:user_edit", user_id=person.pk)
 
 
 # --- Notfallzugang (Issue 51) ----------------------------------------------
