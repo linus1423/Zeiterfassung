@@ -1,9 +1,11 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.validators import validate_email
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.text import slugify
 
+from apps.siteconfig.models import MailDomain
 from apps.tracking.forms import DateTimeLocalInput
 
 from .models import Activity, Group, GroupMembership
@@ -16,6 +18,67 @@ class ActivityForm(forms.ModelForm):
     class Meta:
         model = Activity
         fields = ["name", "description", "sort_order", "is_active"]
+
+
+class EmailWithDomainWidget(forms.MultiWidget):
+    """Eingabefeld für den Teil vor dem @, daneben die Auswahl der Domäne."""
+
+    template_name = "groups/widgets/email_domain.html"
+
+    def __init__(self, domains, attrs=None):
+        choices = [(domain, domain) for domain in domains]
+        super().__init__(
+            [
+                forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}),
+                forms.Select(choices=choices, attrs={"aria-label": "Domäne"}),
+            ],
+            attrs,
+        )
+        self.domains = list(domains)
+
+    def decompress(self, value):
+        if value and "@" in value:
+            local, domain = value.rsplit("@", 1)
+            if domain in self.domains:
+                return [local, domain]
+        return [value, None]
+
+
+class EmailWithDomainField(forms.MultiValueField):
+    """Mail-Adresse aus dem Teil vor dem @ und einer hinterlegten Domäne.
+
+    Enthält die Eingabe selbst ein @, gilt sie als ganze Adresse und die
+    Auswahl wird übergangen. So lassen sich auch Konten mit einer Adresse
+    außerhalb der hinterlegten Domänen zuordnen.
+    """
+
+    def __init__(self, domains, **kwargs):
+        domains = list(domains)
+        super().__init__(
+            fields=[
+                forms.CharField(max_length=254),
+                forms.ChoiceField(choices=[(d, d) for d in domains], required=False),
+            ],
+            widget=EmailWithDomainWidget(domains),
+            require_all_fields=False,
+            **kwargs,
+        )
+
+    def compress(self, data_list):
+        if not data_list:
+            return ""
+        local, domain = (data_list + [None, None])[:2]
+        local = (local or "").strip()
+        if not local:
+            return ""
+        if "@" in local:
+            address = local
+        elif domain:
+            address = f"{local}@{domain}"
+        else:
+            raise forms.ValidationError("Bitte eine Domäne auswählen.")
+        validate_email(address)
+        return address
 
 
 class MembershipForm(forms.Form):
@@ -33,6 +96,16 @@ class MembershipForm(forms.Form):
     def __init__(self, group, *args, **kwargs):
         self.group = group
         super().__init__(*args, **kwargs)
+        domains = list(MailDomain.objects.values_list("domain", flat=True))
+        if domains:
+            self.fields["email"] = EmailWithDomainField(
+                domains,
+                label="E-Mail-Adresse des Nutzers",
+                help_text=(
+                    "Nur den Teil vor dem @ eintragen und die Domäne auswählen. "
+                    "Für eine andere Domäne die ganze Adresse eintragen."
+                ),
+            )
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()

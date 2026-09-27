@@ -3,7 +3,7 @@ from django.forms import modelformset_factory
 from django.utils import timezone
 
 from .logo import ERLAUBTE_FORMATE, MAX_LOGO_BYTES, erkenne_bildtyp
-from .models import FooterLink, SiteSettings
+from .models import FooterLink, MailDomain, SiteSettings
 
 
 class SiteSettingsForm(forms.ModelForm):
@@ -122,6 +122,27 @@ class FooterLinkForm(forms.ModelForm):
 FooterLinkFormSet = modelformset_factory(
     FooterLink,
     form=FooterLinkForm,
+    extra=2,
+    can_delete=True,
+)
+
+
+class MailDomainForm(forms.ModelForm):
+    """Eine Zeile der Liste erlaubter Mail-Domänen."""
+
+    class Meta:
+        model = MailDomain
+        fields = ["domain"]
+
+    def clean_domain(self):
+        # Wer "@firma.de" oder "Firma.de " einträgt, meint dasselbe wie
+        # "firma.de". Normalisiert wird vor der Eindeutigkeitsprüfung.
+        return self.cleaned_data["domain"].strip().lstrip("@").lower()
+
+
+MailDomainFormSet = modelformset_factory(
+    MailDomain,
+    form=MailDomainForm,
     extra=2,
     can_delete=True,
 )

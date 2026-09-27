@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Mail-Domänen{% endblock %}
+{% block content %}
+<h1>Mail-Domänen</h1>
+<p class="lead">
+  Beim Hinzufügen zu einer Gruppe wird nur der Teil vor dem @ eingetippt, die
+  Domäne steht in einer Auswahl. Ist hier keine Domäne hinterlegt, wird wie
+  bisher die ganze Adresse eingegeben.
+</p>
+
+<form method="post">{% csrf_token %}
+  <div class="card">
+    <h2>Erlaubte Domänen</h2>
+    <p class="help">Zum Beispiel firma.de. Leere Zeilen werden nicht gespeichert.</p>
+    {{ formset.management_form }}
+    {{ formset.non_form_errors }}
+    <div class="link-zeilen">
+      {% for zeile in formset %}
+        <div class="link-zeile domain-zeile">
+          {{ zeile.id }}
+          <span>{{ zeile.domain.label_tag }}{{ zeile.domain }}{{ zeile.domain.errors }}</span>
+          {% if zeile.instance.pk %}<span>{{ zeile.DELETE.label_tag }}{{ zeile.DELETE }}</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" type="submit">Speichern</button>
+  </div>
+</form>
+{% endblock %}

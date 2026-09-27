@@ -34,6 +34,7 @@ class AuditLog(models.Model):
         EMERGENCY_LOGIN = "emergency_login", "Notfallzugang genutzt"
         EMERGENCY_LOGIN_FAILED = "emergency_login_failed", "Notfallzugang gescheitert"
         SITE_SETTINGS_UPDATED = "site_settings_updated", "Darstellung geändert"
+        MAIL_DOMAINS_UPDATED = "mail_domains_updated", "Mail-Domänen geändert"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

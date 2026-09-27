@@ -834,3 +834,13 @@ footer.site .footer-links a:hover { text-decoration: underline; }
   padding: var(--space-2);
 }
 .logo-vorschau img { height: 3rem; width: auto; max-width: 16rem; display: block; }
+
+/* Mail-Domänen: eine Zeile je Domäne. */
+@media screen and (min-width: 720px) {
+  .link-zeile.domain-zeile { grid-template-columns: minmax(0, 24rem) auto; }
+}
+
+/* Adresse beim Hinzufügen zu einer Gruppe: Teil vor dem @, dann die Domäne. */
+.email-domain { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.email-domain input { flex: 1 1 12rem; min-width: 0; }
+.email-domain select { flex: 0 1 auto; }
