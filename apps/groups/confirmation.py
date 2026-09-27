@@ -22,7 +22,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Max, Prefetch, Q
 from django.utils import timezone
@@ -33,7 +32,7 @@ from apps.tracking.models import BreakEntry, TimeEntry
 from apps.tracking.utils import day_bounds
 
 from . import closing
-from .models import Group, PeriodConfirmation
+from .models import Group, GroupMembership, PeriodConfirmation
 from .periods import Period, recent_periods
 
 # Wie viele abgelaufene Zeiträume zur Auswahl stehen. Weiter zurück liegt
@@ -85,14 +84,30 @@ def may_confirm(user, group: Group) -> bool:
     return user.is_authenticated and user.is_group_member(group)
 
 
-def choosable_periods(group: Group, count: int = CHOOSABLE_PERIODS, today: date | None = None):
+def choosable_periods(
+    group: Group,
+    count: int = CHOOSABLE_PERIODS,
+    today: date | None = None,
+    since: date | None = None,
+):
     """Die abgelaufenen Zeiträume der Gruppe, der jüngste zuerst.
 
     Der laufende Zeitraum fehlt: solange er läuft, kommen noch Zeiten dazu.
+    Mit `since` fehlen auch die Zeiträume, die vor diesem Tag schon zu Ende
+    waren, etwa vor dem Beitritt der Person zur Gruppe.
     """
     today = today or timezone.localdate()
     periods = recent_periods(group, count=count + 1, today=today)
-    return [period for period in periods if period.end < today][:count]
+    finished = [period for period in periods if period.end < today]
+    if since is not None:
+        finished = [period for period in finished if period.end >= since]
+    return finished[:count]
+
+
+def joined_on(user, group: Group) -> date | None:
+    """Der Tag, an dem die Person der Gruppe beigetreten ist, in Ortszeit."""
+    membership = GroupMembership.objects.filter(user=user, group=group).only("joined_at").first()
+    return timezone.localdate(membership.joined_at) if membership else None
 
 
 def entries_for(user, group: Group, period: Period):
@@ -288,24 +303,26 @@ def _fingerprints(group: Group, periods: list[Period]) -> dict[tuple[int, date],
 def missing_confirmations(group: Group, periods) -> dict[date, MissingConfirmations]:
     """Je Zeitraum: wer von den aktiven Mitgliedern fehlt noch.
 
-    Gezählt werden alle aktiven Mitglieder der Gruppe, auch die ohne eine
+    Gezählt werden die aktiven Mitglieder der Gruppe, auch die ohne eine
     einzige Zeit im Zeitraum: gerade ein leerer Zeitraum will bestätigt sein.
+    Wer erst nach dem Ende eines Zeitraums beigetreten ist, schuldet für ihn
+    keine Bestätigung und zählt dort nicht mit.
     """
     periods = list(periods)
     if not periods:
         return {}
 
-    members = list(
-        get_user_model()
-        .objects.filter(group_memberships__group=group, is_active=True)
-        .distinct()
-        .order_by("last_name", "first_name", "username")
+    memberships = list(
+        GroupMembership.objects.filter(group=group, user__is_active=True)
+        .select_related("user")
+        .order_by("user__last_name", "user__first_name", "user__username")
     )
-    if not members:
+    if not memberships:
         return {
             period.start: MissingConfirmations(period=period, members=0, missing=[])
             for period in periods
         }
+    joined = [(m.user, timezone.localdate(m.joined_at)) for m in memberships]
 
     starts = [period.start for period in periods]
     confirmations = {
@@ -317,6 +334,7 @@ def missing_confirmations(group: Group, periods) -> dict[date, MissingConfirmati
 
     result: dict[date, MissingConfirmations] = {}
     for period in periods:
+        members = [person for person, joined_day in joined if joined_day <= period.end]
         missing = []
         for person in members:
             confirmation = confirmations.get((person.pk, period.start))

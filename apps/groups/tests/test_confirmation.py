@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.audit.models import AuditLog
 from apps.corrections.models import CorrectionRequest
 from apps.groups import closing, confirmation
-from apps.groups.models import PeriodConfirmation
+from apps.groups.models import GroupMembership, PeriodConfirmation
 from apps.tracking import entry_editing
 from apps.tracking.models import TimeEntry
 
@@ -17,6 +17,29 @@ from apps.tracking.models import TimeEntry
 def at(day, hour):
     """Feste Uhrzeit an einem Tag: 'jetzt minus x' liefe nachts über Mitternacht."""
     return timezone.make_aware(datetime.combine(day, time(hour, 0)))
+
+
+def backdate(user, group, days=400):
+    """Die Mitgliedschaft auf einen Tag vor langer Zeit zurückdatieren.
+
+    `joined_at` setzt Django beim Anlegen selbst, deshalb über update().
+    """
+    GroupMembership.objects.filter(user=user, group=group).update(
+        joined_at=timezone.now() - timedelta(days=days)
+    )
+
+
+@pytest.fixture
+def member(member, group):
+    """Hier schon lange Mitglied, sonst schuldete es keinem abgelaufenen Zeitraum etwas."""
+    backdate(member, group)
+    return member
+
+
+@pytest.fixture
+def group_admin(group_admin, group):
+    backdate(group_admin, group)
+    return group_admin
 
 
 @pytest.fixture
@@ -387,3 +410,68 @@ def test_choosable_periods_skip_the_running_one(group):
     assert len(periods) == confirmation.CHOOSABLE_PERIODS
     assert all(period.end < today for period in periods)
     assert periods[0].start == group.current_period().previous().start
+
+
+def join_now(make_user, group, email="neu@example.com"):
+    """Eine Person, die der Gruppe erst heute beitritt."""
+    person = make_user(email, first_name="Nele", last_name="Neu")
+    GroupMembership.objects.create(user=person, group=group)
+    return person
+
+
+def test_someone_who_joined_later_owes_no_earlier_period(
+    make_user, member, group_admin, group, last_period, own_entries
+):
+    """Wer unter dem Jahr dazukommt, fehlt nicht rückwirkend beim Abschluss."""
+    newcomer = join_now(make_user, group)
+    periods = confirmation.choosable_periods(group)
+
+    rows = confirmation.missing_confirmations(group, periods)
+
+    for period in periods:
+        assert newcomer not in rows[period.start].missing
+    assert rows[last_period.start].members == 2
+
+
+def test_someone_counts_from_the_period_they_joined_in(make_user, group, last_period):
+    newcomer = join_now(make_user, group)
+    GroupMembership.objects.filter(user=newcomer).update(joined_at=at(last_period.end, 12))
+    earlier = last_period.previous()
+
+    rows = confirmation.missing_confirmations(group, [last_period, earlier])
+
+    assert newcomer in rows[last_period.start].missing
+    assert rows[earlier.start].members == 0
+
+
+def test_the_closing_page_leaves_out_who_joined_later(
+    client, make_user, member, group_admin, group, last_period, own_entries
+):
+    newcomer = join_now(make_user, group)
+    client.force_login(group_admin)
+
+    response = client.get(reverse("groups:periods", args=[group.pk]))
+
+    body = response.content.decode()
+    assert "2 von 2 offen" in body
+    assert newcomer.full_name not in body
+
+
+def test_a_newcomer_is_offered_only_periods_since_joining(client, make_user, group, last_period):
+    newcomer = join_now(make_user, group)
+    GroupMembership.objects.filter(user=newcomer).update(joined_at=at(last_period.start, 12))
+    client.force_login(newcomer)
+
+    response = client.get(reverse("tracking:confirm_period"))
+
+    assert [period.start for period in response.context["periods"]] == [last_period.start]
+
+
+def test_a_newcomer_without_a_finished_period_sees_a_note(client, make_user, group):
+    newcomer = join_now(make_user, group)
+    client.force_login(newcomer)
+
+    response = client.get(reverse("tracking:confirm_period"))
+
+    assert response.status_code == 200
+    assert "noch kein Abrechnungszeitraum zu Ende" in response.content.decode()

@@ -33,6 +33,7 @@
           <p><strong>{{ group.name }}</strong></p>
         </div>
       {% endif %}
+      {% if periods %}
       <div>
         <label for="zeitraum">Abrechnungszeitraum</label>
         <select name="zeitraum" id="zeitraum">
@@ -41,6 +42,7 @@
           {% endfor %}
         </select>
       </div>
+      {% endif %}
       <div class="actions">
         <button class="primary" type="submit">Anzeigen</button>
       </div>
@@ -55,6 +57,11 @@
     </p>
   </div>
 
+  {% if not period %}
+  <div class="card">
+    <p class="empty">Seit du {{ group.name }} beigetreten bist, ist noch kein Abrechnungszeitraum zu Ende gegangen. Sobald einer abgelaufen ist, kannst du ihn hier bestätigen.</p>
+  </div>
+  {% else %}
   <div class="card">
     <div class="card-head">
       <h2>{{ period.label }} · {{ group.name }}</h2>
@@ -114,5 +121,6 @@
       </tbody>
     </table>
   </div>
+  {% endif %}
 {% endif %}
 {% endblock %}

@@ -297,7 +297,17 @@ def confirm_period(request):
 
     selection = request.POST if request.method == "POST" else request.GET
     group = _chosen_group(groups, selection.get("gruppe"))
-    periods = confirmation.choosable_periods(group)
+    # Zeiträume, die vor dem Beitritt schon vorbei waren, schuldet niemand.
+    periods = confirmation.choosable_periods(
+        group, since=confirmation.joined_on(request.user, group)
+    )
+    if not periods:
+        # Frisch beigetreten: seit dem Beitritt ist noch kein Zeitraum zu Ende.
+        return render(
+            request,
+            "tracking/period_confirm.html",
+            {"groups": groups, "group": group, "periods": [], "period": None},
+        )
     period = _chosen_period(periods, selection.get("zeitraum", ""))
 
     if request.method == "POST":
