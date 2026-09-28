@@ -28,7 +28,7 @@ jobs:
         run: ruff check .
 
       - name: Installationsskript prüfen
-        run: shellcheck install-dnf.sh
+        run: shellcheck install-dnf.sh update.sh
 
       - name: Formatierung
         run: ruff format --check .
